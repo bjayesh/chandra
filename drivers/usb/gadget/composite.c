@@ -1484,7 +1484,7 @@ void composite_disconnect(struct usb_gadget *gadget)
 {
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	unsigned long			flags;
-printk(KERN_ERR "$ %s entry \n",__func__);
+//printk(KERN_ERR "$ %s entry \n",__func__);
 	/* REVISIT:  should we have config and device level
 	 * disconnect callbacks?
 	 */
@@ -1520,7 +1520,7 @@ static void __composite_unbind(struct usb_gadget *gadget, bool unbind_driver)
 	 * state protected by cdev->lock.
 	 */
 	WARN_ON(cdev->config);
-printk(KERN_ERR "$$ %s entry \n",__func__);
+//printk(KERN_ERR "$$ %s entry \n",__func__);
 	while (!list_empty(&cdev->configs)) {
 		struct usb_configuration	*c;
 		c = list_first_entry(&cdev->configs,
