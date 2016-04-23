@@ -71,5 +71,5 @@ static struct platform_device lm2_sdhci1_device = {
 void __init lm2_sdhci_init(void)
 {
 	platform_device_register(&lm2_sdhci0_device);
-//	platform_device_register(&lm2_sdhci1_device);
+	platform_device_register(&lm2_sdhci1_device);
 }

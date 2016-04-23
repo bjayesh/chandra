@@ -148,30 +148,40 @@ static void sdhci_lm2_platform_init(struct sdhci_host *host)
 	/***************/
 
 	/* GPF-SYS(0x288) */
-//	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
-//	val  = readl(virt_addr + 0x8);
-//	val  = (val & 0xffff8eff);
-//	val |= 0x7100;				/* SDIO1S0_PWR_EN */
-//	writel(val, virt_addr + 0x8);		/* SDIO Low Dropout Regulator Output : */
-//	iounmap(virt_addr);
+	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
+	val  = readl(virt_addr + 0x8);
+	val  = (val & 0xffff8eff);
+	val |= 0x3100;				/* SDIO1S0_TUNE1P8=3 SDIO1S0_PWR_EN=1 */
+	writel(val, virt_addr + 0x8);		/* SDIO Low Dropout Regulator Output : */
+	iounmap(virt_addr);
+
+	/*  OVL-SYS(0x24:SYS_OVLCTL8) */
+	virt_addr = ioremap(LM2_OVLSYS_BASE, 0x30);
+	val  = readl(virt_addr + 0x2c);
+	val  = (val & 0x88888888);
+	val |= 0x00000022;			/* Input is "SD0S1CMDI"; output is "SD0S1CMDO" */
+						/* Output is "SD0S1CLK" */
+	val |= 0x11222200;
+	writel(val, virt_addr + 0x2c);		/* SDIO Low Dropout Regulator Output : */
+
 
 	/* SDIO1 HRS2 */
-//	virt_addr = ioremap(LM2_SDIO1_BASE + 0x08,0x4);
-//	writel(0x00000004, virt_addr);		/* SDIO1_HRS2  DMA Burst=4  */
-//	pr_err("SDIO1_HRS2 0x8: 0x%08x\n",readl(virt_addr));
-//	iounmap(virt_addr);
+	virt_addr = ioremap(LM2_SDIO1_BASE + 0x08,0x4);
+	writel(0x00000004, virt_addr);		/* SDIO1_HRS2  DMA Burst=4  */
+	pr_err("SDIO1_HRS2 0x8: 0x%08x\n",readl(virt_addr));
+	iounmap(virt_addr);
 
-	/* GPF-SYS(0x280) */
-//	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
-//	val = readl(virt_addr + 0x4);
-//	val = (val & 0xfffffff3) | 0x4;
-//	writel(val, virt_addr + 0x4);
-//	iounmap(virt_addr);
+	/* GPF-SYS(0x284) */
+	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
+	val = readl(virt_addr + 0x4);
+	val = (val & 0xfffffff3) | 0x4;
+	writel(val, virt_addr + 0x4);
+	iounmap(virt_addr);
 
-	/* GPF-SYS(0x1B4:SDIO0ADBCTL) */
-//	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x1b4 ,0x10);
-//	writel(0x00000081, virt_addr + 0x4);	/* SDIO0ADB Control register */
-//	iounmap(virt_addr);
+	/* GPF-SYS(0x1B8:SDIO0ADBCTL) */
+	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x1b8 ,0x10);
+	writel(0x00000081, virt_addr + 0x4);	/* SDIO0ADB Control register */
+	iounmap(virt_addr);
 
 
 }
