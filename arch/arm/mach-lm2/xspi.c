@@ -35,8 +35,8 @@ static	struct resource	lm2_xspi_resource[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	{
-		.start	= LM2_IRQ_SPI_0,
-		.end	= LM2_IRQ_SPI_0,
+		.start	= LM2_IRQ_XSPI_0_CMP,
+		.end	= LM2_IRQ_XSPI_0_CMP,
 		.flags	= IORESOURCE_IRQ,
 	},
 };

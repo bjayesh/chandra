@@ -39,6 +39,8 @@
 #include <linux/spi/spi.h>
 #include <linux/module.h>
 
+#include <linux/spi/xspi.h>
+
 /* Register offset Address */
 /* configuration and clock */
 #define	SPI_ERR		0x00
@@ -98,6 +100,16 @@ static	inline	void	xspi_wr(struct xspi_dev * dev, unsigned int reg, u32 val)
 	writel(val, dev->reg_base + reg);
 }
 
+static	void	xspi_clear_fifo(struct xspi_dev *dev)
+{
+	int	cnt;
+
+	for(cnt = 0 ; cnt < 64 ; cnt++ ){
+		xspi_wr(dev, SPI_FIFO, 0x00000000);
+		xspi_wr(dev, SPI_DCTL, 0x00000080);
+	}
+}
+
 static	irqreturn_t	xspi_interrupt(int irq, void *dev_id)
 {
 	struct spi_master	*master = dev_id;
@@ -106,34 +118,51 @@ static	irqreturn_t	xspi_interrupt(int irq, void *dev_id)
 
 	stat = xspi_rd(dev, SPI_SPIINT);
 	if(stat & SPI_SPIINT_DONE){
-		dev->stat = 1;
-	}else{
 		dev->stat = 0;
+	}else{
+		dev->stat = stat;
 	}
+	xspi_wr(dev, SPI_SPIINT, stat);
 	complete(&dev->done);
 	return	IRQ_HANDLED;
 }
 
-#define	CMD_START	0x80000000
+#define	CMD_START	0xe0000000
 #define	CMD_LEN		0x07000000
 #define	CMD_RD		(0x03<<16)
 #define	CMD_WR		(0x02<<16)
 
-static	int	xspi_start_transfer(struct spi_device *spi,struct spi_transfer *tfr)
+static	int	xspi_start_transfer(struct spi_device *spi,struct spi_transfer *tfr, int dat_idx)
 {
 	struct xspi_dev	*xspi = spi_master_get_devdata(spi->master);
 	u32	cmd = CMD_START;
+	int	cnt;
+	unsigned int	adr;
+	char		dat;
 
-	if(spi->chip_select != 0){	/* CPLD */
-		if(tfr->tx_buf == NULL)	/* read */
-			cmd = cmd | CMD_RD | CMD_LEN;
-		else
-			cmd = cmd | CMD_WR |*((char *)tfr->tx_buf);
+	dev_info(&spi->dev, "xspi_start_transfer\n");
+	dev_info(&spi->dev, "tfr->len %d\n",tfr->len);
+	dev_info(&spi->dev, "tfr->cs_change %d\n",tfr->cs_change);
+	dev_info(&spi->dev, "tfr->bit_per_word %d\n",tfr->bits_per_word);
+	dev_info(&spi->dev, "tfr->delay_usec %d\n",tfr->delay_usecs);
+	dev_info(&spi->dev, "tfr->speed_hz %d\n",tfr->speed_hz);
+	xspi->stat = 0;
+	if(spi->chip_select != 0){	/* CPLD Literal 1byte read/write */
+		adr = (dat_idx & 0x0000ff)<<8;
+		if(tfr->tx_buf == NULL){	/* read */
+			cmd = cmd | CMD_RD | CMD_LEN | adr;
+		}else{
+			dat = ((char *)tfr->tx_buf)[dat_idx];
+			cmd = cmd | CMD_WR | CMD_LEN | adr | dat;
+		}
+		dev_info(&spi->dev,"command = %x\n", cmd);
+		xspi->len = 1;
 
-		xspi_wr(xspi->reg_base, SPI_LIT+4, cmd);
+		xspi_wr(xspi, SPI_LIT+4, cmd);
 	}else{	/* SRAM */
 	/*	dev_info("SRAM Access\n");*/
 	}
+dev_info(&spi->dev,"command = %x\n", cmd);
 	return	0;
 }
 
@@ -144,14 +173,34 @@ static	int	xspi_transfer_one(struct spi_master *master, struct spi_message *msg)
 	struct spi_device	*spi = msg->spi;
 	int	err;
 
+	dev_info(&spi->dev,"xspi_transfer_one call\n");
+	dev_info(&spi->dev,"actual_length=%d\n",msg->actual_length);
+	dev_info(&spi->dev,"chip_select=%d\n",spi->chip_select);
+	dev_info(&spi->dev,"mode=%d\n",spi->mode);
+	dev_info(&spi->dev,"bus_num=%d\n",spi->master->bus_num);
+
 	list_for_each_entry(tfr, &msg->transfers, transfer_list){
-		err = xspi_start_transfer(spi, tfr);
-		if(err)
-			goto out;
-		wait_for_completion(&xspi->done);
+		do{
+			err = xspi_start_transfer(spi, tfr, msg->actual_length);
+			if(err)
+				goto out;
+//			wait_for_completion(&xspi->done);
+			err = xspi_rd(xspi, SPI_STAT+4);
+			dev_info(&spi->dev,"status read =%x\n",err);
+			while(err & 0x80000000){
+				err = xspi_rd(xspi, SPI_STAT+4);
+				dev_info(&spi->dev, ".");
+			}
+			if(xspi->stat){
+				msg->status = -1;
+				goto	out;
+			}
+			msg->actual_length += xspi->len;
+		}while(msg->actual_length <= tfr->len);
 	}
-	spi_finalize_current_message(master);
+	msg->status = 0;
 out:
+	spi_finalize_current_message(master);
 	return	0;
 }
 
@@ -226,13 +275,17 @@ static int xspi_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "XSPI I/O %x IRQ %d \n",xspi->reg_base,xspi->irq);
 	/* initialize hardware set up */
+	dev_info(&pdev->dev, "SPI_CLK0 %x\n", xspi_rd(xspi, SPI_CLK0));
+	dev_info(&pdev->dev, "SPI_CLK1 %x\n", xspi_rd(xspi, SPI_CLK1));
+	dev_info(&pdev->dev, "SPI0CFG0 %x\n", xspi_rd(xspi, SPI_CFG));
+	dev_info(&pdev->dev, "SPI0CFG1 %x\n", xspi_rd(xspi, SPI_CFG+4));
 	/* CS0 :SRAM,FRAM,MRAM */
-	xspi_wr(xspi, SPI_CLK0, 0x00002020); /* SPI mode 0 300MHz/32 */
-	xspi_wr(xspi, SPI_CFG, 0x80000000);
+//	xspi_wr(xspi, SPI_CLK0, 0x00002020); /* SPI mode 0 300MHz/32 */
+//	xspi_wr(xspi, SPI_CFG, 0x80000000);
 
 	/* CS1 : CPLD */
-	xspi_wr(xspi, SPI_CLK1, 0x40002020); /* SPI mode 0 300MHz/64 */
-	xspi_wr(xspi, SPI_CFG + 4, 0xc00000e0);
+//	xspi_wr(xspi, SPI_CLK1, 0x40002020); /* SPI mode 0 300MHz/64 */
+//	xspi_wr(xspi, SPI_CFG + 4, 0xc00000e0);
 
 //	err = devm_spi_register_master(&pdev->dev, master);
 	err = spi_register_master(master);
@@ -240,7 +293,7 @@ static int xspi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "could not register SPI Master Driver \n");
 		goto out_free_irq;
 	}
-	dev_info(&pdev->dev, "XSPI set up completed Virt %x ",xspi->reg_base);
+	dev_info(&pdev->dev, "XSPI set up completed Virt %x \n",xspi->reg_base);
 
 	return 0;
 
@@ -270,6 +323,22 @@ static int xspi_remove(struct platform_device *pdev)
 	
 	return 0;
 }
+
+int	xspi_read(XSPILIB_PARAM *spiParam)
+{
+	int	ret = 0;
+
+	return	ret;
+}
+EXPORT_SYNBOL(xspi_read);
+
+int	xspi_write(XSPILIB_PARAM *spiParam)
+{
+	int	ret = 0;
+
+	return	ret;
+}
+EXPORT_SYMBOL(xspi_write);
 
 #ifdef CONFIG_OF
 static struct of_device_id xspi_dt_ids[] = {
