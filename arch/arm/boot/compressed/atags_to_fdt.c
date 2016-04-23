@@ -8,7 +8,7 @@
  * 0x7fff_f000 start virtual address
  */
 #define	PARAM_ADDR	0x7ffff000
-#define	ATAGS_ADDR	0x80000100
+#define	ATAGS_ADDR	0x05000100
 
 struct	lm2_param {
 	unsigned int	magic;
@@ -20,41 +20,6 @@ struct	lm2_param {
 	unsigned long	firm_addr;
 	unsigned long	firm_size;
 };
-
-static	void	prepare_atag_list(void)
-{
-	struct	lm2_param	*p_ptr = PARAM_ADDR;
-	struct	tag		*t_ptr = ATAGS_ADDR;
-
-	t_ptr->hdr.size = sizeof(struct tag_header) + sizeof(struct tag_core);
-	t_ptr->hdr.tag = ATAG_CORE;
-	t_ptr->u.core.flags= 0x1;
-	t_ptr->u.core.pagesize = PAGE_SIZE;
-	t_ptr->u.core.rootdev = 0xff;
-
-	t_ptr = t_ptr + t_ptr->hdr.size;
-
-	t_ptr->hdr.size = sizeof(struct tag_header) + sizeof(struct tag_mem32);
-	t_ptr->hdr.tag = ATAG_MEM;
-	t_ptr->u.mem.size = (unsigned long)p_ptr->ramsize;
-	t_ptr->u.mem.start = 0x80000000;
-
-	t_ptr = t_ptr + t_ptr->hdr.size;
-
-	t_ptr->hdr.size = sizeof(struct tag_header) + sizeof(struct tag_initrd);
-	t_ptr->hdr.tag = ATAG_INITRD;
-	t_ptr->u.initrd.start = p_ptr->initrd_addr;
-	t_ptr->u.initrd.size = p_ptr->initrd_size;
-
-	t_ptr = t_ptr + t_ptr->hdr.size;
-
-	t_ptr->hdr.size = sizeof(struct tag_header) + 512;
-	t_ptr->hdr.tag = ATAG_CMDLINE;
-	memcpy(t_ptr->u.cmdline.cmdline, p_ptr->bootparam, 512);
-
-	return;
-	
-}
 
 #endif	/* CONFIG_ARCH_LM2 */
 
@@ -70,6 +35,15 @@ static int node_offset(void *fdt, const char *node_path)
 	if (offset == -FDT_ERR_NOTFOUND)
 		offset = fdt_add_subnode(fdt, 0, node_path);
 	return offset;
+}
+
+static int setprop_inplace(void *fdt, const char *node_path, const char *property,
+		const void *val, int size)
+{
+	int offset = node_offset(fdt,node_path);
+	if(offset < 0)
+		return	offset;
+	return	fdt_setprop_inplace(fdt, offset, property, val, size);
 }
 
 static int setprop(void *fdt, const char *node_path, const char *property,
@@ -152,6 +126,14 @@ static void merge_fdt_bootargs(void *fdt, const char *fdt_cmdline)
 	setprop_string(fdt, "/chosen", "bootargs", cmdline);
 }
 
+static	int	replace_mac_addr(void *fdt, int total_space)
+{
+	struct	lm2_param	*p_ptr = (struct lm2_param *)PARAM_ADDR;
+
+	setprop_inplace(fdt, "/mac_addr", "mac-address", p_ptr->macaddr, 6);
+	return	1;
+}
+
 /*
  * Convert and fold provided ATAGs into the provided FDT.
  *
@@ -168,9 +150,10 @@ int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 	uint32_t mem_reg_property[2 * 2 * NR_BANKS];
 	int memcount = 0;
 	int ret, memsize;
-
+	int len;
 #ifdef	CONFIG_ARCH_LM2
-	prepare_atag_list();
+	if(replace_mac_addr(fdt,total_space))
+		return	1;
 #endif	/* CONFIG_ARCH_LM2 */
 
 	/* make sure we've got an aligned pointer */

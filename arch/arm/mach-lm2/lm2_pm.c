@@ -28,7 +28,7 @@
 
 #include "core.h"
 
-#define LM2_PM_DEBUG
+//#define LM2_PM_DEBUG
 //#define PM_TEST
 
 /* Suspend End flag -> memory write */

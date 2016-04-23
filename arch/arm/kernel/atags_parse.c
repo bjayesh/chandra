@@ -30,25 +30,6 @@
 
 #include "atags.h"
 static char default_command_line[COMMAND_LINE_SIZE] __initdata = CONFIG_CMDLINE;
-#if 0	/* yamano */
-#ifndef MEM_SIZE
-#define MEM_SIZE	(16*1024*1024)
-#endif
-
-static struct {
-	struct tag_header hdr1;
-	struct tag_core   core;
-	struct tag_header hdr2;
-	struct tag_mem32  mem;
-	struct tag_header hdr3;
-} default_tags __initdata = {
-	{ tag_size(tag_core), ATAG_CORE },
-	{ 1, PAGE_SIZE, 0xff },
-	{ tag_size(tag_mem32), ATAG_MEM },
-	{ MEM_SIZE },
-	{ 0, ATAG_NONE }
-};
-#else
 #ifndef	MEM_SIZE
 #define	MEM_SIZE	(760*1024*1024)		/* 2G */
 #endif	/* MEM_SIZE */
@@ -65,39 +46,6 @@ static	struct {
 	{ MEM_SIZE},
 	{ 0, ATAG_NONE}
 };
-#endif	/* yamano debug */
-#if 0 /* yamano */
-#define UART_BASE       0xfc160000
-#define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
-#define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
-static  void    putchar(int c)
-{
-        while((UART_STAT(UART_BASE) & 0x40) == 0)
-                barrier();
-        UART_DATA(UART_BASE) = c;
-        return;
-}
-
-static  void    flush(void)
-{
-        while((UART_STAT(UART_BASE) & 0x40) == 0)
-                barrier();
-}
-
-static  void    putstr(const char *ptr)
-{
-        char    c;
-
-        while((c = *ptr++) != '\0'){
-                if(c == '\n')
-                        putchar('\r');
-                putchar(c);
-        }
-        flush();
-}
-#else
-#define	putstr(x)	
-#endif  /* yamano */
 
 static int __init parse_tag_core(const struct tag *tag)
 {
@@ -233,12 +181,8 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 	struct tag *tags = (struct tag *)&default_tags;
 	struct machine_desc *mdesc = NULL, *p;
 	char *from = default_command_line;
-//	char	buf[256];	/* yamano debug */
 
 	default_tags.mem.start = PHYS_OFFSET;
-//	default_tags.mem.start = 0x0000000890000000ULL;
-//	sprintf(buf,"machine_nr:%x\n",machine_nr);
-//	putstr(buf);
 	machine_nr = 0x157c;	/* yamano debug */
 	/*
 	 * locate machine in the list of supported machines.
@@ -246,13 +190,8 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 	for_each_machine_desc(p)
 		if (machine_nr == p->nr) {
 			printk("Machine: %s\n", p->name);
-//			putstr(p->name);	/* yamano debug */
 			mdesc = p;
 			break;
-		}else{	/* yamano debug */
-//			putstr(p->name);
-//			sprintf(buf,"==%x==",p->nr);
-//			putstr(buf);
 		}
 
 	if (!mdesc) {
@@ -262,10 +201,8 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 	}
 #if 1
 	if (__atags_pointer){
-//	putstr("atags point vaild\n");
 		tags = phys_to_virt(__atags_pointer);
 	}else if (mdesc->atag_offset){
-//	putstr("atag offset valid\n");
 		tags = (void *)(PAGE_OFFSET + mdesc->atag_offset);
 	}
 #if defined(CONFIG_DEPRECATED_PARAM_STRUCT)

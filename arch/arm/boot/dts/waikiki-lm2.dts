@@ -19,6 +19,9 @@
 	chosen {
 		bootargs = "root=/dev/sda1 ip=dhcp console=ttyS0,38400 mem=2992M";
 	};
+	mac_addr {
+		mac-address = [ 11 22 33 44 55 66 ];
+	};
 /*
 	aliases {
 		serial0 = &lm2_serial0;
@@ -224,15 +227,16 @@
 			reg = <0x04a30000 0x200>;
 			interrupts = <85>;
 		};
-
+*/
 		ethernet@04410000 {
 			compatible = "snps,dwmac";
 			reg = <0x04410000 0x10000>;
 			interrupts = <94 93>;
 			phy-mode = "mii";
 			reg-io-width = <4>;
+			mac-address = [ 00 00 00 00 00 00 ];
 		};
-
+/*
 		sdio@04440000 {
 			compatible = "sdhci";
 			reg = <0x0 0x04440000 0x0 0x500>;

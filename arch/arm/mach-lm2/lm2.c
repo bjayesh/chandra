@@ -59,59 +59,11 @@ extern void    lm2_cipui_tim_init(void);
 #ifdef	CONFIG_LM2_GPDMA
 extern	lm2_dma_register(void);
 #endif	/* CONFIG_LM2_GPDMA */
-#if 0
-static	void	lm2_putchar(unsigned long base, char c)
-{
-#if 0
-        while((UART_STAT(base) & 0x40) == 0)
-                barrier();
-        UART_DATA(base) = c;
-#endif
-        return;
-}
-
-static  void	lm2_flush(unsigned long base)
-{
-#if 0
-        while((UART_STAT(base) & 0x40) == 0)
-                barrier();
-#endif
-}
-
-void	lm2_printk(unsigned long base, const char *ptr)
-{
-#if 0
-        char    c;
-
-        while((c = *ptr++) != '\0'){
-                if(c == '\n')
-                        lm2_putchar(base,'\r');
-                lm2_putchar(base,c);
-        }
-	lm2_flush(base);
-#endif
-}
-#endif
 /*
  * Static I/O map
  * serial ,GIC, timer, ethernet, SPI etc.
  */
 static struct map_desc lm2_io_desc[] __initdata = {
-#if 0
-	{
-		.virtual	= 0xffc00000,
-		.pfn		= __phys_to_pfn(0x0000000410000000ULL),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	},
-	{
-/*		.virtual	= LM2_DEBUG_SERIAL_VIRT,	*/
-		.virtual	= 0xffc10000,
-		.pfn		= __phys_to_pfn(0x04160000ULL),
-		.length		= SZ_4K,
-		.type		= MT_DEVICE,
-	},
-#endif
 };
 
 /*
@@ -148,11 +100,9 @@ const unsigned int lm2_use_irq_size = sizeof(lm2_use_irq);
  */
 static void __init lm2_timer_init(void)
 {
-//	char	buf[128];
 	void	__iomem	*clksrc_timer;
 	void	__iomem	*clkevt_timer;
 
-/*	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x38, 0x0c);	*/
 	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x10, 0x10);
 	clkevt_timer = ioremap(LM2_TIMER_BASE + 0x5c, 0x0c);
 	lm2_clocksource_init(clksrc_timer);
@@ -164,7 +114,6 @@ static void __init lm2_timer_init(void)
  */
 static	struct	plat_serial8250_port	lm2_serial_resource[]={
 	{
-//		.membase	= LM2_UART_1_BASE,
 		.mapbase	= LM2_UART_1_BASE,
 		.irq		= LM2_IRQ_UART_1,
 		.uartclk	= LM2_UART1_CLK,
@@ -172,17 +121,6 @@ static	struct	plat_serial8250_port	lm2_serial_resource[]={
 		.iotype		= UPIO_MEM,
 		.flags		= UPF_SKIP_TEST,
 	},
-#if 0
-	{
-//		.membase	= LM2_UART_0_BASE,
-		.mapbase	= LM2_UART_0_BASE,
-		.irq		= LM2_IRQ_UART_0,	/* change. 0->1 */
-		.uartclk	= LM2_UART0_CLK,	/* change. 0->1 */
-		.regshift	= 0,
-		.iotype		= UPIO_MEM,
-		.flags		= UPF_SKIP_TEST,
-	},
-#endif	/* yamano serial remove for AMP vxWorks used */
 	{},
 };
 static struct platform_device lm2_serial_device = {
@@ -192,18 +130,6 @@ static struct platform_device lm2_serial_device = {
 		.platform_data = lm2_serial_resource,
 	},
 };
-
-#ifdef	CONFIG_SERIAL_8250_CONSOLE
-#if 0
-static int	__init lm2_console_init(void)
-{
-#if 0
-	return add_preferred_console("ttyS",0,"38400");
-#endif
-	return	0;
-}
-#endif
-#endif	/* CONFIG_SERIAL_8250_CONSOLE */
 
 /*
  * I2C
@@ -234,7 +160,6 @@ static struct resource lm2_eth_resources[] = {
 
 static	struct stmmac_mdio_bus_data phy_private_data = {
 	.phy_mask	= 1,
-//	.irqs		= 15,
 	.irqs		= 0,	/* poll */
 };
 
@@ -357,21 +282,7 @@ static struct resource lm2_pcie_resource[]={
                .end    = 0x04a40fff,
                .flags  = IORESOURCE_MEM,
        },
-#if 0
-       {	/* port 2 */
-               .start  = 0x04a50000,
-               .end    = 0x04a50fff,
-               .flags  = IORESOURCE_MEM,
-       },
-       {	/* port 3 */
-               .start  = 0x04a60000,
-               .end    = 0x04a60fff,
-               .flags  = IORESOURCE_MEM,
-       },
-#endif
        {	/* host bridge interrput */
-//               .start  = LM2_IRQ_PCIE_BUS,
-//               .end    = LM2_IRQ_PCIE_BUS,
                .flags  = IORESOURCE_IRQ,
                .start  = LM2_IRQ_PCIE1,
                .end    = LM2_IRQ_PCIE1,
@@ -387,14 +298,7 @@ static	struct platform_device lm2_pcie_device = {
 
 static void __init lm2_init_early(void)
 {
-//	lm2_printk(0xfc000000,"lm2_init_early\n");
 }
-#if 0
-static void lm2_power_off(void)
-{
-	printk(KERN_EMERG "Unable to shutdown\n");
-}
-#endif
 static void lm2_restart(char str, const char *cmd)
 {
 	printk(KERN_EMERG "Unable to reboot\n");
@@ -403,9 +307,6 @@ static void lm2_restart(char str, const char *cmd)
 static void __init lm2_map_io(void)
 {
 	iotable_init(lm2_io_desc, ARRAY_SIZE(lm2_io_desc));
-#ifdef CONFIG_SERIAL_8250_CONSOLE
-//	lm2_early_serial_setup();
-#endif /* CONFIG_SERIAL_8250_CONSOLE */
 }
 
 /*
@@ -413,16 +314,13 @@ static void __init lm2_map_io(void)
  */
 static void __init lm2_init_irq(void)
 {
-//	char	buf[128];
 	void __iomem	*virt_dist;
 	void __iomem	*virt_cpui;
 
 	virt_dist = ioremap(LM2_GIC_DIST,SZ_4K);
 	virt_cpui = ioremap(LM2_GIC_CPU,SZ_4K);
 
-//	lm2_printk(0xfc000000,"lm2_init_irq\n");
 	gic_init_bases(0,29,ioremap(LM2_GIC_DIST,SZ_4K),ioremap(LM2_GIC_CPU,SZ_4K),0,NULL);
-//	lm2_printk(0xfc000000,"lm2_init_irq end\n");
 }
 
 /*
@@ -518,49 +416,6 @@ void __init lm2_dt_init_early(void)
 	return;
 }
 /*
- * GIC find data 
- */
-#if 0
-static  struct of_device_id lm2_irq_match[] __initdata = {
-	{ .compatible = "arm,cortex-a15-gic", .data = gic_of_init, },
-	{}
-};
-
-/*
- * General Interrupt Controller Initialize by DTB
- */
-static void __init lm2_dt_init_irq(void)
-{
-	of_irq_init(lm2_irq_match);
-}
-#endif
-
-/*
- * Kernel timer initialize routine by DTB
- */
-#if 0
-static void __init lm2_dt_timer_init(void)
-{
-	struct device_node *node;
-	const char *path;
-	int err;
-
-	/* aliase check to unique node */ 
-	err = of_property_read_string(of_aliases, "arm,lm2_timer", &path);
-	if (WARN_ON(err))
-		return;
-
-	/* get DTB node */
-	node = of_find_node_by_path(path);
-
-	/* timer device add device node */
-//	regbase = of_iomap(node,0);
-//	timer_irq = irq_of_parse_and_map(node,0);
-//	clocksource_register_hz(&clocksource,LM2_TIMER_HZ);
-//	clocksource_register_hz(&clocksource,LM2_TIM32_CLK);
-}
-#endif
-/*
  * init_machine by DTB
  */
 static const struct of_device_id lm2_dt_bus_match[] __initconst = {
@@ -573,6 +428,12 @@ static const struct of_device_id lm2_dt_bus_match[] __initconst = {
 static const struct of_device_id lm2_pcie_match[] = {
         {
                 .compatible = "synopsys-pcie",
+        },
+};
+
+static const struct of_device_id lm2_eth_match[] = {
+        {
+                .compatible = "snps,dwmac",
         },
 };
 
@@ -608,9 +469,7 @@ static void __init lm2_dt_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
-//	platform_device_register(&lm2_pcie_device);
 
-//	l2x0_of_init(0x00400000, 0xfe0fffff);
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
 	node = of_find_matching_node(NULL,lm2_pcie_match);
 	if(node){
@@ -619,7 +478,6 @@ static void __init lm2_dt_init(void)
 			platform_device_register(&lm2_pcie_device);
 		of_node_put(node);
 	}
-		
 	lm2_cipui_tim_init();
 }
 
@@ -639,7 +497,6 @@ DT_MACHINE_START(LM2_DT, "FujiXerox Waikiki")
 	.map_io		= lm2_dt_map_io,
 	.init_early	= lm2_dt_init_early,
 	.init_irq	= lm2_init_irq,
-//	.init_irq	= irqchip_init,
 	.init_time	= lm2_timer_init,
 	.init_machine	= lm2_dt_init,
 MACHINE_END

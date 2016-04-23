@@ -136,7 +136,7 @@ start:
 
  THUMB(		.thumb			)
 1:
-/*		b	1b	* yamano ICE debug */
+/*		b	1b	/ yamano ICE debug */
 		mrs	r9, cpsr
 #ifdef CONFIG_ARM_VIRT_EXT
 /*		bl	__hyp_stub_install */	@ get into SVC mode, reversibly
