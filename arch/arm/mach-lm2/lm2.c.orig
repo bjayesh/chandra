@@ -434,9 +434,7 @@ static void __init lm2_init(void)
 	lm2_sata_register();
 #endif	/* CONFIG_SATA_AHCI_PLATFORM */
 	lm2_usb_register();
-#ifdef	CONFIG_MMC_SDHCI_PLTFM
         lm2_sdhci_init();
-#endif
 
 	platform_device_register(&lm2_gpio_device);
 	platform_device_register(&lm2_rtc_device);
