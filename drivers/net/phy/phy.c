@@ -1155,6 +1155,8 @@ int phy_ethtool_set_eee(struct phy_device *phydev, struct ethtool_eee *data)
 	int val;
 
 	val = ethtool_adv_to_mmd_eee_adv_t(data->advertised);
+	if ( !data->eee_enabled )
+		val=0;
 	phy_write_mmd_indirect(phydev->bus, MDIO_AN_EEE_ADV, MDIO_MMD_AN,
 			       phydev->addr, val);
 
