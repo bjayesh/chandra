@@ -89,6 +89,7 @@ void __init arm_dt_init_cpu_maps(void)
 	if (!cpus)
 		return;
 
+printk("### %s: line %d### mpidr = %d \n", __FUNCTION__, __LINE__, mpidr);
 	for_each_child_of_node(cpus, cpu) {
 		u32 hwid;
 
@@ -106,7 +107,7 @@ void __init arm_dt_init_cpu_maps(void)
 				     cpu->full_name);
 			return;
 		}
-
+printk("### %s: line %d### hwid = %d \n",__FUNCTION__,__LINE__,hwid);
 		/*
 		 * 8 MSBs must be set to 0 in the DT since the reg property
 		 * defines the MPIDR[23:0].

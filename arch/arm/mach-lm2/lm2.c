@@ -486,6 +486,7 @@ static void __init lm2_dt_init(void)
 	virt_addr = ioremap(LM2_UART_0_BASE,0x32);
 	lm2_serial_resource[1].membase = virt_addr;
 	platform_device_register(&lm2_serial_device);
+	platform_device_register(&lm2_eth_device);
 
 //	l2x0_of_init(0x00400000, 0xfe0fffff);
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
@@ -507,7 +508,7 @@ DT_MACHINE_START(LM2_DT, "FujiXerox Waikiki")
 	.map_io		= lm2_dt_map_io,
 	.init_early	= lm2_dt_init_early,
 	.init_irq	= lm2_init_irq,
-	.init_time	= &lm2_timer_init,
+	.init_time	= lm2_timer_init,
 	.init_machine	= lm2_dt_init,
 MACHINE_END
 
