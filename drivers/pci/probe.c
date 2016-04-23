@@ -1832,21 +1832,24 @@ int pci_bus_insert_busn_res(struct pci_bus *b, int bus, int bus_max)
 	res->end = bus_max;
 	res->flags = IORESOURCE_BUS;
 
-	if (!pci_is_root_bus(b))
+	if (!pci_is_root_bus(b)){	/* yamano debug */
+		printk(KERN_ERR "root bus\n");
 		parent_res = &b->parent->busn_res;
-	else {
+	} else {
+		printk(KERN_ERR "not root bus\n");
 		parent_res = get_pci_domain_busn_res(pci_domain_nr(b));
 		res->flags |= IORESOURCE_PCI_FIXED;
 	}
 
 	conflict = insert_resource_conflict(parent_res, res);
 
-	if (conflict)
+	if (conflict){
+printk(KERN_ERR " ### %s resource insert conflict \n",__FUNCTION__);
 		dev_printk(KERN_DEBUG, &b->dev,
 			   "busn_res: can not insert %pR under %s%pR (conflicts with %s %pR)\n",
 			    res, pci_is_root_bus(b) ? "domain " : "",
 			    parent_res, conflict->name, conflict);
-
+	}
 	return conflict == NULL;
 }
 
@@ -1868,6 +1871,7 @@ printk( KERN_ERR "res->end =%llx\n",res->end);
 printk( KERN_ERR "res->flags =%x\n",res->flags);
 
 	size = bus_max - res->start + 1;
+res->start=0;
 	ret = adjust_resource(res, res->start, size);
 //	dev_printk(KERN_DEBUG, &b->dev,
 	printk(KERN_ERR "busn_res: %pR end %s updated to %02x\n",
@@ -1878,9 +1882,9 @@ printk(KERN_ERR " ## %s : instert busn_res\n",__FUNCTION__);
 
 		pci_bus_insert_busn_res(b, res->start, res->end);
 	}	/* yamano debug */
-printk(KERN_ERR "Information\n");
-printk(KERN_ERR "parent : %x \n",b->parent);
-printk(KERN_ERR "resource : %x \n",b->resources);
+//printk(KERN_ERR "Information\n");
+//printk(KERN_ERR "parent : %x \n",b->parent);
+//printk(KERN_ERR "resource : %x \n",b->resources);
 
 printk(KERN_ERR " ## %s ;Exit bus->resources = %x\n",__FUNCTION__,b->busn_res);
 	return ret;

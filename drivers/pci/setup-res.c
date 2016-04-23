@@ -232,6 +232,7 @@ static int __pci_assign_resource(struct pci_bus *bus, struct pci_dev *dev,
 		 * But a prefetching area can handle a non-prefetching
 		 * window (it will just not perform as well).
 		 */
+printk( KERN_ERR " $$$ %s : re-allocating\n",__FUNCTION__);
 		ret = pci_bus_alloc_resource(bus, res, size, align, min, 0,
 					     pcibios_align_resource, dev);
 	}

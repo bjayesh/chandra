@@ -147,10 +147,15 @@ static void pci_fixup_quatro(struct pci_dev *dev)
 	int i;
 printk(KERN_ERR "pci fixup function for quatro\n");
 	if (dev->devfn == 0) {
+//		dev->resource[0].flags = IORESOURCE_MEM;
+//		dev->resource[1].flags = IORESOURCE_IO;
 //		dev->class &= 0x060000;
 //		dev->class = 0x060000;
 //		dev->class |= PCI_CLASS_BRIDGE_HOST << 8;
 		for (i = 0; i < PCI_NUM_RESOURCES; i++) {
+//printk(KERN_ERR " dev->resource[%d].start = %llx\n",i,dev->resource[i].start);
+//printk(KERN_ERR " dev->resource[%d].end = %llx\n",i,dev->resource[i].end);
+//printk(KERN_ERR " dev->resource[%d].flags = %x\n",i,dev->resource[i].flags);
 			dev->resource[i].start = 0;
 			dev->resource[i].end   = 0;
 			dev->resource[i].flags = 0;

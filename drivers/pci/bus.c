@@ -57,6 +57,7 @@ void pci_bus_add_resource(struct pci_bus *bus, struct resource *res,
 {
 	struct pci_bus_resource *bus_res;
 
+printk(KERN_ERR "##### %s resource add to bus \n",__FUNCTION__);
 	bus_res = kzalloc(sizeof(struct pci_bus_resource), GFP_KERNEL);
 	if (!bus_res) {
 		dev_err(&bus->dev, "can't add %pR resource\n", res);
@@ -126,7 +127,7 @@ pci_bus_alloc_resource(struct pci_bus *bus, struct resource *res,
 	int i, ret = -ENOMEM;
 	struct resource *r;
 	resource_size_t max = -1;
-printk(KERN_ERR " ### %s : Entry bus->number = %x\n",__FUNCTION__,bus->number);
+printk(KERN_ERR " ### %s : Entry %x bus->number = %x\n",__FUNCTION__,bus,bus->number);
 	type_mask |= IORESOURCE_IO | IORESOURCE_MEM;
 
 	/* don't allocate too high if the pref mem doesn't support 64bit*/
@@ -136,16 +137,25 @@ printk(KERN_ERR " ### %s : Entry bus->number = %x\n",__FUNCTION__,bus->number);
 	pci_bus_for_each_resource(bus, r, i) {
 		if (!r)
 			continue;
+printk(KERN_ERR "resource start = 0x%llx\n",r->start);
+printk(KERN_ERR "resource end   = 0x%llx\n",r->end);
+printk(KERN_ERR "resource flags = 0x%x\n",r->flags);
+
 
 		/* type_mask must match */
-		if ((res->flags ^ r->flags) & type_mask)
+		if ((res->flags ^ r->flags) & type_mask){
+printk(KERN_ERR "----- type mismatch %x : %x : %x\n",res->flags,r->flags,type_mask);
+printk(KERN_ERR "----- res start %llx : r start %llx \n",res->start,r->start);
 			continue;
+		}
 
 		/* We cannot allocate a non-prefetching resource
 		   from a pre-fetching area */
 		if ((r->flags & IORESOURCE_PREFETCH) &&
-		    !(res->flags & IORESOURCE_PREFETCH))
+		    !(res->flags & IORESOURCE_PREFETCH)){
+printk(KERN_ERR "----- non prefetch \n");
 			continue;
+		}
 
 		/* Ok, try it out.. */
 printk(KERN_ERR " ### %s : resource allocate\n",__FUNCTION__);

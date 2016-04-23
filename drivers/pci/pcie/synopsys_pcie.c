@@ -180,8 +180,14 @@ printk(KERN_ERR "sys->io_offset :0x%llx\n",sys->io_offset);
 	sys->io_offset  = 0x410000000ULL - 0x10100000ULL;
 printk(KERN_ERR "print offset mem = 0x%llx\n",sys->mem_offset);
 printk(KERN_ERR "print offset io = 0x%llx\n",sys->io_offset);
-	pci_add_resource_offset(&sys->resources, &pp->config[0].mem, sys->mem_offset);
+	if(request_resource(&iomem_resource,&pp->config[0].io)){
+		printk(KERN_ERR " iomem io resource reqest error \n");
+	}
 	pci_add_resource_offset(&sys->resources, &pp->config[0].io, sys->io_offset);
+	if(request_resource(&iomem_resource,&pp->config[0].mem)){
+		printk(KERN_ERR " iomem memory resource reqest error \n");
+	}
+	pci_add_resource_offset(&sys->resources, &pp->config[0].mem, sys->mem_offset);
 	
 #ifdef	DEBUG_CALLBACK
 	dev_err(pp->dev, "##### %s : End\n",__FUNCTION__);
@@ -259,7 +265,7 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 //	dev_err(pp->dev, " 0x%8.8lx : 0x%8.8lx\n", pcieconf_base, val);
 out:
 	if(debugFlag == 1){
-		dev_err(pp->dev, "root read access %x : %x\n",where, *val);
+//		dev_err(pp->dev, "root read access %x : %x\n",where, *val);
 		if(where == 8)
 			*val = 0x06040000;
 	}
@@ -305,7 +311,7 @@ static int synopsys_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 		if(devfn != 0)	return	PCIBIOS_DEVICE_NOT_FOUND;
 //		dev_err(pp->dev, "Root write access");
 		pcieconf_base = (void __iomem *)((u32)pp->pciegen3_base1 + where);
-		dev_err(pp->dev, "Root write access %x : %x",where,val);
+//		dev_err(pp->dev, "Root write access %x : %x",where,val);
 	}
 //	dev_err(pp->dev, " 0x%8.8lx : 0x%8.8x\n", pcieconf_base, val);
 	if(size == 1)
@@ -676,10 +682,11 @@ static void synopsys_pcie_AxiToPexInit(struct pcie_port *pp, int which)
 
 		// - window 1
 		//   - MEM access
-		//   - 3 MB
+		//   - 1 MB
 		//   - axi side is not where dependent
 		//   - pex side is where dependent
-		synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_AMAP_CTRL1,      0x00030005);
+	//	synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_AMAP_CTRL1,      0x00030005);
+		synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_AMAP_CTRL1,      0x00100005);
 		synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_AMAP_AXI_BASE1,  0x04000000);
 		synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_AMAP_AXI_BASE1X, 0x00000004);
 		synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_AMAP_PEX_BASEL1, 0x10000000);
@@ -750,6 +757,7 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 			/* INT A Enable */
 			synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_INT_MISC_EN, 0x00000020);
 			break;
+#if 0
 		case 2: 
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
 			// window 0
@@ -758,7 +766,7 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE0X,  AXI_ADDR_H_DDR);
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE2_DDR_RC); // NOTE special _RC suffix
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE2_DDR_RC); // NOTE special _RC suffix
-#if 0
+
 			// window 1
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
@@ -774,7 +782,6 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE2_MSI_RC); // NOTE special _RC suffix
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE2_MSI_RC); // NOTE special _RC suffix
-#endif
 			break;
 		case 3: 
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
@@ -784,7 +791,7 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE0X,  AXI_ADDR_H_DDR);
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE3_DDR);
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE3_DDR);
-#if 0
+
 			// window 1
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
@@ -800,8 +807,9 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE3_MSI);
 			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE3_MSI);
-#endif
+
 			break;
+#endif
 		default:
 			dev_err(pp->dev, "synopsys_pcie_PexToAxiInitRc: which is %d Error\n",which);
 			break;
@@ -952,8 +960,8 @@ static void exynos_pcie_clear_irq_pulse(struct pcie_port *pp)
 	void __iomem *resetgen_base  = pp->resetgen_base;
 	
 	synopsys_writel(resetgen_base + PCIE1_INT_CLR, PCIE1_INT_CLR__PERST_N_PIN__MASK | PCIE1_INT_CLR__GDA_PAB__MASK);
-	synopsys_writel(resetgen_base + PCIE1_INT_CLR, PCIE2_INT_CLR__PERST_N_PIN__MASK | PCIE2_INT_CLR__GDA_PAB__MASK);
-	synopsys_writel(resetgen_base + PCIE1_INT_CLR, PCIE3_INT_CLR__PERST_N_PIN__MASK | PCIE3_INT_CLR__GDA_PAB__MASK);
+//	synopsys_writel(resetgen_base + PCIE1_INT_CLR, PCIE2_INT_CLR__PERST_N_PIN__MASK | PCIE2_INT_CLR__GDA_PAB__MASK);
+//	synopsys_writel(resetgen_base + PCIE1_INT_CLR, PCIE3_INT_CLR__PERST_N_PIN__MASK | PCIE3_INT_CLR__GDA_PAB__MASK);
 	return;
 }
 
@@ -964,8 +972,8 @@ static void synopsys_pcie_enable_irq_pulse(struct pcie_port *pp)
 
 	/* enable INTX interrupt */
 	synopsys_writel(resetgen_base + PCIE1_INT_EN, PCIE1_INT_EN__PERST_N_PIN__MASK | PCIE1_INT_EN__GDA_PAB__MASK);
-	synopsys_writel(resetgen_base + PCIE2_INT_EN, PCIE2_INT_EN__PERST_N_PIN__MASK | PCIE2_INT_EN__GDA_PAB__MASK);
-	synopsys_writel(resetgen_base + PCIE3_INT_EN, PCIE3_INT_EN__PERST_N_PIN__MASK | PCIE3_INT_EN__GDA_PAB__MASK);
+//	synopsys_writel(resetgen_base + PCIE2_INT_EN, PCIE2_INT_EN__PERST_N_PIN__MASK | PCIE2_INT_EN__GDA_PAB__MASK);
+//	synopsys_writel(resetgen_base + PCIE3_INT_EN, PCIE3_INT_EN__PERST_N_PIN__MASK | PCIE3_INT_EN__GDA_PAB__MASK);
 	return;
 }
 
@@ -1095,6 +1103,7 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 
 	/* host bridge interrupt routing enable */
 	synopsys_writel(pciewrap_base + PCIE_INT_EN, 0x00000001);
+	synopsys_pcie_enable_interrupts(pp);
 out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init:%x End\n",pciegen3_base1);
@@ -1253,6 +1262,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->config[0].io.end   = 0x41000FFFFULL;
 	pp->config[0].io.flags = IORESOURCE_IO;
 	pp->config[0].io_size = resource_size(&pp->config[0].io);
+	printk(KERN_ERR "I/O size %x \n",pp->config[0].io_size);
 //	pp->config[0].io_bus_addr	= 0x410000000ULL;
 	pp->mem.name	= "Memory";
 	pp->mem.start	= 0x404000000ULL;
@@ -1265,6 +1275,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->config[0].mem.end  	= 0x4040fffffULL;
 	pp->config[0].mem.flags = IORESOURCE_MEM;
 	pp->config[0].mem_size = resource_size(&pp->config[0].mem);
+	printk(KERN_ERR "Memory size %x \n",pp->config[0].mem_size);
 //	pp->config[0].mem_bus_addr	= 0x400000000ULL;
 
 	pp->config[0].irq = LM2_IRQ_PCIE1;	/* device interrupt by port */
