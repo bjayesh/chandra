@@ -10,6 +10,7 @@
 /* general include */
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/printk.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
@@ -128,6 +129,11 @@ static	struct platform_device lm2_usb_devs_device = {
 int	__init	lm2_usb_register(void)
 {
 	int	result;
+	void __iomem	*ptr;
+
+	ptr= ioremap(LM2_USB2_PHY,0x500);
+	printk(KERN_WARNING "USB Register Device %x PHY address",ptr);
+
 	result = platform_device_register(&lm2_usb_host_device);
 	result = platform_device_register(&lm2_usb_devs_device);
 	return	result;

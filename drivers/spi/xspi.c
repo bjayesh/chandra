@@ -205,7 +205,11 @@ static int xspi_probe(struct platform_device *pdev)
 	else
 		clk_prepare_enable(xspi->clk);
 #endif
+#if 1
+	xspi->irq = platform_get_irq(pdev, 0);
+#else
 	xspi->irq = irq_of_parse_and_map(pdev->dev.of_node,0);
+#endif
 	if(xspi->irq <= 0){
 		dev_err(&pdev->dev, "could no get IRQ\n");
 		goto out_master_put;
@@ -215,20 +219,21 @@ static int xspi_probe(struct platform_device *pdev)
 	clk_prepare_enable(xspi->clk);
 #endif	/* yamano debug */
 
-	err = request_irq(xspi->irq, xspi_interrupt, 0, dev_name(&pdev->dev), master);
+	err = request_irq(xspi->irq, xspi_interrupt, 0, "xspi", master);
 	if(err){
 		dev_err(&pdev->dev, "could not register IRQ\n");
 		goto out_master_put;
 	}
 
+	dev_info(&pdev->dev, "XSPI I/O %x IRQ %d \n",xspi->reg_base,xspi->irq);
 	/* initialize hardware set up */
 	/* CS0 :SRAM,FRAM,MRAM */
-	xspi_wr(xspi->reg_base, SPI_CLK0, 0x00002020); /* SPI mode 0 300MHz/32 */
-	xspi_wr(xspi->reg_base, SPI_CFG, 0x80000000);
+	xspi_wr(xspi, SPI_CLK0, 0x00002020); /* SPI mode 0 300MHz/32 */
+	xspi_wr(xspi, SPI_CFG, 0x80000000);
 
 	/* CS1 : CPLD */
-	xspi_wr(xspi->reg_base, SPI_CLK1, 0x40002020); /* SPI mode 0 300MHz/64 */
-	xspi_wr(xspi->reg_base, SPI_CFG+4, 0xc00000e0);
+	xspi_wr(xspi, SPI_CLK1, 0x40002020); /* SPI mode 0 300MHz/64 */
+	xspi_wr(xspi, SPI_CFG + 4, 0xc00000e0);
 
 	err = spi_register_master(master);
 	if(err){

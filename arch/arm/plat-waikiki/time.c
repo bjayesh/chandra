@@ -124,7 +124,6 @@ static void clockevent_set_mode(enum clock_event_mode mode,
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
 		writel((SYSCLK/DIVISOR), LOAD(clkevt_base));
-lm2_printk(0xfc000000,"clockevent_set_mode:MODE PERIODIC\n");
 		val = readl( CTLR(clkevt_base));
 /*		val |= CTLR_START | CTLR_CONTINOUS | CTLR_LOAD;*/
 		val = CTLR_START | CTLR_LOAD;
@@ -132,7 +131,6 @@ lm2_printk(0xfc000000,"clockevent_set_mode:MODE PERIODIC\n");
 
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
-lm2_printk(0xfc000000,"clockevent_set_mode:MODE ONESHOT\n");
 //		val = readl(CTLR(clkevt_base));
 //		val &= ~CTLR_CONTINOUS;
 		val = CTLR_START | CTLR_LOAD; 
@@ -274,8 +272,8 @@ void __init lm2_setup_of_timer(void)
 		goto err_prepare_enable_clk;
 	}
 
-	spear_clockevent_init(irq);
-	spear_clocksource_init();
+	lm2_clockevent_init(irq, gpt_base);
+	lm2_clocksource_init(gpt_base);
 
 	return;
 

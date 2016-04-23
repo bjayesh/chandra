@@ -29,4 +29,7 @@ void vexpress_dt_smp_map_io(void);
 extern	int	lm2_sata_register(void);
 extern	int	lm2_usb_register(void);
 extern	int	lm2_sdhci_init(void);
+#ifdef	CONFIG_SPI_XSPI
+extern	int	lm2_xspi_register(void);
+#endif	/* CONFIG_SPI_XSPI */
 #endif

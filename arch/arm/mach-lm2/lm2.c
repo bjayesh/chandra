@@ -375,6 +375,10 @@ static void __init lm2_init(void)
 	platform_device_register(&lm2_rtc_device);
 	platform_device_register(&lm2_i2c_device);
 	platform_device_register(&lm2_wdt_device);
+#ifdef	CONFIG_SPI_XSPI
+	lm2_xspi_register();
+#endif	/* CONFIG_SPI_XSPI */
+
 }
 
 MACHINE_START(LM2, "FujiXerox Waikiki")
