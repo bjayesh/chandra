@@ -10,6 +10,8 @@ pcieportdrv-$(CONFIG_ACPI)	+= portdrv_acpi.o
 
 obj-$(CONFIG_PCIEPORTBUS)	+= pcieportdrv.o
 
+obj-$(CONFIG_PCIE_LM2)		+= synopsys_pcie.o
+
 # Build PCI Express AER if needed
 obj-$(CONFIG_PCIEAER)		+= aer/
 

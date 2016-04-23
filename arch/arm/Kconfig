@@ -373,6 +373,7 @@ config ARCH_LM2
         select GENERIC_CLOCKEVENTS
         select HAVE_CLK
         select HAVE_PATA_PLATFORM
+	select MIGHT_HAVE_PCI
         select ICST
         select NO_IOPORT
         select PLAT_WAIKIKI

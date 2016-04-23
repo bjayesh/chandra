@@ -30,6 +30,11 @@ source "drivers/pci/pcie/aer/Kconfig"
 #
 # PCI Express ASPM
 #
+config PCIE_LM2
+	bool "PCI Express host contorl"
+	depends on ARCH_LM2
+	help
+
 config PCIEASPM
 	bool "PCI Express ASPM control" if EXPERT
 	depends on PCI && PCIEPORTBUS

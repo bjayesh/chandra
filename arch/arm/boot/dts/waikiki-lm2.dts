@@ -220,4 +220,25 @@
 		reg = <0x0 0x04440000 0x0 0x500>;
 		interrupts = <131 132>;
 	};
+        pcie@290000 {
+                compatible = "synopsys,exynos5440-pcie", "snps,dw-pcie";
+                reg = <0x290000 0x1000
+                        0x270000 0x1000
+                        0x271000 0x40>;
+                interrupts = <0 20 0>, <0 21 0>, <0 22 0>;
+/*                clocks = <&clock CLK_PR0_250_O>, <&clock CLK_PB0_250_O>; */
+/*                clock-names = "pcie", "pcie_bus"; */
+                #address-cells = <3>;
+                #size-cells = <2>;
+                device_type = "pci";
+                ranges = <0x00000800 0 0x40000000 0x40000000 0 0x00001000   /* configuration space */
+                          0x81000000 0 0          0x40001000 0 0x00010000   /* downstream I/O */
+                          0x82000000 0 0x40011000 0x40011000 0 0x1ffef000>; /* non-prefetchable memory */
+                #interrupt-cells = <1>;
+                interrupt-map-mask = <0 0 0 0>;
+                interrupt-map = <0x0 0 &gic 53>;
+                num-lanes = <4>;
+                status = "disabled";
+        };
+
 };

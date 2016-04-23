@@ -1200,7 +1200,7 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 static int __init synopsys_pcie_probe(struct platform_device *pdev)
 {
 	struct pcie_port *pp;
-#if 1
+#if 0
 #else
 	struct device_node *np = pdev->dev.of_node;
 	struct of_pci_range range;
@@ -1218,7 +1218,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 
 	pp->dev = &pdev->dev;
 
-#if 1
+#if 0
 	pp->resetgen.name       = "resetgen";
 	pp->resetgen.start      = max_t(resource_size_t, PCIBIOS_MIN_IO, RSTGEN_BASE);
 	pp->resetgen.end        = min_t(resource_size_t, IO_SPACE_LIMIT, RSTGEN_BASE + 0x10000);
@@ -1353,7 +1353,7 @@ static struct platform_driver synopsys_pcie_driver = {
 	.driver = {
 		.name	= "synopsys-pcie",
 		.owner	= THIS_MODULE,
-//		.of_match_table = of_match_ptr(synopsys_pcie_of_match),
+		.of_match_table = of_match_ptr(synopsys_pcie_of_match),
 	},
 };
 
