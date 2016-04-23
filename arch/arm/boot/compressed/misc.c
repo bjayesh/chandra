@@ -23,7 +23,7 @@ unsigned int __machine_arch_type;
 #include <linux/linkage.h>
 
 static void putstr(const char *ptr);
-extern void error(char *x);
+/*extern void error(char *x);*/
 
 #include CONFIG_UNCOMPRESS_INCLUDE
 
@@ -103,13 +103,27 @@ extern char input_data[];
 extern char input_data_end[];
 
 unsigned char *output_data;
-
 unsigned long free_mem_ptr;
 unsigned long free_mem_end_ptr;
 
 #ifndef arch_error
 #define arch_error(x)
 #endif
+
+static void	num_to_string(unsigned int data)
+{
+	int i,j;
+	char	num;
+
+	for(i=7,j=0; i>=0 ; i--,j++){
+		num = (data >> (i * 4)) & 0x0000000f;
+		if((num - 9) > 0)
+			putc((num-10) + 0x41);
+		else
+			putc(num + 0x30);
+	}
+	flush();
+}
 
 void error(char *x)
 {
@@ -136,17 +150,41 @@ decompress_kernel(unsigned long output_start, unsigned long free_mem_ptr_p,
 		int arch_id)
 {
 	int ret;
-
 	output_data		= (unsigned char *)output_start;
 	free_mem_ptr		= free_mem_ptr_p;
 	free_mem_end_ptr	= free_mem_ptr_end_p;
 	__machine_arch_type	= arch_id;
 
 	arch_decomp_setup();
+#if 0
+	putstr("Debug mode enter\n");
 
+
+	num_to_string((unsigned int)input_data);
+	putstr("\n");
+	num_to_string((unsigned int)input_data_end);
+	putstr("\n");
+	num_to_string((unsigned int)in_dat);
+	putstr("\n");
+	num_to_string((unsigned int)in_dat_end);
+	putstr("\n");
+	num_to_string((unsigned int)output_data);
+	putstr("\n");
+
+
+	ret = getc();
+	putc(ret);
+#endif	/* yamano debug */
 	putstr("Uncompressing Linux...");
 	ret = do_decompress(input_data, input_data_end - input_data,
 			    output_data, error);
+#if 0
+	if (ret == -6)	putstr("retunr -6");
+	if (ret == -5)	putstr("retunr -5");
+	if (ret == -4)	putstr("retunr -4");
+	if (ret == -3)	putstr("retunr -3");
+	if (ret == -2)	putstr("retunr -2");
+#endif
 	if (ret)
 		error("decompressor returned an error");
 	else
