@@ -180,7 +180,7 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 			lm2_i2c_mrecv(id);	/* recv */
 		}else{
 			for(i = 0 ; i < id->len ; i++){
-				writel(msgs->buf[idx],id->iobase+EDR1+i);
+				writel(msgs->buf[idx],id->iobase+EDR1+i*4);
 				idx++;
 			}
 			lm2_i2c_msend(id);	/* send */
@@ -196,7 +196,7 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 
 		if(msgs->flags & I2C_M_RD) {
 			for(i = 0 ; i < id->len ; i++){
-				msgs->buf[idx] = (char)readl(id->iobase+EDR1+i);
+				msgs->buf[idx] = (char)readl(id->iobase+EDR1+i*4);
 				idx++;
 			}
 		}
@@ -315,6 +315,7 @@ static int lm2_i2c_probe(struct platform_device *pdev)
 	}
 	dev_info(&pdev->dev, "I2C Driver Registered iomem = %x misc = %x IRQ = %d\n",
 		 id->iobase, id->miscbase, id->irq);
+#if 0
 	dev_info(&pdev->dev, "EMSR=%x\n",(int)*((int *)(id->iobase+EMSR)));
 	dev_info(&pdev->dev, "ESAR=%x\n",(int)*((int *)(id->iobase+ESAR)));
 	dev_info(&pdev->dev, "EWAR=%x\n",(int)*((int *)(id->iobase+EWAR)));
@@ -322,6 +323,7 @@ static int lm2_i2c_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "ESTR=%x\n",(int)*((int *)(id->iobase+ESTR)));
 	dev_info(&pdev->dev, "EECR=%x\n",(int)*((int *)(id->iobase+EECR)));
 	dev_info(&pdev->dev, "EWWT=%x\n",(int)*((int *)(id->iobase+EWWT)));
+#endif
 	return 0;
 
 out4:
