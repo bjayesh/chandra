@@ -69,7 +69,7 @@ static	struct platform_device lm2_sata_device = {
 	.name	= "ahci",
 	.id	= -1,
 	.dev	= {
-		.platform_data	= &lm2_sata_pdata,
+//		.platform_data	= &lm2_sata_pdata,
 		.dma_mask	= &lm2_sata_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(64),
 	},
