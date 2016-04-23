@@ -45,6 +45,7 @@ struct pcie_port_info {
 //	phys_addr_t	mem_bus_addr;
 	struct resource		cfg;			/* ohkuma */
 	void __iomem		*va_cfg;
+	int			irq;
 	struct resource		io;			/* ohkuma */
 	struct resource		mem;			/* ohkuma */
 };
@@ -331,6 +332,7 @@ static int synopsys_pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "%s entry\n",__FUNCTION__);
 #endif
+	
 	return pp->irq;
 }
 
@@ -673,8 +675,9 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 	{
 		case 1: 
 			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
+
 			// window 0
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0);
+			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0X);
 //			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
 			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  0x05000000);
 //			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0X, AXI_ADDR_H_DDR);
@@ -698,6 +701,8 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE1_MSI);
 			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE1_MSI);
 #endif 	/* not used */
+			/* INT A Enable */
+			synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_INT_MISC_EN, 0x00000020);
 			break;
 		case 2: 
 			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
@@ -1038,6 +1043,9 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 		dev_err(pp->dev, "PCIe can't Data link Up\n");
 		return	-1;
 	}
+
+	/* host bridge interrupt routing enable */
+	synopsys_writel(pciewrap_base + PCIE_INT_EN, 0x00000001);
 //
 //	adr_base = 0x400000000ULL;
 //	conFig = ioremap(adr_base, 0x10000000);
@@ -1111,8 +1119,8 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 	if (IS_ERR(pp->pciegen3_base3))
 		return PTR_ERR(pp->pciegen3_base3);
 	
-	pp->irq = IRQ_V2M_PCIE;
-//	pp->irq = platform_get_irq(pdev, 1);
+//	pp->irq = IRQ_V2M_PCIE;
+	pp->irq = platform_get_irq(pdev, 0);
 	if (!pp->irq) {
 		dev_err(pp->dev, "add_pcie_port: failed to get irq\n");
 		return -ENODEV;
@@ -1195,7 +1203,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 		}
 	}
 #endif
-
+	/* Configureation resource */
 	pp->io.name	= "Multiport";
 	pp->io.start	= 0x410000000ULL;
 	pp->io.end	= 0x41000ffffULL;
@@ -1212,6 +1220,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->config[0].mem_size = resource_size(&pp->mem);
 //	pp->config[0].mem_bus_addr	= 0x400000000ULL;
 
+	pp->config[0].irq = LM2_IRQ_PCIE1;	/* device interrupt by port */
 /*
 	pp->clk = devm_clk_get(&pdev->dev, "pcie");
 	if (IS_ERR(pp->clk)) {

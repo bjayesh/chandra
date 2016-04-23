@@ -330,6 +330,11 @@ static struct resource lm2_pcie_resource[]={
                .end    = 0x04a6ffff,
                .flags  = IORESOURCE_MEM,
        },
+       {	/* host bridge interrput */
+               .start  = LM2_IRQ_PCIE_BUS,
+               .end    = LM2_IRQ_PCIE_BUS,
+               .flags  = IORESOURCE_IRQ,
+       },
 };
 
 static	struct platform_device lm2_pcie_device = {

@@ -29,6 +29,7 @@
 
 // PAB_PEX_AMAP_CTRL only applies to root complex
 #define PAB_PEX_AMAP_CTRL0      0x04000005 // 64MB prefetchable (DDR access)
+#define PAB_PEX_AMAP_CTRL0X      0x80000005 // 2G prefetchable (DDR access)
 #define PAB_PEX_AMAP_CTRL1      0x00100005 // 1MB  prefetchable (SP access)
 #define PAB_PEX_AMAP_CTRL2      0x04000007 // 64MB non-prefetchable (XYZ access)
 #define PAB_PEX_AMAP_CTRL3      0x00000401 // Interrupt for Mailbox, size of window is 1 KB (must be >0)
@@ -211,6 +212,8 @@
 #define PCIE3_PMEM_BASE_U		0x00001000
 #define PCIE3_PMEM_LIMIT_U		0x000022FF
 
+#define	PCIE_INT_EN			0x0000005C
+
 
 //--------------------------------------------------------------
 // - define offset address in DDR that will be used by tests
@@ -264,6 +267,7 @@
 #define	PCIE_GPEXD_CORE_CLK_RATIO	0x0440
 #define	PCIE_PAB_CTRL			0x0808
 #define	PCIE_PAB_AXI_PIO_CTRL0		0x0844
+#define	PCIE_PAB_AXI_INT_MISC_EN	0x0BEC
 #define	PCIE_PAB_AXI_AMAP_CTRL0		0x0CA4
 #define	PCIE_PAB_AXI_AMAP_AXI_BASE0	0x0CA8
 #define	PCIE_PAB_AXI_AMAP_PEX_BASEL0	0x0CAC
