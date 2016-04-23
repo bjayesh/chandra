@@ -173,7 +173,7 @@ static int xspi_probe(struct platform_device *pdev)
 //	master->dev.of_node = pdev->dev.of_node;
 	master->mode_bits = SPI_MODE_0;
 //	master->bits_per_word_mask = BIT(8 - 1);
-	master->bus_num = -1;
+	master->bus_num = pdev->id;
 	master->num_chipselect = 2;
 	master->transfer_one_message = xspi_transfer_one;
 	platform_set_drvdata(pdev, master);

@@ -47,18 +47,18 @@ static	struct platform_device	lm2_xspi_device = {
 	.num_resources	= ARRAY_SIZE( lm2_xspi_resource ),
 	.resource	= lm2_xspi_resource,
 };
-
+#if 0
 static	struct platform_device	lm2_spidev_device = {
 	.name	= "spidev",
 	.id	= -1,
 };
-
+#endif
 int	__init lm2_xspi_register(void)
 {
 	int	result;
 
 	spi_register_board_info(lm2_spi_devices,ARRAY_SIZE(lm2_spi_devices));
-	result = platform_device_register( &lm2_spidev_device );
+//	result = platform_device_register( &lm2_spidev_device );
 	result = platform_device_register( &lm2_xspi_device );
 	return	result;
 }
