@@ -25,6 +25,9 @@
 #include "sd.h"
 #include "sd_ops.h"
 
+static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
+			    struct mmc_card *oldcard);
+
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -668,6 +671,39 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_MMC_LOCK
+static ssize_t mmc_sd_unlock_retry_store(struct device *dev,
+                                         struct device_attribute *att,
+                                        const char *data, size_t len)
+{
+	int err;
+	struct mmc_card *card = mmc_dev_to_card(dev);
+	struct mmc_host *host = card->host;
+	BUG_ON(!card);
+	BUG_ON(!host);
+
+	mmc_claim_host(host);
+	if (!mmc_card_locked(card)) {
+		mmc_release_host(host);
+		return len;
+	}
+	err = mmc_sd_init_card(host, host->ocr, card);
+	mmc_release_host(host);
+	if (err)
+		return err;
+	device_release_driver(dev);
+	err = device_attach(dev);
+	if (err < 0)
+		return err;
+	return len;
+}
+
+static DEVICE_ATTR(lock, S_IWUSR | S_IRUGO,
+                   mmc_lock_show, mmc_lock_store);
+static DEVICE_ATTR(unlock_retry, S_IWUSR,
+                   NULL, mmc_sd_unlock_retry_store);
+#endif /* CONFIG_MMC_LOCK */
+
 MMC_DEV_ATTR(cid, "%08x%08x%08x%08x\n", card->raw_cid[0], card->raw_cid[1],
 	card->raw_cid[2], card->raw_cid[3]);
 MMC_DEV_ATTR(csd, "%08x%08x%08x%08x\n", card->raw_csd[0], card->raw_csd[1],
@@ -697,6 +733,10 @@ static struct attribute *sd_std_attrs[] = {
 	&dev_attr_name.attr,
 	&dev_attr_oemid.attr,
 	&dev_attr_serial.attr,
+#ifdef CONFIG_MMC_LOCK
+	&dev_attr_lock.attr,
+	&dev_attr_unlock_retry.attr,
+#endif /* CONFIG_MMC_LOCK */
 	NULL,
 };
 
@@ -914,55 +954,75 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 	int err;
 	u32 cid[4];
 	u32 rocr = 0;
+	u32 status;
 
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
-	err = mmc_sd_get_cid(host, ocr, cid, &rocr);
-	if (err)
-		return err;
-
-	if (oldcard) {
-		if (memcmp(cid, oldcard->raw_cid, sizeof(cid)) != 0)
-			return -ENOENT;
-
+	/* Retry init of locked card */
+	if (oldcard && mmc_card_locked(oldcard)) {
 		card = oldcard;
+		oldcard = NULL;
+		rocr = card->raw_ocr;
 	} else {
+		err = mmc_sd_get_cid(host, ocr, cid, &rocr);
+		if (err)
+			return err;
+
+		if (oldcard) {
+			if (memcmp(cid, oldcard->raw_cid, sizeof(cid)) != 0)
+				return -ENOENT;
+			card = oldcard;
+		} else {
+			/*
+			 * Allocate card structure.
+			 */
+			card = mmc_alloc_card(host, &sd_type);
+			if (IS_ERR(card))
+				return PTR_ERR(card);
+
+			card->type = MMC_TYPE_SD;
+			memcpy(card->raw_cid, cid, sizeof(card->raw_cid));
+		}
+
 		/*
-		 * Allocate card structure.
+		 * For native busses:  get card RCA and quit open drain mode.
 		 */
-		card = mmc_alloc_card(host, &sd_type);
-		if (IS_ERR(card))
-			return PTR_ERR(card);
+		if (!mmc_host_is_spi(host)) {
+			err = mmc_send_relative_addr(host, &card->rca);
+			if (err)
+				goto free_card;
+		}
+		if (!oldcard) {
+			err = mmc_sd_get_csd(host, card);
+			if (err)
+				goto free_card;
 
-		card->type = MMC_TYPE_SD;
-		memcpy(card->raw_cid, cid, sizeof(card->raw_cid));
+			mmc_decode_cid(card);
+		}
+		/*
+		 * Select card, as all following commands rely on that.
+		 */
+		if (!mmc_host_is_spi(host)) {
+			err = mmc_select_card(card);
+			if (err)
+				goto free_card;
+		}
 	}
 
-	/*
-	 * For native busses:  get card RCA and quit open drain mode.
-	 */
-	if (!mmc_host_is_spi(host)) {
-		err = mmc_send_relative_addr(host, &card->rca);
-		if (err)
-			goto free_card;
-	}
-
-	if (!oldcard) {
-		err = mmc_sd_get_csd(host, card);
-		if (err)
-			goto free_card;
-
-		mmc_decode_cid(card);
-	}
-
-	/*
-	 * Select card, as all following commands rely on that.
-	 */
-	if (!mmc_host_is_spi(host)) {
-		err = mmc_select_card(card);
-		if (err)
-			goto free_card;
+	/* If card is locked, skip the rest of the init */
+	err = mmc_send_status(card, &status);
+	if (err)
+		goto free_card;
+	if (status & R1_CARD_IS_LOCKED) {
+		pr_info("%s: card is locked.\n", mmc_hostname(card->host));
+		err = mmc_unlock_card(card);
+		if (err != 0) {
+			pr_warn("%s: Card unlock failed.\n",
+				mmc_hostname(card->host));
+			card->raw_ocr = rocr;
+			goto locked_return;
+		}
 	}
 
 	err = mmc_sd_setup_card(host, card, oldcard != NULL);
@@ -1005,6 +1065,7 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 
+locked_return:
 	host->card = card;
 	return 0;
 

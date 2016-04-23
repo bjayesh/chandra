@@ -13,6 +13,8 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/scatterlist.h>
+#include <linux/key.h>
+#include <linux/err.h>
 
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
@@ -607,3 +609,108 @@ int mmc_send_hpi_cmd(struct mmc_card *card, u32 *status)
 
 	return 0;
 }
+#ifdef CONFIG_MMC_LOCK
+/**
+ *     mmc_lock_unlock - send LOCK_UNLOCK command to a specific card.
+ *     @card: card to which the LOCK_UNLOCK command should be sent
+ *     @key: key containing the MMC password
+ *     @mode: LOCK_UNLOCK mode
+ *
+ */
+int mmc_lock_unlock(struct mmc_card *card, struct mmc_password *password,
+			int mode)
+{
+	struct mmc_request mrq;
+	struct mmc_command cmd;
+	struct mmc_data data;
+	struct scatterlist sg;
+	unsigned long erase_timeout;
+	int err;
+	u8 *data_buf;
+	int buffer_size;
+
+	buffer_size = 512;
+	data_buf = kzalloc(buffer_size, GFP_KERNEL);
+	if (!data_buf)
+		return -ENOMEM;
+	data_buf[0] |= mode;
+	if (!(mode & MMC_LOCK_MODE_ERASE)) {
+		data_buf[1] = password->length;
+		memcpy(data_buf + 2, password->password, password->length);
+	}
+
+	memset(&cmd, 0, sizeof(struct mmc_command));
+	cmd.opcode = MMC_SET_BLOCKLEN;
+	cmd.arg = buffer_size;
+	cmd.flags = MMC_RSP_R1 | MMC_CMD_AC;
+	err = mmc_wait_for_cmd(card->host, &cmd, MMC_CMD_RETRIES);
+	if (err)
+		goto out;
+	memset(&cmd, 0, sizeof(struct mmc_command));
+	cmd.opcode = MMC_LOCK_UNLOCK;
+	cmd.arg = 0;
+	cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+
+	memset(&data, 0, sizeof(struct mmc_data));
+	mmc_set_data_timeout(&data, card);
+	data.blksz = buffer_size;
+	data.blocks = 1;
+	data.flags = MMC_DATA_WRITE;
+	data.sg = &sg;
+	data.sg_len = 1;
+
+	memset(&mrq, 0, sizeof(struct mmc_request));
+	mrq.cmd = &cmd;
+	mrq.data = &data;
+
+	sg_init_one(&sg, data_buf, buffer_size);
+	mmc_wait_for_req(card->host, &mrq);
+	if (cmd.error) {
+		err = cmd.error;
+		goto out;
+	}
+	if (data.error) {
+		err = data.error;
+		goto out;
+	}
+
+	memset(&cmd, 0, sizeof(struct mmc_command));
+	cmd.opcode = MMC_SEND_STATUS;
+	cmd.arg = card->rca << 16;
+	cmd.flags = MMC_RSP_R1 | MMC_CMD_AC;
+
+	/* set timeout for forced erase operation to 3 min. (see MMC spec) */
+	erase_timeout = jiffies + 180 * HZ;
+	do {
+		/*
+		 * we cannot use "retries" here because the
+		 * R1_LOCK_UNLOCK_FAILED bit is cleared by subsequent reads to
+		 * the status register, hiding the error condition
+		 */
+		err = mmc_wait_for_cmd(card->host, &cmd, 0);
+		if (err)
+			break;
+		/* the other modes don't need timeout checking */
+		if (!(mode & MMC_LOCK_MODE_ERASE))
+			continue;
+		if (time_after(jiffies, erase_timeout) &&
+			!(cmd.resp[0] & R1_READY_FOR_DATA)) {
+			dev_err(&card->dev, "forced erase timed out\n");
+			err = -ETIMEDOUT;
+			break;
+		}
+	} while (!(cmd.resp[0] & R1_READY_FOR_DATA));
+	if (cmd.resp[0] & R1_LOCK_UNLOCK_FAILED) {
+		dev_dbg(&card->dev, "LOCK_UNLOCK operation failed\n");
+		err = -EIO;
+	}
+	if (cmd.resp[0] & R1_CARD_IS_LOCKED)
+		mmc_card_set_locked(card);
+	else
+		mmc_card_clear_locked(card);
+
+out:
+	kfree(data_buf);
+	return err;
+}
+#endif /* CONFIG_MMC_LOCK */

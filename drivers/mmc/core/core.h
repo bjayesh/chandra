@@ -81,5 +81,18 @@ void mmc_add_card_debugfs(struct mmc_card *card);
 void mmc_remove_card_debugfs(struct mmc_card *card);
 
 void mmc_init_context_info(struct mmc_host *host);
+
+/* Lock/Unlock functionality */
+#define MMC_PASSWORD_MAX 16
+struct mmc_password {
+	char password[MMC_PASSWORD_MAX];
+	int length;
+};
+int mmc_unlock_card(struct mmc_card *card);
+int mmc_get_password(struct mmc_card *card, struct mmc_password *password);
+ssize_t mmc_lock_show(struct device *dev, struct device_attribute *att,
+                      char *buf);
+ssize_t mmc_lock_store(struct device *dev, struct device_attribute *att,
+                       const char *data, size_t len);
 #endif
 

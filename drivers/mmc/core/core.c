@@ -28,6 +28,7 @@
 #include <linux/random.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/key-type.h>
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
@@ -2749,6 +2750,129 @@ void mmc_init_context_info(struct mmc_host *host)
 	init_waitqueue_head(&host->context_info.wait);
 }
 
+#ifdef CONFIG_MMC_LOCK
+static int mmc_key_instantiate(struct key *key,
+                               struct key_preparsed_payload *prep)
+{
+	char *payload;
+
+	if (prep->datalen <= 0 || prep->datalen > MMC_PASSWORD_MAX ||
+	   !prep->data) {
+		pr_warn("Invalid data\n");
+		return  -EINVAL;
+	}
+
+	payload = kmalloc(prep->datalen, GFP_KERNEL);
+	if (!payload)
+		return -ENOMEM;
+	memcpy(payload, prep->data, prep->datalen);
+	key->payload.data = payload;
+	key->datalen = prep->datalen;
+	return 0;
+}
+
+static int mmc_key_match(const struct key *key, const void *description)
+{
+	pr_debug("mmc_key_match: %s, %s\n",
+		key->description, (char *)description);
+	return strcmp(key->description, description) == 0;
+}
+
+/*
+ * dispose of the data dangling from the corpse of a mmc key
+ */
+static void mmc_key_destroy(struct key *key)
+{
+	kfree(key->payload.data);
+}
+
+struct key_type key_type_mmc = {
+	.name		= "mmc",
+	.instantiate	= mmc_key_instantiate,
+	.match		= mmc_key_match,
+	.destroy	= mmc_key_destroy,
+};
+
+int mmc_get_password(struct mmc_card *card, struct mmc_password *password)
+{
+	struct key *mmc_key;
+	char key_desc[(sizeof(card->raw_cid) * 2) + 1];
+
+	/* Use the CID to uniquely identify the card */
+	snprintf(key_desc, sizeof(key_desc), "%08x%08x%08x%08x",
+		card->raw_cid[0], card->raw_cid[1],
+		card->raw_cid[2], card->raw_cid[3]);
+
+	mmc_key = request_key(&key_type_mmc, key_desc,
+				"password");
+	if (IS_ERR(mmc_key)) {
+		dev_warn(&card->dev, "Error, request_key %ld\n",
+			PTR_ERR(mmc_key));
+		return PTR_ERR(mmc_key);
+	}
+	dev_dbg(&card->dev, "Found matching key\n");
+	memcpy(&password->password, mmc_key->payload.data,
+		mmc_key->datalen);
+	password->length = mmc_key->datalen;
+	key_put(mmc_key);
+
+	return 0;
+}
+
+static inline int mmc_register_key_type(void)
+{
+	return register_key_type(&key_type_mmc);
+}
+
+static inline void mmc_unregister_key_type(void)
+{
+	unregister_key_type(&key_type_mmc);
+}
+
+int mmc_unlock_card(struct mmc_card *card)
+{
+	int stat;
+	struct mmc_password password;
+
+	mmc_card_set_locked(card);
+	stat = mmc_get_password(card, &password);
+	if (stat) {
+		pr_warn("%s: Cannot find matching key\n",
+			mmc_hostname(card->host));
+		return stat;
+	}
+	stat = mmc_lock_unlock(card, &password, MMC_LOCK_MODE_UNLOCK);
+	if (stat)
+		pr_warn("%s: Password failed to unlock card\n",
+			mmc_hostname(card->host));
+	else
+		mmc_card_clear_locked(card);
+	return stat;
+}
+
+#else /* CONFIG_MMC_LOCK */
+
+int mmc_get_password(struct mmc_card *card, struct mmc_password *password)
+{
+	return -ENOKEY;
+}
+
+static inline int mmc_register_key_type(void)
+{
+	return 0;
+}
+
+static inline void mmc_unregister_key_type(void)
+{
+}
+
+int mmc_unlock_card(struct mmc_card *card)
+{
+	return -ENOKEY;
+}
+
+#endif /* CONFIG_MMC_LOCK */
+
 static int __init mmc_init(void)
 {
 	int ret;
@@ -2769,8 +2893,14 @@ static int __init mmc_init(void)
 	if (ret)
 		goto unregister_host_class;
 
+	ret = mmc_register_key_type();
+	if (ret)
+		goto unregister_sdio_bus;
+
 	return 0;
 
+unregister_sdio_bus:
+	sdio_unregister_bus();
 unregister_host_class:
 	mmc_unregister_host_class();
 unregister_bus:
@@ -2783,6 +2913,7 @@ destroy_workqueue:
 
 static void __exit mmc_exit(void)
 {
+	mmc_unregister_key_type();
 	sdio_unregister_bus();
 	mmc_unregister_host_class();
 	mmc_unregister_bus();

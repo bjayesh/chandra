@@ -2377,6 +2377,14 @@ static int mmc_blk_probe(struct mmc_card *card)
 	struct mmc_blk_data *md, *part_md;
 	char cap_str[10];
 
+	/* if the card is locked, don't bring up the block layer because
+	 * all reads and writes will fail.
+	 */
+	if (mmc_card_locked(card)) {
+		pr_debug("%s: %s - Probe aborted because card is locked\n",
+			mmc_hostname(card->host), __func__);
+		return -ENODEV;
+	}
 	/*
 	 * Check that the card supports the command class(es) we need.
 	 */
