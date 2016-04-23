@@ -42,7 +42,7 @@ const char *usb_otg_state_string(enum usb_otg_state state)
 	return names[state];
 }
 EXPORT_SYMBOL_GPL(usb_otg_state_string);
-
+#if 0
 const char *usb_speed_string(enum usb_device_speed speed)
 {
 	static const char *const names[] = {
@@ -59,6 +59,24 @@ const char *usb_speed_string(enum usb_device_speed speed)
 	return names[speed];
 }
 EXPORT_SYMBOL_GPL(usb_speed_string);
+#else
+static const char *const speed_names[] = {
+        [USB_SPEED_UNKNOWN] = "UNKNOWN",
+        [USB_SPEED_LOW] = "low-speed",
+        [USB_SPEED_FULL] = "full-speed",
+        [USB_SPEED_HIGH] = "high-speed",
+        [USB_SPEED_WIRELESS] = "wireless",
+        [USB_SPEED_SUPER] = "super-speed",
+};
+
+const char *usb_speed_string(enum usb_device_speed speed)
+{
+        if (speed < 0 || speed >= ARRAY_SIZE(speed_names))
+                speed = USB_SPEED_UNKNOWN;
+        return speed_names[speed];
+}
+EXPORT_SYMBOL_GPL(usb_speed_string);
+#endif
 
 const char *usb_state_string(enum usb_device_state state)
 {
@@ -112,6 +130,34 @@ enum usb_dr_mode of_usb_get_dr_mode(struct device_node *np)
 	return USB_DR_MODE_UNKNOWN;
 }
 EXPORT_SYMBOL_GPL(of_usb_get_dr_mode);
+
+/**
+ *  * of_usb_get_maximum_speed - Get maximum requested speed for a given USB
+ *   * controller.
+ *    * @np: Pointer to the given device_node
+ *     *
+ *      * The function gets the maximum speed string from property "maximum-speed",
+ *       * and returns the corresponding enum usb_device_speed.
+ *        */
+enum usb_device_speed of_usb_get_maximum_speed(struct device_node *np)
+{
+        const char *maximum_speed;
+        int err;
+        int i;
+
+        err = of_property_read_string(np, "maximum-speed", &maximum_speed);
+        if (err < 0)
+                return USB_SPEED_UNKNOWN;
+
+        for (i = 0; i < ARRAY_SIZE(speed_names); i++)
+                if (strcmp(maximum_speed, speed_names[i]) == 0)
+                        return i;
+
+        return USB_SPEED_UNKNOWN;
+}
+EXPORT_SYMBOL_GPL(of_usb_get_maximum_speed);
+
+
 #endif
 
 MODULE_LICENSE("GPL");

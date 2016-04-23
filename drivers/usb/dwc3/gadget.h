@@ -75,13 +75,13 @@ struct dwc3;
 
 /* DEPXFERCFG parameter 0 */
 #define DWC3_DEPXFERCFG_NUM_XFER_RES(n)	((n) & 0xffff)
-
+#if 0
 struct dwc3_gadget_ep_cmd_params {
 	u32	param2;
 	u32	param1;
 	u32	param0;
 };
-
+#endif
 /* -------------------------------------------------------------------------- */
 
 #define to_dwc3_request(r)	(container_of(r, struct dwc3_request, request))
