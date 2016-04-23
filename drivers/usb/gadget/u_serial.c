@@ -552,8 +552,23 @@ static void gs_rx_push(unsigned long _port)
 	/* Push from tty to ldisc; without low_latency set this is handled by
 	 * a workqueue, so we won't get callbacks and can hold port_lock
 	 */
+#ifdef	CONFIG_PREEMPT_RT_FULL 	/* preent-rt patch */
+	if (tty && do_push) {
+		/*
+		 * Drop the lock here since it might end up calling
+		 * gs_flush_chars, which takes the lock.
+		 */
+		spin_unlock_irq(&port->port_lock);
+		tty_flip_buffer_push(&port->port);
+		spin_lock_irq(&port->port_lock);
+		
+		/* tty may have been closed */
+		tty = port->port.tty;
+	}
+#else	/* CONFIG_PREEMPT_RT_FULL */
 	if (do_push)
 		tty_flip_buffer_push(&port->port);
+#endif	/* CONFIG_PREEMPT_RT_FULL */
 
 
 	/* We want our data queue to become empty ASAP, keeping data
