@@ -5526,7 +5526,7 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 	 * head, otherwise try next time
 	 */
 #ifdef	WR_E1000E_WORKAROUND
-	if (e1000_maybe_stop_tx(tx_ring, count + 220))
+	if (e1000_maybe_stop_tx(tx_ring, count + 200))
 #else
 	if (e1000_maybe_stop_tx(tx_ring, count + 2))
 #endif  /* WR_E1000E_WORKAROUND */
