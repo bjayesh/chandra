@@ -7456,8 +7456,8 @@ void __might_sleep(const char *file, int line, int preempt_offset)
 {
 	static unsigned long prev_jiffy;	/* ratelimiting */
 
-	rcu_sleep_check(); /* WARN_ON_ONCE() by default, no rate limit reqd. */
-	if ((preempt_count_equals(preempt_offset) && !irqs_disabled() &&
+/*	rcu_sleep_check(); */ /* WARN_ON_ONCE() by default, no rate limit reqd. */
+/*	if ((preempt_count_equals(preempt_offset) && !irqs_disabled() &&
 	     !is_idle_task(current)) ||
 	    system_state != SYSTEM_RUNNING || oops_in_progress)
 		return;
@@ -7483,7 +7483,7 @@ void __might_sleep(const char *file, int line, int preempt_offset)
 		pr_cont("\n");
 	}
 #endif
-	dump_stack();
+	dump_stack(); */
 }
 EXPORT_SYMBOL(__might_sleep);
 #endif
