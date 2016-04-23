@@ -103,8 +103,13 @@ void __init add_static_vm_early(struct static_vm *svm)
 	list_add_tail(&svm->list, &curr_svm->list);
 }
 
+#ifdef	CONFIG_ARM_LPAE
+int ioremap_page(unsigned long virt, phys_addr_t phys,
+		 const struct mem_type *mtype)
+#else
 int ioremap_page(unsigned long virt, unsigned long phys,
 		 const struct mem_type *mtype)
+#endif	/* CONFIG_ARM_LPAE yamano */
 {
 	return ioremap_page_range(virt, virt + PAGE_SIZE, phys,
 				  __pgprot(mtype->prot_pte));
@@ -335,7 +340,12 @@ void __iomem *__arm_ioremap_caller(phys_addr_t phys_addr, size_t size,
 	unsigned int mtype, void *caller)
 {
 	phys_addr_t last_addr;
- 	unsigned long offset = phys_addr & ~PAGE_MASK;
+#ifdef	CONFIG_ARM__LPAE
+ 	phys_addr_t offset;
+#else
+ 	unsigned long offset;
+#endif	/* CONFIG_ARM_LPAE yamano */
+	offset = phys_addr & ~PAGE_MASK;
  	unsigned long pfn = __phys_to_pfn(phys_addr);
 
  	/*
