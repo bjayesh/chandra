@@ -151,6 +151,7 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 	struct usb_host_endpoint *endpoint;
 	int n, i, j, retval;
 
+dev_info(ddev, "usb_parse_endpoint\n");
 	d = (struct usb_endpoint_descriptor *) buffer;
 	buffer += d->bLength;
 	size -= d->bLength;
@@ -312,6 +313,7 @@ static int usb_parse_interface(struct device *ddev, int cfgno,
 	int len, retval;
 	int num_ep, num_ep_orig;
 
+dev_warn(ddev, "usb_parse_interface\n");
 	d = (struct usb_interface_descriptor *) buffer;
 	buffer += d->bLength;
 	size -= d->bLength;
@@ -422,6 +424,7 @@ static int usb_parse_configuration(struct usb_device *dev, int cfgidx,
 	u8 inums[USB_MAXINTERFACES], nalts[USB_MAXINTERFACES];
 	unsigned iad_num = 0;
 
+dev_warn(ddev, "usb_parse_configuration\n");
 	memcpy(&config->desc, buffer, USB_DT_CONFIG_SIZE);
 	if (config->desc.bDescriptorType != USB_DT_CONFIG ||
 	    config->desc.bLength < USB_DT_CONFIG_SIZE ||
@@ -661,6 +664,7 @@ int usb_get_configuration(struct usb_device *dev)
 	unsigned char *bigbuffer;
 	struct usb_config_descriptor *desc;
 
+dev_err(ddev, "usb_get_configuration\n");
 	cfgno = 0;
 	result = -ENOMEM;
 	if (ncfg > USB_MAXCONFIG) {

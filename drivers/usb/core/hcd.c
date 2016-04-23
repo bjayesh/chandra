@@ -2497,6 +2497,7 @@ int usb_add_hcd(struct usb_hcd *hcd,
 
 	dev_info(hcd->self.controller, "%s\n", hcd->product_desc);
 
+dev_info(hcd->self.controller, "usb_add_hcd\n");
 	/* Keep old behaviour if authorized_default is not in [0, 1]. */
 	if (authorized_default < 0 || authorized_default > 1)
 		hcd->authorized_default = hcd->wireless? 0 : 1;
