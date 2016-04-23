@@ -1294,6 +1294,9 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	struct of_pci_range_parser parser;
 #endif
 	int ret;
+	struct device_node *np;
+
+
 	pp = devm_kzalloc(&pdev->dev, sizeof(*pp), GFP_KERNEL);
 	if (!pp) {
 		dev_err(pp->dev, "synopsys_pcie_probe: no memory for pcie port\n");

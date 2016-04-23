@@ -566,10 +566,17 @@ static const struct of_device_id lm2_dt_bus_match[] __initconst = {
         {}
 };
 
+static const struct of_device_id lm2_pcie_match[] = {
+        {
+                .compatible = "synopsys-pcie",
+        },
+};
+
 static void __init lm2_dt_init(void)
 {
         void __iomem *virt_addr;
-
+	struct device_node	*node;
+	const struct	of_device_id *of_id;
 	lm2_init_clock();
 	/* Serial DTB ok */
 	virt_addr = ioremap(LM2_UART_1_BASE,0x32);
@@ -597,10 +604,18 @@ static void __init lm2_dt_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
-	platform_device_register(&lm2_pcie_device);
+//	platform_device_register(&lm2_pcie_device);
 
 //	l2x0_of_init(0x00400000, 0xfe0fffff);
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
+	node = of_find_matching_node(NULL,lm2_pcie_match);
+	if(node){
+		of_id = of_match_node(lm2_pcie_match,node);
+		if(of_id)
+			platform_device_register(&lm2_pcie_device);
+		of_node_put(node);
+	}
+		
 	lm2_cipui_tim_init();
 }
 
