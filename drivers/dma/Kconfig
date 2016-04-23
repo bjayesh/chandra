@@ -35,6 +35,11 @@ comment "DMA Devices"
 
 source "drivers/dma/xilinx/Kconfig"
 
+config LM2_GPDMA
+	bool "Lm2 GPDMA Generic Driver "
+	depends on ARCH_LM2
+	help
+
 config INTEL_MID_DMAC
 	tristate "Intel MID DMA support for Peripheral DMA controllers"
 	depends on PCI && X86
