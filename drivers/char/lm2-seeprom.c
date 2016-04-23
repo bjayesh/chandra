@@ -116,9 +116,9 @@ static void lm2_i2c_mrecv(struct lm2_i2c_seeprom *id)
 	u32	reg;
 
 //	dev_info(id->adap.dev.parent, "mrecv call\n");
-printk("read transaction \n");
-printk("read count = %d offset address %d chip address %x\n",
-	id->len,id->addr,id->cadr);
+//printk("read transaction \n");
+//printk("read count = %d offset address %d chip address %x\n",
+//	id->len,id->addr,id->cadr);
 	/* set the read count and address width */
 	reg = readl(id->iobase + EMSR);
 	reg |= ((id->len-1) << 14);
