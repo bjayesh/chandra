@@ -415,7 +415,7 @@ void __init lm2_dt_map_io(void)
 
 }
 
-static u32 osc;
+//static u32 osc;
 
 /*
  * Device Tree Brob Initializer
@@ -427,6 +427,7 @@ void __init lm2_dt_init_early(void)
 /*
  * GIC find data 
  */
+#if 0
 static  struct of_device_id lm2_irq_match[] __initdata = {
 	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init, },
 	{}
@@ -439,6 +440,7 @@ static void __init lm2_dt_init_irq(void)
 {
 	of_irq_init(lm2_irq_match);
 }
+#endif
 
 /*
  * Kernel timer initialize routine by DTB
@@ -458,24 +460,41 @@ static void __init lm2_dt_timer_init(void)
 	node = of_find_node_by_path(path);
 
 	/* timer device add device node */
-	regbase = of_iomap(node,0)
-	timer_irq = irq_of_parse_and_map(node,0);
-	clocksource_register_hz(&clocksource,LM2_TIMER_HZ);
+//	regbase = of_iomap(node,0);
+//	timer_irq = irq_of_parse_and_map(node,0);
+//	clocksource_register_hz(&clocksource,LM2_TIMER_HZ);
+//	clocksource_register_hz(&clocksource,LM2_TIM32_CLK);
 }
 
 /*
  * init_machine by DTB
  */
+static const struct of_device_id lm2_dt_bus_match[] __initconst = {
+        { .compatible = "simple-bus", },
+        { .compatible = "arm,amba-bus", },
+        { .compatible = "arm,vexpress,config-bus", },
+        {}
+};
+
 static void __init lm2_dt_init(void)
 {
+        void __iomem *virt_addr;
+
+	/* Serial DTB ok */
+	virt_addr = ioremap(LM2_UART_1_BASE,0x32);
+	lm2_serial_resource[0].membase = virt_addr;
+	virt_addr = ioremap(LM2_UART_0_BASE,0x32);
+	lm2_serial_resource[1].membase = virt_addr;
+	platform_device_register(&lm2_serial_device);
 
 //	l2x0_of_init(0x00400000, 0xfe0fffff);
+	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
 }
 
 /*
  * match string for dtb
  */
-const static char *lm2_dt_match[] __initconst = {
+static const char * const lm2_dt_match[] __initconst = {
 	"FujiXerox,waikiki",
 	NULL,
 };
@@ -487,8 +506,8 @@ DT_MACHINE_START(LM2_DT, "FujiXerox Waikiki")
 #endif
 	.map_io		= lm2_dt_map_io,
 	.init_early	= lm2_dt_init_early,
-	.init_irq	= lm2_dt_init_irq,
-	.init_time	= &lm2_dt_timer,
+	.init_irq	= lm2_init_irq,
+	.init_time	= &lm2_timer_init,
 	.init_machine	= lm2_dt_init,
 MACHINE_END
 

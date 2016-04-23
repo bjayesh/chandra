@@ -142,7 +142,12 @@ start:
 /*		bl	__hyp_stub_install */	@ get into SVC mode, reversibly
 #endif
 		mov	r7, r1			@ save architecture ID
+#if 1	/* r8=atag pointer*/
+		ldr     r8, =initrd_phys
+		add     r8, r8, #0x100
+#else
 		mov	r8, r2			@ save atags pointer
+#endif
 
 #ifndef __ARM_ARCH_2__
 		/*
@@ -299,8 +304,24 @@ restart:	adr	r0, LC0
 		ldmfd	sp!, {r0-r3, ip, lr}
 		sub	sp, sp, #0x10000
 #endif	/* CONFIG_ARM_ATAG_DTB_COMPAT */
-
+#if 1	/* memcopy */
+		add	sp, sp, #0x10000
+		stmfd	sp!, {r0-r3, ip, lr}
+		ldr	r2, [r6, #4]
+#ifndef __ARMEB__
+		eor     r1, r2, r2, ror #16
+		bic     r1, r1, #0x00ff0000
+		mov     r2, r2, ror #8
+		eor     r2, r2, r1, lsr #8
+#endif
+		mov     r1, r6
+		mov     r0, r8
+		bl	memcpy
+		ldmfd	sp!, {r0-r3, ip, lr}
+		sub	sp, sp, #0x10000
+#else
 		mov	r8, r6			@ use the appended device tree
+#endif
 
 		/*
 		 * Make sure that the DTB doesn't end up in the final
