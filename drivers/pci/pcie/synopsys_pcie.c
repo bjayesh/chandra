@@ -155,6 +155,7 @@ static int synopsys_pcie_setup(int nr, struct pci_sys_data *sys)
 {
 	struct pcie_port *pp;
 
+printk(KERN_ERR "# %s entry \n",__FUNCTION__);
 	pp = sys_to_pcie(sys);
 
 #ifdef	DEBUG_CALLBACK
@@ -162,22 +163,23 @@ static int synopsys_pcie_setup(int nr, struct pci_sys_data *sys)
 #endif
 
 	if (!pp) {
+		dev_err(pp->dev, "##### %s : Error End\n",__FUNCTION__);
 #ifdef	DEBUG_CALLBACK
 		dev_err(pp->dev, "##### %s : Error End\n",__FUNCTION__);
 #endif
 		return 0;
 	}
 printk(KERN_ERR "sys->busnr :0x%x\n",sys->busnr);
-printk(KERN_ERR "sys->mem_offset :0x%x\n",sys->mem_offset);
-printk(KERN_ERR "sys->io_offset :0x%x\n",sys->io_offset);
+printk(KERN_ERR "sys->mem_offset :0x%llx\n",sys->mem_offset);
+printk(KERN_ERR "sys->io_offset :0x%llx\n",sys->io_offset);
 /* yamano resource debug */
 //	sys->mem_offset = pp->mem.start - pp->config.mem_bus_addr;
 //	pci_add_resource_offset(&sys->resources, &pp->mem, sys->mem_offset);
 //	pci_add_resource_offset(&sys->resources, &pp->config[1].mem, sys->mem_offset);
 	sys->mem_offset = 0x404000000ULL - 0x10000000ULL;
-	sys->io_offset  = 0x411000000ULL - 0x10100000ULL;
-printk(KERN_ERR "print offset mem = %llx\n",sys->mem_offset);
-printk(KERN_ERR "print offset io = %llx\n",sys->io_offset);
+	sys->io_offset  = 0x410000000ULL - 0x10100000ULL;
+printk(KERN_ERR "print offset mem = 0x%llx\n",sys->mem_offset);
+printk(KERN_ERR "print offset io = 0x%llx\n",sys->io_offset);
 	pci_add_resource_offset(&sys->resources, &pp->config[0].mem, sys->mem_offset);
 	pci_add_resource_offset(&sys->resources, &pp->config[0].io, sys->io_offset);
 	
@@ -1093,7 +1095,7 @@ out:
 	return	0;
 }
 
-static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
+static int synopsys_add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 {
 	struct resource *tmp;
 	int ret;
@@ -1155,11 +1157,11 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 		dev_err(pp->dev, "add_pcie_port: failed to get irq\n");
 		return -ENODEV;
 	}
-//	ret = devm_request_irq(&pdev->dev, pp->irq, exynos_pcie_irq_handler, IRQF_SHARED, "synopsys-pcie", pp);
-//	if (ret) {
-//		dev_err(pp->dev, "add_pcie_port: failed to request irq\n");
-//		return ret;
-//	}
+	ret = devm_request_irq(&pdev->dev, pp->irq, exynos_pcie_irq_handler, IRQF_SHARED, "synopsys-pcie", pp);
+	if (ret) {
+		dev_err(pp->dev, "add_pcie_port: failed to request irq\n");
+		return ret;
+	}
 	
 	
 	pp->root_bus_nr = 0;
@@ -1235,25 +1237,25 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 #endif
 	/* Configureation resource */
 	pp->io.name	= "Multiport";
-	pp->io.start	= 0x411000000ULL;
-	pp->io.end	= 0x41100ffffULL;
+	pp->io.start	= 0x410000000ULL;
+	pp->io.end	= 0x41000ffffULL;
 	pp->io.flags	= IORESOURCE_IO;
 	pp->va_io = ioremap(0x410000000ULL,SZ_64K);
 	pp->config[0].io.name = "Port 0 IO space";
-	pp->config[0].io.start = 0x411000000ULL;
-	pp->config[0].io.end   = 0x41100FFFFULL;
+	pp->config[0].io.start = 0x410000000ULL;
+	pp->config[0].io.end   = 0x41000FFFFULL;
 	pp->config[0].io.flags = IORESOURCE_IO;
 	pp->config[0].io_size = resource_size(&pp->config[0].io);
 //	pp->config[0].io_bus_addr	= 0x410000000ULL;
 	pp->mem.name	= "Memory";
 	pp->mem.start	= 0x404000000ULL;
-	pp->mem.end	= 0x40fffffffULL;
+	pp->mem.end	= 0x4040fffffULL;
 	pp->mem.flags	= IORESOURCE_MEM;
 	pp->va_cfg = ioremap(0x400000000ULL,SZ_64M);
-	pp->va_mem = ioremap(0x404000000ULL,SZ_128+SZ_64);
+	pp->va_mem = ioremap(0x404000000ULL,SZ_128M+SZ_64K);
 	pp->config[0].mem.name = "Port 0 Memory";
 	pp->config[0].mem.start = 0x404000000ULL;
-	pp->config[0].mem.end  	= 0x40fffffffULL;
+	pp->config[0].mem.end  	= 0x4040fffffULL;
 	pp->config[0].mem.flags = IORESOURCE_MEM;
 	pp->config[0].mem_size = resource_size(&pp->config[0].mem);
 //	pp->config[0].mem_bus_addr	= 0x400000000ULL;
@@ -1279,7 +1281,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail_clk;
 */
-	ret = add_pcie_port(pp, pdev);
+	ret = synopsys_add_pcie_port(pp, pdev);
 	if (ret < 0)
 		goto fail_bus_clk;
 

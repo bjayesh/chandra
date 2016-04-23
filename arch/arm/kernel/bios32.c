@@ -363,6 +363,20 @@ void pcibios_fixup_bus(struct pci_bus *bus)
 }
 EXPORT_SYMBOL(pcibios_fixup_bus);
 
+void pcibios_add_bus(struct pci_bus *bus)
+{
+	struct pci_sys_data *sys = bus->sysdata;
+	if (sys->add_bus)
+		sys->add_bus(bus);
+}
+
+void pcibios_remove_bus(struct pci_bus *bus)
+{
+	struct pci_sys_data *sys = bus->sysdata;
+	if (sys->remove_bus)
+		sys->remove_bus(bus);
+}
+
 /*
  * Swizzle the device pin each time we cross a bridge.  If a platform does
  * not provide a swizzle function, we perform the standard PCI swizzling.
@@ -418,7 +432,6 @@ static int pcibios_init_resources(int busnr, struct pci_sys_data *sys)
 	int ret;
 	struct pci_host_bridge_window *window;
 
-printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 	if (list_empty(&sys->resources)) {
 		pci_add_resource_offset(&sys->resources,
 			 &iomem_resource, sys->mem_offset);
@@ -443,17 +456,16 @@ printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 	pci_add_resource_offset(&sys->resources, &sys->io_res,
 				sys->io_offset);
 
-printk( KERN_ERR " $$$ %s : exit\n",__FUNCTION__);	/* yamano */
 	return 0;
 }
 
-static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
+static void pcibios_init_hw(struct device *parent, struct hw_pci *hw,
+			    struct list_head *head)
 {
 	struct pci_sys_data *sys = NULL;
 	int ret;
 	int nr, busnr;
 
-printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 	for (nr = busnr = 0; nr < hw->nr_controllers; nr++) {
 		sys = kzalloc(sizeof(struct pci_sys_data), GFP_KERNEL);
 		if (!sys)
@@ -466,6 +478,8 @@ printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 		sys->swizzle = hw->swizzle;
 		sys->map_irq = hw->map_irq;
 		sys->align_resource = hw->align_resource;
+		sys->add_bus = hw->add_bus;
+		sys->remove_bus = hw->remove_bus;
 		INIT_LIST_HEAD(&sys->resources);
 
 		if (hw->private_data)
@@ -483,7 +497,7 @@ printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 			if (hw->scan)
 				sys->bus = hw->scan(nr, sys);
 			else
-				sys->bus = pci_scan_root_bus(NULL, sys->busnr,
+				sys->bus = pci_scan_root_bus(parent, sys->busnr,
 						hw->ops, sys, &sys->resources);
 
 			if (!sys->bus)
@@ -498,18 +512,17 @@ printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 				break;
 		}
 	}
-printk( KERN_ERR " $$$ %s : exit\n",__FUNCTION__);	/* yamano */
 }
 
-void pci_common_init(struct hw_pci *hw)
+void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 {
 	struct pci_sys_data *sys;
 	LIST_HEAD(head);
-printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
+
 	pci_add_flags(PCI_REASSIGN_ALL_RSRC);
 	if (hw->preinit)
 		hw->preinit();
-	pcibios_init_hw(hw, &head);
+	pcibios_init_hw(parent, hw, &head);
 	if (hw->postinit)
 		hw->postinit();
 
@@ -528,11 +541,6 @@ printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 			 * Assign resources.
 			 */
 			pci_bus_assign_resources(bus);
-
-			/*
-			 * Enable bridges
-			 */
-			pci_enable_bridges(bus);
 		}
 
 		/*
@@ -540,7 +548,6 @@ printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 		 */
 		pci_bus_add_devices(bus);
 	}
-printk( KERN_ERR " $$$ %s : exit\n",__FUNCTION__);	/* yamano */
 }
 
 #ifndef CONFIG_PCI_HOST_ITE8152

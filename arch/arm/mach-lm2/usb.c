@@ -109,7 +109,8 @@ struct dwc3_platform_data {
 static	struct dwc3_platform_data	dwc3_plat_data = {
 	.maximum_speed	= USB_SPEED_SUPER,
 	.dr_mode	= USB_DR_MODE_PERIPHERAL,
-	.tx_fifo_resize	= 1,
+//	.tx_fifo_resize	= 1,	/* original */
+	.tx_fifo_resize	= 0,	/* original */
 };
 
 static  u64     lm2_usbd_dmamask = DMA_BIT_MASK(64);

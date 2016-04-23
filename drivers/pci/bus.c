@@ -56,7 +56,7 @@ void pci_bus_add_resource(struct pci_bus *bus, struct resource *res,
 			  unsigned int flags)
 {
 	struct pci_bus_resource *bus_res;
-dev_info(&bus->dev," $$$ %s Entry bus = %x res = %x\n",__FUNCTION__,bus,res);
+
 	bus_res = kzalloc(sizeof(struct pci_bus_resource), GFP_KERNEL);
 	if (!bus_res) {
 		dev_err(&bus->dev, "can't add %pR resource\n", res);
@@ -66,7 +66,6 @@ dev_info(&bus->dev," $$$ %s Entry bus = %x res = %x\n",__FUNCTION__,bus,res);
 	bus_res->res = res;
 	bus_res->flags = flags;
 	list_add_tail(&bus_res->list, &bus->resources);
-dev_info(&bus->dev," $$$ %s Exit\n",__FUNCTION__);
 }
 
 struct resource *pci_bus_resource_n(const struct pci_bus *bus, int n)
@@ -285,6 +284,21 @@ void pci_walk_bus(struct pci_bus *top, int (*cb)(struct pci_dev *, void *),
 	up_read(&pci_bus_sem);
 }
 EXPORT_SYMBOL_GPL(pci_walk_bus);
+
+struct pci_bus *pci_bus_get(struct pci_bus *bus)
+{
+	if (bus)
+		get_device(&bus->dev);
+	return bus;
+}
+EXPORT_SYMBOL(pci_bus_get);
+
+void pci_bus_put(struct pci_bus *bus)
+{
+	if (bus)
+		put_device(&bus->dev);
+}
+EXPORT_SYMBOL(pci_bus_put);
 
 EXPORT_SYMBOL(pci_bus_alloc_resource);
 EXPORT_SYMBOL_GPL(pci_bus_add_device);
