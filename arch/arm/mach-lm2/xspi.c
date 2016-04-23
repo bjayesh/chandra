@@ -7,9 +7,52 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/spi/spi.h>
+#include <linux/mtd/partitions.h>
+#include <linux/spi/flash.h>
 
 #include "mach/irqs.h"
 #include "mach/motherboard.h"
+
+static	struct	mtd_partition	lm2_flash_parts[] = {
+	{
+		.name	= "bootloader",
+		.offset	= 0x00000000,
+		.size	= 0x00600000,
+	},
+	{	
+		.name	="rootfs",
+		.offset	= 0x00600000,
+		.size	= 0x00100000,
+	},
+};
+
+static	struct flash_platform_data lm2_flash_data ={
+	.name		= "fcspi-flash",
+	.parts		= lm2_flash_parts,
+	.nr_parts	= ARRAY_SIZE( lm2_flash_parts ),
+};
+
+static	struct resource	lm2_fcspi_resource[] = {
+	{
+		.start	= 0x04110000,
+		.end	= 0x04110900,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= 53,
+		.end	= 53,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+static	struct	platform_device	lm2_fcspi_device = {
+	.name		= "fcspi",
+	.id		= 0,
+	.resource	= lm2_fcspi_resource,
+	.num_resources	= ARRAY_SIZE( lm2_fcspi_resource),
+	.dev		= {
+		.platform_data = &lm2_flash_data,
+	},
+};
 
 static	struct spi_board_info	lm2_spi_devices[] __initdata = {
 	{
@@ -60,6 +103,7 @@ int	__init lm2_xspi_register(void)
 	spi_register_board_info(lm2_spi_devices,ARRAY_SIZE(lm2_spi_devices));
 //	result = platform_device_register( &lm2_spidev_device );
 	result = platform_device_register( &lm2_xspi_device );
+	result = platform_device_register( &lm2_fcspi_device );
 	return	result;
 }
 
