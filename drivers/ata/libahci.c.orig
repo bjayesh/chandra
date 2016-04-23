@@ -2255,6 +2255,7 @@ static int ahci_port_start(struct ata_port *ap)
 	pp = devm_kzalloc(dev, sizeof(*pp), GFP_KERNEL);
 	if (!pp)
 		return -ENOMEM;
+
 	/* check FBS capability */
 	if ((hpriv->cap & HOST_CAP_FBS) && sata_pmp_supported(ap)) {
 		void __iomem *port_mmio = ahci_port_base(ap);

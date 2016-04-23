@@ -203,19 +203,23 @@ static int ahci_probe(struct platform_device *pdev)
 		if (!(hpriv->port_map & (1 << i)))
 			ap->ops = &ata_dummy_port_ops;
 	}
-
+dev_info(dev,"prepare reset controller\n");
 	rc = ahci_reset_controller(host);
 	if (rc)
 		goto pdata_exit;
 
+dev_info(dev,"controlleri init\n");
 	ahci_init_controller(host);
+dev_info(dev,"capabilities information\n");
 	ahci_print_info(host, "platform");
 
+dev_info(dev,"Activate controller\n");
 	rc = ata_host_activate(host, irq, ahci_interrupt, IRQF_SHARED,
 			       &ahci_platform_sht);
 	if (rc)
 		goto pdata_exit;
 
+dev_info(dev,"Activate controller finished\n");
 	return 0;
 pdata_exit:
 	if (pdata && pdata->exit)
