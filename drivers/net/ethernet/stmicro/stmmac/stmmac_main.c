@@ -227,13 +227,25 @@ static void stmmac_clk_csr_set(struct stmmac_priv *priv)
 static void print_pkt(unsigned char *buf, int len)
 {
 	int j;
-	pr_info("len = %d byte, buf addr: 0x%p", len, buf);
-	for (j = 0; j < len; j++) {
-		if ((j % 16) == 0)
-			pr_info("\n %03x:", j);
-		pr_info(" %02x", buf[j]);
+	unsigned char	tmp[64];
+	int		tmp_len=0;
+	if ( len > 0 ) {
+		printk(KERN_ERR "** frm_len=%d byte, bufaddr=0x%p **\n", len, buf);
+		len -= ETH_HLEN;
+		for (j = 0; j < len; j++) {
+			if ((j % 16) == 0) {
+				if ( j != 0 )
+					printk(KERN_ERR "%s\n",tmp);
+	
+				memset(&tmp, 0, sizeof(tmp));
+				sprintf(tmp, "%03x: %02x",j,buf[j]);
+			} else {
+				sprintf(&tmp[tmp_len], " %02x",buf[j]);
+			}
+			tmp_len=strlen(tmp);
+		}
+		printk(KERN_ERR "%s\n",tmp);
 	}
-	pr_info("\n");
 }
 #endif
 
@@ -732,6 +744,12 @@ static void stmmac_release_ptp(struct stmmac_priv *priv)
  * @dev: net device structure
  * Description: it adjusts the link parameters.
  */
+/* lm2 work around start */
+#define GMAC_RDPD       0x8004
+#define GMAC_RCPD       0x8008
+#define GMAC_TDPD       0x800c
+#define GMAC_TCPD       0x8010
+/* lm2 work around end */
 static void stmmac_adjust_link(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
@@ -796,6 +814,18 @@ static void stmmac_adjust_link(struct net_device *dev)
 			}
 
 			priv->speed = phydev->speed;
+#if 1	/* No32 */
+#ifdef  CONFIG_ARCH_LM2         /* lm2 workaround */
+			if ( phydev->speed == SPEED_1000 ) {
+				writel(0x00000800,priv->ioaddr + GMAC_TCPD);  /* GMACTCPD */
+				writel(0x00000000,priv->ioaddr + GMAC_RCPD);  /* GMACRCPD */
+			} else {
+				writel(0x00003f00,priv->ioaddr + GMAC_TCPD);  /* GMACTCPD */
+				writel(0x00003f00,priv->ioaddr + GMAC_RCPD);  /* GMACRCPD */
+			}
+//			printk(KERN_ERR "No32 Link is Up (%d) TCPD/RCPD Set\n", (int)priv->speed);
+#endif  /* CONFIG_ARCH_LM2 */   /* lm2 workaround */
+#endif	/* No32 */
 		}
 
 		writel(ctrl, priv->ioaddr + MAC_CTRL_REG);
@@ -2245,6 +2275,14 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 			 */
 			if (unlikely(status != llc_snap))
 				frame_len -= ETH_FCS_LEN;
+#if 1	/* No34 No35 No36 */
+			if (frame_len > priv->dev->mtu + ETH_HLEN) {
+//printk(KERN_ERR "No34-36 RX frame size=%d > %d ==>drop\n",frame_len, priv->dev->mtu + ETH_HLEN);
+				pr_debug("RX frame size %d > (%d) ==>drop\n",frame_len, priv->dev->mtu + ETH_HLEN);
+				priv->dev->stats.rx_dropped++;
+				break;
+			}
+#endif	/* No34 No35 No36 */
 #ifdef STMMAC_RX_DEBUG
 			if (frame_len > ETH_FRAME_LEN)
 				pr_debug("\tRX frame size %d, COE status: %d\n",
@@ -2277,6 +2315,9 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 			else
 				skb->ip_summed = CHECKSUM_UNNECESSARY;
 
+#ifdef	STMMAC_RX_DEBUG
+			print_pkt(skb->data, frame_len);
+#endif
 			napi_gro_receive(&priv->napi, skb);
 
 			priv->dev->stats.rx_packets++;
