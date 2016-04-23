@@ -36,7 +36,7 @@
 
 #include "mm.h"
 
-#if 1 /* yamano */
+#if 0 /* yamano */
 #define UART_BASE       0xfc160000
 #define UART_BASE2      0xffc10000
 #define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
@@ -74,6 +74,10 @@ static  int     getchar(u32 base)
                 barrier();
         return  UART_DATA(base);
 }
+#else
+#define putchar(a,b)    {}
+#define flush(a)        {}
+#define putstr(a,b)     {}
 #endif  /* yamano */
 
 
@@ -632,6 +636,9 @@ void __init mem_init(void)
 	/* These pointers are filled in on TCM detection */
 	extern u32 dtcm_end;
 	extern u32 itcm_end;
+#endif
+#if 1   /* ohkuma */
+printk(KERN_WARNING "## mem_init : \n");
 #endif
 
 	max_mapnr   = pfn_to_page(max_pfn + PHYS_PFN_OFFSET) - mem_map;

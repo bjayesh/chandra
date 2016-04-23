@@ -47,6 +47,7 @@
 #  define rpgdh	r0
 #endif
 
+/*#define	TTBL0_OFF*/
 /*
  * cpu_v7_switch_mm(pgd_phys, tsk)
  *
@@ -123,7 +124,10 @@ ENDPROC(cpu_v7_set_pte_ext)
         .macro  v7_ttb_setup, zero, ttbr0, ttbr1, tmp
 	ldr	\tmp, =swapper_pg_dir		@ swapper_pg_dir virtual address
 	mov	\tmp, \tmp, lsr #ARCH_PGD_SHIFT
-/*	cmp	\ttbr1, \tmp			@ PHYS_OFFSET > PAGE_OFFSET? */
+#ifdef	TTBL0_OFF
+#else
+	cmp	\ttbr1, \tmp			@ PHYS_OFFSET > PAGE_OFFSET?
+#endif
 	mrc	p15, 0, \tmp, c2, c0, 2		@ TTB control register
 	orr	\tmp, \tmp, #TTB_EAE
 	ALT_SMP(orr	\tmp, \tmp, #TTB_FLAGS_SMP)
@@ -135,23 +139,35 @@ ENDPROC(cpu_v7_set_pte_ext)
 	 * otherwise booting secondary CPUs would end up using TTBR1 for the
 	 * identity mapping set up in TTBR0.
 	 */
-/*	orrls	\tmp, \tmp, #TTBR1_SIZE				@ TTBCR.T1SZ */
+#ifdef	TTBL0_OFF
 	orr	\tmp, \tmp, #TTBR1_SIZE				@ TTBCR.T1SZ
+#else
+	orrls	\tmp, \tmp, #TTBR1_SIZE				@ TTBCR.T1SZ
+#endif
 	mcr	p15, 0, \tmp, c2, c0, 2				@ TTBCR
 	isb							@ fxcl
 	mov	\tmp, \ttbr1, lsr #(32 - ARCH_PGD_SHIFT)	@ upper bits
 	mov	\ttbr1, \ttbr1, lsl #ARCH_PGD_SHIFT		@ lower bits
-/*	addls	\ttbr1, \ttbr1, #TTBR1_OFFSET */
+#ifdef	TTBL0_OFF
 	add	\ttbr1, \ttbr1, #TTBR1_OFFSET
+#else
+	addls	\ttbr1, \ttbr1, #TTBR1_OFFSET
+#endif
 	mcrr	p15, 1, \ttbr1, \zero, c2			@ load TTBR1
 	isb							@ fxcl 
-/*	mov	\tmp, \ttbr0, lsr #(32 - ARCH_PGD_SHIFT)	@ upper bits */
-/*	mov	\ttbr0, \ttbr0, lsl #ARCH_PGD_SHIFT		@ lower bits */
-/*	mcrr	p15, 0, \ttbr0, \zero, c2			@ load TTBR0 */
+#ifdef	TTBL0_OFF
+#else
+	mov	\tmp, \ttbr0, lsr #(32 - ARCH_PGD_SHIFT)	@ upper bits
+	mov	\ttbr0, \ttbr0, lsl #ARCH_PGD_SHIFT		@ lower bits
+	mcrr	p15, 0, \ttbr0, \zero, c2			@ load TTBR0
+#endif
 	isb							@ fxcl
 	mcrr	p15, 1, \ttbr1, \zero, c2			@ load TTBR1
 	isb							@ fxcl
-/*	mcrr	p15, 0, \ttbr0, \zero, c2			@ load TTBR0 */
+#ifdef	TTBL0_OFF
+#else
+	mcrr	p15, 0, \ttbr0, \zero, c2			@ load TTBR0
+#endif
 	isb
 	.endm
 

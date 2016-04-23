@@ -517,7 +517,7 @@ asmlinkage void __init start_kernel(void)
 #if 1	/* ohkuma to TLB Flush */
 	asm volatile("mcr p15,0,r0,c8,c6,0");
 #endif
-	PHYS_OFFSET = 0x0000000890000000ULL;	/* yamano debug */
+	PHYS_OFFSET = 0x0000000800000000ULL;	/* yamano debug */
 #if 1   /* ohkuma */
 sprintf(buf, "__pv_phys_offset=0x%llx(%llx)\n", __pv_phys_offset, PHYS_OFFSET);
 lm2_printk(UART_BASE,buf);

@@ -115,7 +115,7 @@ struct outer_cache_fns outer_cache __read_mostly;
 EXPORT_SYMBOL(outer_cache);
 #endif
 
-#if 1 /* yamano */
+#if 0 /* yamano */
 #define UART_BASE       0xfc160000
 #define	UART_BASE2	0xffc10000
 #define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
@@ -146,7 +146,10 @@ static  void    putstr(u32 base,const char *ptr)
         }
         flush(base);
 }
-
+#else
+#define	putchar(a,b)	{}
+#define	flush(a)	{}
+#define	putstr(a,b)	{}
 #endif  /* yamano */
 
 /*
@@ -853,11 +856,55 @@ void __init setup_arch(char **cmdline_p)
 	/* populate cmd_line too for later use, preserving boot_command_line */
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;
+#if 0	/* ohkuma */
+sprintf(buf,"##1 meminfo.nr_banks=%d\n",meminfo.nr_banks);
+putstr(UART_BASE, buf);
+sprintf(buf,"##1 meminfo.bank[0].start=0x%llx\n",meminfo.bank[0].start);
+putstr(UART_BASE, buf);
+sprintf(buf,"##1 meminfo.bank[0].size =0x%lx\n" ,meminfo.bank[0].size);
+putstr(UART_BASE, buf);
+#endif
 	parse_early_param();
 
+#if 1	/* ohkuma */
+sprintf(buf,"##2 meminfo.nr_banks=%d\n",meminfo.nr_banks);
+putstr(UART_BASE, buf);
+sprintf(buf,"##2 meminfo.bank[0].highmem =%d\n",meminfo.bank[0].highmem);
+putstr(UART_BASE, buf);
+sprintf(buf,"##2 meminfo.bank[0].start=0x%llx\n",meminfo.bank[0].start);
+putstr(UART_BASE, buf);
+sprintf(buf,"##2 meminfo.bank[0].size =0x%lx\n" ,meminfo.bank[0].size);
+putstr(UART_BASE, buf);
+if (meminfo.nr_banks >1 ) {
+sprintf(buf,"##2 meminfo.bank[1].highmem =%d\n",meminfo.bank[1].highmem);
+putstr(UART_BASE, buf);
+sprintf(buf,"##2 meminfo.bank[1].start=0x%llx\n",meminfo.bank[1].start);
+putstr(UART_BASE, buf);
+sprintf(buf,"##2 meminfo.bank[1].size =0x%lx\n" ,meminfo.bank[1].size);
+putstr(UART_BASE, buf);
+}
+#endif
 //putstr(UART_BASE,"parse_early_param\n");
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
 	sanity_check_meminfo();
+#if 1	/* ohkuma */
+sprintf(buf,"##3 meminfo.nr_banks=%d\n",meminfo.nr_banks);
+putstr(UART_BASE, buf);
+sprintf(buf,"##3 meminfo.bank[0].highmem =%d\n",meminfo.bank[0].highmem);
+putstr(UART_BASE, buf);
+sprintf(buf,"##3 meminfo.bank[0].start=0x%llx\n",meminfo.bank[0].start);
+putstr(UART_BASE, buf);
+sprintf(buf,"##3 meminfo.bank[0].size =0x%lx\n" ,meminfo.bank[0].size);
+putstr(UART_BASE, buf);
+if (meminfo.nr_banks >1 ) {
+sprintf(buf,"##3 meminfo.bank[1].highmem =%d\n",meminfo.bank[1].highmem);
+putstr(UART_BASE, buf);
+sprintf(buf,"##3 meminfo.bank[1].start=0x%llx\n",meminfo.bank[1].start);
+putstr(UART_BASE, buf);
+sprintf(buf,"##3 meminfo.bank[1].size =0x%lx\n" ,meminfo.bank[1].size);
+putstr(UART_BASE, buf);
+}
+#endif
 //putstr(UART_BASE,"sanity_check_meminfo_OK\n");
 	arm_memblock_init(&meminfo, mdesc);
 //putstr(UART_BASE,"arm_memblock_init\n");

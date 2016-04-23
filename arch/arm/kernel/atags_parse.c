@@ -50,7 +50,7 @@ static struct {
 };
 #else
 #ifndef	MEM_SIZE
-#define	MEM_SIZE	(768*1024*1024)		/* 2G */
+#define	MEM_SIZE	(760*1024*1024)		/* 2G */
 #endif	/* MEM_SIZE */
 static	struct {
 	struct	tag_header	hdr1;
@@ -281,8 +281,17 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 		tags = (struct tag *)&default_tags;
 	}
 #endif
+#if 0	/* ohkuma */
+	if (mdesc->fixup) {
+putstr("## fixup\n");
+		mdesc->fixup(tags, &from, &meminfo);
+sprintf(buf,"## meminfo.nr_banks=%d\n", meminfo.nr_banks);
+putstr(buf);
+	}
+#else
 	if (mdesc->fixup)
 		mdesc->fixup(tags, &from, &meminfo);
+#endif
 
 	if (tags->hdr.tag == ATAG_CORE) {
 		if (meminfo.nr_banks != 0)

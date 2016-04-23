@@ -3,6 +3,6 @@
 #   zreladdr-y	+= 0x05008000
 #params_phys-y	:= 0x05000100
 #initrd_phys-y	:= 0x05000000
-   zreladdr-y	+= 0x90008000
-params_phys-y	:= 0x90000100
-initrd_phys-y	:= 0x90000000
+   zreladdr-y	+= 0x00008000
+params_phys-y	:= 0x00000100
+initrd_phys-y	:= 0x00000000

@@ -518,6 +518,10 @@ asmlinkage void __init start_kernel(void)
 	asm volatile("mcr p15,0,r0,c8,c6,0");
 #endif
 	PHYS_OFFSET = 0x0000000890000000ULL;	/* yamano debug */
+#if 1   /* ohkuma */
+sprintf(buf, "__pv_phys_offset=0x%llx(%llx)\n", __pv_phys_offset, PHYS_OFFSET);
+lm2_printk(UART_BASE,buf);
+#endif
 	lockdep_init();
 	smp_setup_processor_id();
 	debug_objects_early_init();

@@ -54,20 +54,25 @@ extern	void	lm2_clockevent_init(int irq, void __iomem *gpt);
 
 static	void	lm2_putchar(unsigned long base, char c)
 {
+#if 0
         while((UART_STAT(base) & 0x40) == 0)
                 barrier();
         UART_DATA(base) = c;
+#endif
         return;
 }
 
 static  void	lm2_flush(unsigned long base)
 {
+#if 0
         while((UART_STAT(base) & 0x40) == 0)
                 barrier();
+#endif
 }
 
 void	lm2_printk(unsigned long base, const char *ptr)
 {
+#if 0
         char    c;
 
         while((c = *ptr++) != '\0'){
@@ -76,6 +81,7 @@ void	lm2_printk(unsigned long base, const char *ptr)
                 lm2_putchar(base,c);
         }
 	lm2_flush(base);
+#endif
 }
 
 /*
@@ -83,6 +89,7 @@ void	lm2_printk(unsigned long base, const char *ptr)
  * serial ,GIC, timer, ethernet, SPI etc.
  */
 static struct map_desc lm2_io_desc[] __initdata = {
+#if 0
 	{
 		.virtual	= 0xffc00000,
 		.pfn		= __phys_to_pfn(0x0000000004060000ULL),
@@ -96,6 +103,7 @@ static struct map_desc lm2_io_desc[] __initdata = {
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	},
+#endif
 };
 
 /*
@@ -340,10 +348,8 @@ static void __init lm2_init_irq(void)
 static	void __init lm2_fixup_mem(struct tag *tags, char **form, struct meminfo *meminfo)
 {
 #if 1	/* yamano debug */
-	meminfo->bank[0].start = 0x890000000ULL;
+	meminfo->bank[0].start = PHYS_OFFSET;
 	meminfo->bank[0].size = 760*1024*1024;
-//	meminfo->bank[1].start = 0x8bf800000ULL;
-//	meminfo->bank[1].size = SZ_512M+SZ_512M;
 	meminfo->nr_banks = 1;
 #endif /* yamano debug */
 	return;
