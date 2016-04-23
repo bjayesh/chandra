@@ -226,6 +226,9 @@ dtb-$(CONFIG_ARCH_ZYNQ) += zynq-zc702.dtb \
 targets += dtbs
 targets += $(dtb-y)
 endif
+targets += $(dtb-y)
+
+dtb-$(CONFIG_ARCH_LM2)   += waikiki-lm2.dtb
 
 # *.dtb used to be generated in the directory above. Clean out the
 # old build results so people don't accidentally use them.
