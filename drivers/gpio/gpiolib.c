@@ -1405,8 +1405,10 @@ static int gpiod_request(struct gpio_desc *desc, const char *label)
 	spin_lock_irqsave(&gpio_lock, flags);
 
 	chip = desc->chip;
-	if (chip == NULL)
-		goto done;
+	if (chip == NULL) {
+		spin_unlock_irqrestore(&gpio_lock, flags);
+		return -1;
+	}
 
 	if (!try_module_get(chip->owner))
 		goto done;
