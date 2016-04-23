@@ -560,7 +560,7 @@ static int lm2_seeprom_remove(struct platform_device *pdev)
 static unsigned int     reg_bak[LM2_REGBAK_SIZE];
 static unsigned int     reg_bak_chksum;
 extern unsigned int     chksum_info;
-void i2c_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+static void i2c_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
 {
 	int i;
 	int adr = *bak_adr;
@@ -571,7 +571,7 @@ void i2c_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
 	*bak_adr = i;
 }
 
-void i2c_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+static void i2c_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
 {
 	int i;
 	int adr = *bak_adr;
