@@ -130,17 +130,32 @@ static inline u32 __raw_readl(const volatile void __iomem *addr)
  */
 extern void __iomem *__arm_ioremap_pfn_caller(unsigned long, unsigned long,
 	size_t, unsigned int, void *);
+#ifdef	CONFIG_ARM_LPAE
 extern void __iomem *__arm_ioremap_caller(phys_addr_t, size_t, unsigned int,
 	void *);
+#else
+extern void __iomem *__arm_ioremap_caller(unsigned long, size_t, unsigned int,
+	void *);
+#endif	/* CONFIG_ARM_LPAE yamano */
 
+#ifdef	CONFIG_ARM_LPAE
 extern void __iomem *__arm_ioremap_pfn(unsigned long, unsigned long, size_t, unsigned int);
 extern void __iomem *__arm_ioremap(phys_addr_t, size_t, unsigned int);
 extern void __iomem *__arm_ioremap_exec(phys_addr_t, size_t, bool cached);
 extern void __iounmap(volatile void __iomem *addr);
 extern void __arm_iounmap(volatile void __iomem *addr);
-
 extern void __iomem * (*arch_ioremap_caller)(phys_addr_t, size_t,
 	unsigned int, void *);
+#else
+extern void __iomem *__arm_ioremap_pfn(unsigned long, unsigned long, size_t, unsigned int);
+extern void __iomem *__arm_ioremap(unsigned long, size_t, unsigned int);
+extern void __iomem *__arm_ioremap_exec(unsigned long, size_t, bool cached);
+extern void __iounmap(volatile void __iomem *addr);
+extern void __arm_iounmap(volatile void __iomem *addr);
+extern void __iomem * (*arch_ioremap_caller)(unsigned long, size_t,
+	unsigned int, void *);
+#endif	/* CONFIG_ARM_LPAE yamano */
+
 extern void (*arch_iounmap)(volatile void __iomem *);
 
 /*

@@ -52,8 +52,14 @@ extern const struct mem_type *get_mem_type(unsigned int type);
 /*
  * external interface to remap single page with appropriate type
  */
+#ifdef	CONFIG_ARM_LPAE
+extern int ioremap_page(unsigned long virt, phys_addr_t phys,
+			const struct mem_type *mtype);
+#else
 extern int ioremap_page(unsigned long virt, unsigned long phys,
 			const struct mem_type *mtype);
+#endif	/* CONFIG_ARM_LPAE yamano */
+
 #else
 #define iotable_init(map,num)	do { } while (0)
 #define vm_reserve_area_early(a,s,c)	do { } while (0)

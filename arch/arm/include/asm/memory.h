@@ -134,9 +134,13 @@
 /*
  * Convert a physical address to a Page Frame Number and back
  */
+#ifdef	CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY
+#define	__phys_to_pfn(paddr)	((unsigned long)(((phys_addr_t)(paddr)) >> PAGE_SHIFT))
+#define	__pfn_to_phys(pfn)	((phys_addr_t)(pfn) << PAGE_SHIFT)
+#else
 #define	__phys_to_pfn(paddr)	((unsigned long)((paddr) >> PAGE_SHIFT))
 #define	__pfn_to_phys(pfn)	((phys_addr_t)(pfn) << PAGE_SHIFT)
-
+#endif	/* yamano debug */
 /*
  * Convert a page to/from a physical address
  */
@@ -165,8 +169,8 @@
  * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
  */
 #ifndef __virt_to_phys
+#ifndef	CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY
 #ifdef CONFIG_ARM_PATCH_PHYS_VIRT
-
 /*
  * Constants used to force the right instruction encodings and shifts
  * so that all we need to do is modify the 8-bit constant field.
@@ -201,7 +205,13 @@ static inline unsigned long __phys_to_virt(unsigned long x)
 #else
 #define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
 #define __phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
-#endif
+#endif	/* CONFIG_ARM_PATCH_PHYS_VIRT */
+#else	/* CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY */	/* yamano */
+extern phys_addr_t  __pv_phys_offset;
+#define PHYS_OFFSET __pv_phys_offset
+#define __virt_to_phys(x)	(phys_addr_t)((x) - PAGE_OFFSET + PHYS_OFFSET)
+#define __phys_to_virt(x)	((phys_addr_t)(x) - PHYS_OFFSET + PAGE_OFFSET)
+#endif	/* CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY */	/* yamano */
 #endif
 #endif /* __ASSEMBLY__ */
 
@@ -223,7 +233,11 @@ static inline unsigned long __phys_to_virt(unsigned long x)
  * direct-mapped view.  We assume this is the first page
  * of RAM in the mem_map as well.
  */
+#if 1	/* yamano debug */
+#define PHYS_PFN_OFFSET	((phys_addr_t)(PHYS_OFFSET >> PAGE_SHIFT))
+#else
 #define PHYS_PFN_OFFSET	((unsigned long)(PHYS_OFFSET >> PAGE_SHIFT))
+#endif	/* yamano debug */
 
 /*
  * These are *only* valid on the kernel direct mapped RAM memory.
@@ -238,14 +252,22 @@ static inline phys_addr_t virt_to_phys(const volatile void *x)
 
 static inline void *phys_to_virt(phys_addr_t x)
 {
+#ifdef	CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY
+	return (void *)(__phys_to_virt((phys_addr_t)(x)));
+#else
 	return (void *)(__phys_to_virt((unsigned long)(x)));
+#endif
 }
 
 /*
  * Drivers should NOT use these either.
  */
 #define __pa(x)			__virt_to_phys((unsigned long)(x))
+#ifdef	CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY
+#define __va(x)			((void *)__phys_to_virt((phys_addr_t)(x)))
+#else
 #define __va(x)			((void *)__phys_to_virt((unsigned long)(x)))
+#endif
 #define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
 
 /*
