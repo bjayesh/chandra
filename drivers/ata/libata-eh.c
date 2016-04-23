@@ -2832,7 +2832,7 @@ int ata_eh_reset(struct ata_link *link, int classify,
 			classes[dev->devno] = ATA_DEV_SEMB_UNSUP;
 	}
 
-printk("##### %s cur link speed \n",__FUNCTION__);	/* yamano */
+//printk("##### %s cur link speed \n",__FUNCTION__);	/* yamano */
 	/* record current link speed */
 	if (sata_scr_read(link, SCR_STATUS, &sstatus) == 0)
 		link->sata_spd = (sstatus >> 4) & 0xf;
@@ -2840,11 +2840,11 @@ printk("##### %s cur link speed \n",__FUNCTION__);	/* yamano */
 		slave->sata_spd = (sstatus >> 4) & 0xf;
 
 	/* thaw the port */
-printk("##### %s host link call \n",__FUNCTION__);	/* yamano */
+//printk("##### %s host link call \n",__FUNCTION__);	/* yamano */
 	if (ata_is_host_link(link))
 		ata_eh_thaw_port(ap);
 
-printk("##### %s host link exit \n",__FUNCTION__);	/* yamano */
+//printk("##### %s host link exit \n",__FUNCTION__);	/* yamano */
 	/* postreset() should clear hardware SError.  Although SError
 	 * is cleared during link resume, clearing SError here is
 	 * necessary as some PHYs raise hotplug events after SRST.
@@ -2854,14 +2854,14 @@ printk("##### %s host link exit \n",__FUNCTION__);	/* yamano */
 	 */
 	if (postreset) {
 		postreset(link, classes);
-printk("##### %s host link reset exit \n",__FUNCTION__);	/* yamano */
+//printk("##### %s host link reset exit \n",__FUNCTION__);	/* yamano */
 		if (slave){
 			postreset(slave, classes);
-printk("##### %s slave link reset exit \n",__FUNCTION__);	/* yamano */
+//printk("##### %s slave link reset exit \n",__FUNCTION__);	/* yamano */
 		}
 	}
 
-printk("##### %s postreset exit \n",__FUNCTION__);	/* yamano */
+//printk("##### %s postreset exit \n",__FUNCTION__);	/* yamano */
 	/*
 	 * Some controllers can't be frozen very well and may set spurious
 	 * error conditions during reset.  Clear accumulated error

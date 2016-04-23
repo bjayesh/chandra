@@ -28,7 +28,7 @@
 #include <linux/types.h>
 #include "synopsys_pcie.h"
 
-#define	DEBUG_TRACE
+#undef	DEBUG_TRACE
 #undef	DEBUG_RW
 
 #define	PCIE_PORT1	1
@@ -227,8 +227,6 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 	if(bus->number != pp->root_bus_nr){
 //		dev_err(pp->dev, "endpoint read access\n");
 		pcieconf_base = (void __iomem *)((u32)pp->va_cfg + bdf_adr + where);
-//		msleep(1);
-//		goto	out;
 	}else{
 		if(devfn != 0)	return	PCIBIOS_DEVICE_NOT_FOUND;
 //		dev_err(pp->dev, "root read access");
@@ -280,8 +278,6 @@ static int synopsys_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 	if(bus->number != pp->root_bus_nr){
 //		dev_err(pp->dev, "endpoint write access\n");
 		pcieconf_base = (void __iomem *)((u32)pp->va_cfg + bdf_adr + where);
-//		msleep(1);
-//		goto	out;
 	}else{
 		if(devfn != 0)	return	PCIBIOS_DEVICE_NOT_FOUND;
 //		dev_err(pp->dev, "Root write access");
@@ -332,7 +328,9 @@ static int synopsys_pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
 	struct pcie_port *pp = sys_to_pcie(dev->bus->sysdata);
 
+#ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "%s entry\n",__FUNCTION__);
+#endif
 	return pp->irq;
 }
 
@@ -532,7 +530,7 @@ static void synopsys_pcie_deassert_gpex_reset(struct pcie_port *pp, int which, i
 							  PCIE1_SW_RST__PBUS_N__MASK &
 						      PCIE1_SW_RST__LINK_N__MASK);
 			}
-			dev_err(pp->dev, "synopsys_pcie_deassert_gpex_reset:  %d \n",regVal);
+//			dev_err(pp->dev, "synopsys_pcie_deassert_gpex_reset:  %d \n",regVal);
 			synopsys_writel(pciewrap_base + PCIE1_SW_RST, regVal);
 		        break;
 		case 2:
@@ -978,11 +976,11 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 	}
 	synopsys_writel(pciegen3_base1 + PCIE_GPEXD_CLASSCODE, 0xffffffff);
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXD_CLASSCODE);
-	dev_err(pp->dev, "PCIE_GPEXD_CLASSCODE 0x%x\n",val);
+//	dev_err(pp->dev, "PCIE_GPEXD_CLASSCODE 0x%x\n",val);
 
         synopsys_writel(pciegen3_base1 + PCIE_GPEXP_CFG_BASE2_PRIBUS, 0x00010100);
         val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_BASE2_PRIBUS);
-        dev_err(pp->dev, "PCIE_GPEXP_CFG_BASE2_PRIBUS 0x%x\n",val);
+//      dev_err(pp->dev, "PCIE_GPEXP_CFG_BASE2_PRIBUS 0x%x\n",val);
 
 	/* SET GPEXD_CFG_RDY bit */
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXD_CFG_RDY);
@@ -1146,16 +1144,15 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 {
 	struct pcie_port *pp;
 #if 1
+#ifdef	DEBUG_TRACE
 	dev_info(&pdev->dev, "synopsys_pcie_probe :Start\n");
+#endif
 #else
 	struct device_node *np = pdev->dev.of_node;
 	struct of_pci_range range;
 	struct of_pci_range_parser parser;
 #endif
 	int ret;
-#ifdef	DEBUG_TRACE
-	printk(KERN_ERR "synopsys_pcie_probe: Start\n");
-#endif
 	pp = devm_kzalloc(&pdev->dev, sizeof(*pp), GFP_KERNEL);
 	if (!pp) {
 		dev_err(pp->dev, "synopsys_pcie_probe: no memory for pcie port\n");

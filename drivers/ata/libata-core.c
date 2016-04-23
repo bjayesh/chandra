@@ -3764,7 +3764,7 @@ int sata_link_hardreset(struct ata_link *link, const unsigned long *timing,
 	int rc;
 
 	DPRINTK("ENTER\n");
-printk("##### %s enter \n",__FUNCTION__);
+//printk("##### %s enter \n",__FUNCTION__);
 	if (online)
 		*online = false;
 
@@ -3778,7 +3778,7 @@ printk("##### %s enter \n",__FUNCTION__);
 			goto out;
 
 		scontrol = (scontrol & 0x0f0) | 0x304;
-printk("##### %s set needed spd scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
+//printk("##### %s set needed spd scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
 		if ((rc = sata_scr_write(link, SCR_CONTROL, scontrol)))
 			goto out;
 
@@ -3791,7 +3791,7 @@ printk("##### %s set needed spd scontrole = %x \n",__FUNCTION__,scontrol); /* ya
 
 //	scontrol = (scontrol & 0x0f0) | 0x301;
 	scontrol = (scontrol & 0x0f0) | 0x321;
-printk("##### %s scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
+//printk("##### %s scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
 
 	if ((rc = sata_scr_write_flush(link, SCR_CONTROL, scontrol)))
 		goto out;
