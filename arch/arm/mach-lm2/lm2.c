@@ -171,6 +171,11 @@ static int	__init lm2_console_init(void)
  * Ethernet Controller
  */
 static struct resource lm2_eth_resources[] = {
+        {
+                .start  = LM2_GMAC_BASE,
+                .end    = LM2_GMAC_BASE + SZ_64K - 1,
+                .flags  = IORESOURCE_MEM,
+        },
 	{
 		.name	="macirq",
 		.start	= LM2_IRQ_GMACK_STAT,
