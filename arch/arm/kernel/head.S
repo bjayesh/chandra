@@ -263,7 +263,7 @@ __create_page_tables:
 	cmp	r0, r6
 	bls	1b
 
-#if 1	/* yamano debug */
+#if 0	/* yamano debug */
 /* 2:	b	2b	*/ /* yamano ICE debug */
 	/* calculate page table address to stored r0 */
 	ldr	r3, =LM2_SERIAL_DEBUG_VIRT	@specify virtual address 0xf800_0000
@@ -601,12 +601,21 @@ __fixup_pv_table:
 	add	r4, r4, r3	@ adjust table start address
 	add	r5, r5, r3	@ adjust table end address
 	add	r7, r7, r3	@ adjust __pv_phys_offset address
+#if 1	/* PHYS_OFFSET = 64bit */
+	mov	r9, #8		@ PHYS_OFFSET >> 32
+	strd	r8, r9, [r7]	@ save computed PHYS_OFFSET to __pv_phys_offset
+#else
 	str	r8, [r7]	@ save computed PHYS_OFFSET to __pv_phys_offset
+#endif
 	mov	r6, r3, lsr #24	@ constant for add/sub instructions
 	teq	r3, r6, lsl #24 @ must be 16MiB aligned
 THUMB(	it	ne		@ cross section branch )
 	bne	__error
+#if 1	/* PHYS_OFFSET = 64bit */
+	str	r6, [r7, #8]	@ save to __pv_offset
+#else
 	str	r6, [r7, #4]	@ save to __pv_offset
+#endif
 	b	__fixup_a_pv_table
 ENDPROC(__fixup_pv_table)
 
@@ -658,7 +667,11 @@ ENTRY(fixup_pv_table)
 	mov	r3, #0			@ no offset
 	mov	r4, r0			@ r0 = table start
 	add	r5, r0, r1		@ r1 = table size
+#if 1	/* PHYS_OFFSET = 64bit */
+	ldr	r6, [r2, #8]		@ get __pv_offset
+#else
 	ldr	r6, [r2, #4]		@ get __pv_offset
+#endif
 	bl	__fixup_a_pv_table
 	ldmfd	sp!, {r4 - r7, pc}
 ENDPROC(fixup_pv_table)
@@ -669,6 +682,9 @@ ENDPROC(fixup_pv_table)
 	.data
 	.globl	__pv_phys_offset
 	.type	__pv_phys_offset, %object
+#if 1	/* PHYS_OFFSET = 64bit */
+	.align	3
+#endif
 __pv_phys_offset:
 	.long	0
 	.long	0

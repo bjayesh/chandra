@@ -144,7 +144,11 @@ static inline unsigned int __attribute_const__ read_cpuid_tcmstatus(void)
 
 static inline unsigned int __attribute_const__ read_cpuid_mpidr(void)
 {
+#if 1	 
+	return read_cpuid(CPUID_MPIDR) & 0xff;
+#else
 	return read_cpuid(CPUID_MPIDR);
+#endif
 }
 
 /*

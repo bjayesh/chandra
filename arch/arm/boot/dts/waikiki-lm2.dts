@@ -17,7 +17,7 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 	chosen {
-		bootargs = "root=/dev/nfs rw nfsroot=192.168.1.250:/exports/fxcl12490 ip=dhcp console=ttyS0,38400 mem=3G";
+		bootargs = "root=/dev/nfs rw nfsroot=128.224.232.42:/home/fxcl12490/ohkuma/FXCL12490/rootfs ip=128.224.231.92:128.224.232.42:128.224.231.1:255.255.255.0::eth0:none console=ttyS0,38400 mem=3G";
 	};
 /*
 	aliases {

@@ -143,8 +143,7 @@ start:
 #endif
 		mov	r7, r1			@ save architecture ID
 #if 1	/* r8=atag pointer*/
-		ldr     r8, =initrd_phys
-		add     r8, r8, #0x100
+		ldr     r8, =params_phys
 #else
 		mov	r8, r2			@ save atags pointer
 #endif

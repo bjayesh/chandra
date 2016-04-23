@@ -162,7 +162,7 @@ static const char *panic_later, *panic_param;
 
 extern const struct obs_kernel_param __setup_start[], __setup_end[];
 
-#if 1 /* yamano */
+#if 0 /* yamano */
 #define	UART_BASE	0xfc160000
 #define	UART_BASE2	0xffc10000
 #define	UART_DATA(base)	(*(volatile unsigned char *)((base) + 0x10))
@@ -514,14 +514,10 @@ asmlinkage void __init start_kernel(void)
 	 * Need to run as early as possible, to initialize the
 	 * lockdep hash:
 	 */
-#if 1	/* ohkuma to TLB Flush */
+#if 1	/* TLB Flush */
 	asm volatile("mcr p15,0,r0,c8,c6,0");
 #endif
-	PHYS_OFFSET = 0x0000000800000000ULL;	/* yamano debug */
-#if 1   /* ohkuma */
-sprintf(buf, "__pv_phys_offset=0x%llx(%llx)\n", __pv_phys_offset, PHYS_OFFSET);
-lm2_printk(UART_BASE,buf);
-#endif
+//	PHYS_OFFSET = 0x0000000800000000ULL;	/* yamano debug */
 	lockdep_init();
 	smp_setup_processor_id();
 	debug_objects_early_init();
