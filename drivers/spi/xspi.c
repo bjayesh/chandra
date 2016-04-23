@@ -126,7 +126,7 @@ static	void	xspi_write_disable(struct xspi_dev *dev, int cs)
 {
 	u32	reg;
 
-	reg = xspi_rd(dev, (SPI_CFG + cs )));
+	reg = xspi_rd(dev, (SPI_CFG + cs ));
 	reg = reg & 0xfffffff0;
 	reg = reg | 0x00000007;
 	xspi_wr(dev, (SPI_CFG + cs), reg);

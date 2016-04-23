@@ -117,9 +117,9 @@ static void __init lm2_timer_init(void)
 
 /*	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x38, 0x0c);	*/
 	clksrc_timer = ioremap(LM2_TIMER_BASE+0x10, 0x10);
-	clkevt_timer = ioremap(LM2_TIMER_BASE+0x2c,0x0c);
+	clkevt_timer = ioremap(LM2_TIMER_BASE+0x5c,0x0c);
 	lm2_clocksource_init(clksrc_timer);
-	lm2_clockevent_init(LM2_IRQ_TIMER_0,clkevt_timer);
+	lm2_clockevent_init(LM2_IRQ_TIMER_4,clkevt_timer);
 }
 
 /*
