@@ -6572,10 +6572,9 @@ printk(KERN_ERR "###>>> %s Entry\n",__FUNCTION__);
 	mmio_len = pci_resource_len(pdev, 0);
 	err = -EIO;
 	adapter->hw.hw_addr = ioremap(mmio_start, mmio_len);
-printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x vart : 0x%xn",mmio_start,mmio_len,i*adapter->hw.hw_addr);
 	if (!adapter->hw.hw_addr)
 		goto err_ioremap;
-
+printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x \n",mmio_start,mmio_len);
 	if ((adapter->flags & FLAG_HAS_FLASH) &&
 	    (pci_resource_flags(pdev, 1) & IORESOURCE_MEM)) {
 		flash_start = pci_resource_start(pdev, 1);

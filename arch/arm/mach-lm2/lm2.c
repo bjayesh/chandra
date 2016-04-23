@@ -319,17 +319,17 @@ static struct resource lm2_pcie_resource[]={
        },
        {	/* port 1 */
                .start  = 0x04a40000,
-               .end    = 0x04a4ffff,
+               .end    = 0x04a40fff,
                .flags  = IORESOURCE_MEM,
        },
        {	/* port 2 */
                .start  = 0x04a50000,
-               .end    = 0x04a5ffff,
+               .end    = 0x04a50fff,
                .flags  = IORESOURCE_MEM,
        },
        {	/* port 3 */
                .start  = 0x04a60000,
-               .end    = 0x04a6ffff,
+               .end    = 0x04a60fff,
                .flags  = IORESOURCE_MEM,
        },
        {	/* host bridge interrput */

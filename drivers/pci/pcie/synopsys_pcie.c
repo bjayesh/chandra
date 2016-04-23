@@ -1147,7 +1147,7 @@ static int synopsys_add_pcie_port(struct pcie_port *pp, struct platform_device *
 	if (IS_ERR(pp->pciegen3_base1))
 		return PTR_ERR(pp->pciegen3_base1);
 	
-	
+#if 0	
 	tmp = platform_get_resource(pdev, IORESOURCE_MEM, 3);
 	if (!tmp) {
 		dev_err(pp->dev, "add_pcie_port: couldn't get pciegen3_2 base resource\n");
@@ -1166,7 +1166,7 @@ static int synopsys_add_pcie_port(struct pcie_port *pp, struct platform_device *
 	pp->pciegen3_base3 = devm_ioremap_resource(&pdev->dev, tmp);
 	if (IS_ERR(pp->pciegen3_base3))
 		return PTR_ERR(pp->pciegen3_base3);
-	
+#endif	/* saving vartual address space */	
 //	pp->irq = IRQ_V2M_PCIE;
 	pp->irq = platform_get_irq(pdev, 0);
 	if (!pp->irq) {
@@ -1256,7 +1256,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->io.start	= 0x410000000ULL;
 	pp->io.end	= 0x41000ffffULL;
 	pp->io.flags	= IORESOURCE_IO;
-	pp->va_io = ioremap(0x410000000ULL,SZ_64K);
+//	pp->va_io = ioremap(0x410000000ULL,SZ_64K);
 	pp->config[0].io.name = "Port 0 IO space";
 	pp->config[0].io.start = 0x410000000ULL;
 	pp->config[0].io.end   = 0x41000FFFFULL;
@@ -1268,8 +1268,8 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->mem.start	= 0x404000000ULL;
 	pp->mem.end	= 0x4040fffffULL;
 	pp->mem.flags	= IORESOURCE_MEM;
-	pp->va_cfg = ioremap(0x400000000ULL,SZ_64M);
-	pp->va_mem = ioremap(0x404000000ULL,SZ_128M+SZ_64K);
+	pp->va_cfg = ioremap(0x400000000ULL,SZ_32M);
+//	pp->va_mem = ioremap(0x404000000ULL,SZ_128M+SZ_64K);
 	pp->config[0].mem.name = "Port 0 Memory";
 	pp->config[0].mem.start = 0x404000000ULL;
 	pp->config[0].mem.end  	= 0x4040fffffULL;
