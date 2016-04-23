@@ -1044,6 +1044,10 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		}
 
 		dwc3_ep0_do_control_status(dwc, event);
+		break;
+	default:
+		dev_dbg(dwc->dev, "<<<DEPEVT_STATUS_CONTROL_XXXX(%xH)  <HN> >>>\n",event->status);
+		break;
 	}
 }
 
@@ -1070,6 +1074,9 @@ void dwc3_ep0_interrupt(struct dwc3 *dwc,
 	case DWC3_DEPEVT_RXTXFIFOEVT:
 	case DWC3_DEPEVT_STREAMEVT:
 	case DWC3_DEPEVT_EPCMDCMPLT:
+		break;
+	default:
+		dev_dbg(dwc->dev, "<<<SHOULDN'T BE HERE <HN> >>>\n");
 		break;
 	}
 }

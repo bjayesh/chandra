@@ -166,6 +166,8 @@ static inline const char *dwc3_gadget_event_string(u8 event)
 		return "Command Complete";
 	case DWC3_DEVICE_EVENT_OVERFLOW:
 		return "Overflow";
+	default:
+		return "DWC3_DEVICE_UNKNOWN <HN>";
 	}
 
 	return "UNKNOWN";
@@ -190,6 +192,8 @@ static inline const char *dwc3_ep_event_string(u8 event)
 		return "Stream";
 	case DWC3_DEPEVT_EPCMDCMPLT:
 		return "Endpoint Command Complete";
+	default:
+		return "DEPVENT_UNKNOWN <HN>";
 	}
 
 	return "UNKNOWN";

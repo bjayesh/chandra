@@ -412,7 +412,11 @@ dev_err(dwc->dev, "dwc3_core_init entry\n");
 
 dev_err(dwc->dev, "prepare soft reset\n");
 	/* issue device SoftReset too */
+#if	1	/*	<HN>	*/
+	timeout = jiffies + msecs_to_jiffies(500)*5;
+#else	/*	Original	*/
 	timeout = jiffies + msecs_to_jiffies(500*3);
+#endif
 	dwc3_writel(dwc->regs, DWC3_DCTL, DWC3_DCTL_CSFTRST);
 	do {
 		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
@@ -486,8 +490,9 @@ dev_err(dwc->dev, "dwc3_alloc_scratch_buffer\n");
 	ret = dwc3_alloc_scratch_buffers(dwc);
 	if (ret)
 		goto err1;
-
-dev_err(dwc->dev, "dwc3_setup_scratch_buffers\n");
+#if	1 /*<HN>*/
+dev_err(dwc->dev, "dwc3_setup_scratch_buffers. Rev=%xH <HN>\n",dwc->revision);
+#endif
 	ret = dwc3_setup_scratch_buffers(dwc);
 	if (ret)
 		goto err2;
