@@ -172,7 +172,47 @@ static int	__init lm2_console_init(void)
 
 /*
  * I2C
+ * 	resource 0:misc register for used interrupt
+ * 	resource 1:i2c registers
  */
+static	struct resource lm2_i2c_resource[] = {
+	{
+		.name	= "lm2-cip-ui",
+		.start	= LM2_CIP_UI_BASE,
+		.end	= LM2_CIP_UI_BASE+0x60,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "lm2-i2c-mmio",
+		.start	= LM2_CIP_UI_BASE+0x100,
+		.end	= LM2_CIP_UI_BASE+0x200,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "cip-ui-int",
+		.start	= 64,
+		.end	= 64,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+/*
+ * RTC resource
+ */
+static	struct resource lm2_rtc_resource [] = {
+	{
+		.name	= "lm2-rtc",
+		.start	= LM2_RTC_BASE+0x10,
+		.end	= LM2_RTC_BASE+0x20,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static	struct platform_device lm2_rtc_device = {
+	.name		= "lm2-rtc",
+	.id		= -1,
+	.resource	= lm2_rtc_resource,
+};
 
 /*
  * Ethernet Controller
@@ -360,6 +400,7 @@ static void __init lm2_init(void)
 	lm2_sata_register();
 #endif	/* CONFIG_SATA_AHCI_PLATFORM */
 	lm2_usb_register();
+	platform_device_register(&lm2_rtc_device);
 }
 
 MACHINE_START(LM2, "FujiXerox Waikiki")
