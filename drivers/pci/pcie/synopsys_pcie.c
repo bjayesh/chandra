@@ -31,6 +31,14 @@
 #define	DEBUG_TRACE
 #define	DEBUG_RW
 
+#define	PCIE_PORT1	1
+#define	PCIE_PORT2	2
+#define	PCIE_PORT3	3
+
+#define	PCIE_LANE_PHY_CONF_1	1	/* link1:l4:cont1:p0 */
+#define	PCIE_LANE_PHY_CONF_2	2
+#define	PCIE_LANE_PHY_CONF_3	3	/* l1:p1:cont1:p0 */
+
 struct pcie_port_info {
 	u32		io_size;
 	u32		mem_size;
@@ -150,7 +158,9 @@ static int synopsys_pcie_link_up(struct pcie_port *pp)
 	return 0;
 }
 
-
+/*
+ * PCI Express Configuration Register Access primitive
+ */
 static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int size, u32 *val)
 {
 	struct pcie_port *pp = sys_to_pcie(bus->sysdata);
@@ -489,29 +499,29 @@ static void synopsys_pcie_gpexd_core_clk_ratio(struct pcie_port *pp, int which)
 	switch(which)
 	{
 		case 1: synopsys_writel(pciegen3_base1 + PCIE_GPEXD_CORE_CLK_RATIO, 0x10);
-				while (regVal != PCIE1_MISC_STAT__GDA_PAB_DL_UP__MASK)
-				{
-					regVal = synopsys_readl(pciewrap_base + PCIE1_MISC_STAT);
-					regVal &= PCIE1_MISC_STAT__GDA_PAB_DL_UP__MASK;
-				}
+			while (regVal != PCIE1_MISC_STAT__GDA_PAB_DL_UP__MASK)
+			{
+				regVal = synopsys_readl(pciewrap_base + PCIE1_MISC_STAT);
+				regVal &= PCIE1_MISC_STAT__GDA_PAB_DL_UP__MASK;
+			}
 		        break;
 		case 2: synopsys_writel(pciegen3_base2 + PCIE_GPEXD_CORE_CLK_RATIO, 0x10);
-				while (regVal != PCIE2_MISC_STAT__GDA_PAB_DL_UP__MASK)
-				{
-					regVal = synopsys_readl(pciewrap_base + PCIE2_MISC_STAT);
-					regVal &= PCIE2_MISC_STAT__GDA_PAB_DL_UP__MASK;
-				}
+			while (regVal != PCIE2_MISC_STAT__GDA_PAB_DL_UP__MASK)
+			{
+				regVal = synopsys_readl(pciewrap_base + PCIE2_MISC_STAT);
+				regVal &= PCIE2_MISC_STAT__GDA_PAB_DL_UP__MASK;
+			}
 		        break;
 		case 3: synopsys_writel(pciegen3_base3 + PCIE_GPEXD_CORE_CLK_RATIO, 0x10);
-				while (regVal != PCIE3_MISC_STAT__GDA_PAB_DL_UP__MASK)
-				{
-					regVal = synopsys_readl(pciewrap_base + PCIE3_MISC_STAT);
-					regVal &= PCIE3_MISC_STAT__GDA_PAB_DL_UP__MASK;
-				}
+			while (regVal != PCIE3_MISC_STAT__GDA_PAB_DL_UP__MASK)
+			{
+				regVal = synopsys_readl(pciewrap_base + PCIE3_MISC_STAT);
+				regVal &= PCIE3_MISC_STAT__GDA_PAB_DL_UP__MASK;
+			}
 		        break;
 		default:
-				dev_err(pp->dev, "synopsys_pcie_gpexd_core_clk_ratio: which is %d Error\n",which);
-				break;
+			dev_err(pp->dev, "synopsys_pcie_gpexd_core_clk_ratio: which is %d Error\n",which);
+			break;
 	}
 }
 
@@ -876,7 +886,6 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 		dev_err(pp->dev, "synopsys_pcie_establish_link: Link already up\n");
 		return 0;
 	}
-
 	/* assert PHY Reset */
 	synopsys_pcie_assert_phy_reset(pp);
 
@@ -886,10 +895,11 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 	/* assert GPEX Reset */
 	synopsys_pcie_assert_gpex_reset(pp);
 	
-	/* Set sw_bootstrap */
+	/* Set sw_bootstrap Root Complex*/
 	synopsys_pcie_set_bootstrap(pp, rc_num, 1);
 	synopsys_pcie_set_bootstrap(pp, ep_num, 0);
 	synopsys_pcie_set_bootstrap(pp, nu_num, 0);
+	/* Connetc lane */
 	synopsys_pcie_pcie_bifur(pp, bifur_num);
 	
 	// - NEW FOR 55xx PHY
@@ -898,6 +908,7 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 	val  = synopsys_readl(pciewrap_base + PCIE_PHY_CLK_CTRL);
 	val |= PCIE_PHY_CLK_CTRL__PHY_REF_USE_PAD__MASK;
 	synopsys_writel(pciewrap_base + PCIE_PHY_CLK_CTRL, val);
+
 	// - NEW FOR 55xx PHY
 	//   - assert macP_pclkreq_n inputs to PHY for each PIPE being used
 	//   - if you do not do this then PHY will kill mpll_dword_clk output
@@ -917,33 +928,31 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 	
 	/*  PIPE Status Check */
 	synopsys_pcie_pipe_ok(pp, rc_num);
-	synopsys_pcie_pipe_ok(pp, ep_num);
+//	synopsys_pcie_pipe_ok(pp, ep_num);
 	
 	/* de-assert GPEX Reset */
 	synopsys_pcie_deassert_gpex_reset(pp, rc_num, 0);
-	synopsys_pcie_deassert_gpex_reset(pp, ep_num, 0);
+//	synopsys_pcie_deassert_gpex_reset(pp, ep_num, 0);
 	
 	/* Set GPEXD_CORE_CLK_RATIO  */
-	synopsys_pcie_gpexd_core_clk_ratio(pp, rc_num);
-	synopsys_pcie_gpexd_core_clk_ratio(pp, ep_num);
-	
+//	synopsys_pcie_gpexd_core_clk_ratio(pp, rc_num);	/* yamano */
+//	synopsys_pcie_gpexd_core_clk_ratio(pp, ep_num);
 	//-------------------------------------------------------
 	// - INITIALIZE AXI and PEX WINDOWS
 	//-------------------------------------------------------
-	synopsys_writel(pciegen3_base1 + PCIE_PAB_CTRL, 0x00000a2f);
-	synopsys_writel(pciegen3_base2 + PCIE_PAB_CTRL, 0x00000a2f);
-	
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_CTRL, 0x00000a2f);	/* yamano */
+//	synopsys_writel(pciegen3_base2 + PCIE_PAB_CTRL, 0x00000a2f);
 	/* initialize AXI to PEX windows for RC to EP accesses */
 	synopsys_pcie_AxiToPexInit(pp, rc_num, ep_num, rc_num);
 	
 	/* initialize AXI to PEX windows for EP to RC accesses */
-	synopsys_pcie_AxiToPexInit(pp, ep_num, rc_num, rc_num);
+//	synopsys_pcie_AxiToPexInit(pp, ep_num, rc_num, rc_num);	/* yamano */
 	
 	/* initialize root complex registers */
 	synopsys_pcie_PexToAxiInitRc(pp, rc_num);
 	
 	/* initialize endpoint registers */
-	synopsys_pcie_PexToAxiInitEp(pp, ep_num);
+//	synopsys_pcie_PexToAxiInitEp(pp, ep_num);	/* yamano debug */
 	
 //	/* check if the link is up or not */
 //	while (!synopsys_pcie_link_up(pp)) {
@@ -956,6 +965,7 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 //	}
 //	
 //	dev_info(pp->dev, "Link up\n");
+out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_establish_link: End\n");
 #endif
@@ -1016,7 +1026,6 @@ static void synopsys_pcie_host_init(struct pcie_port *pp)
 	val = synopsys_readl(resetgen_base + RSTGENSWRSTSTATIC10);
 	val &= 0xff0fffff;
 	synopsys_writel(resetgen_base + RSTGENSWRSTSTATIC10, val);
-	
 	/* enable link */
 	synopsys_pcie_establish_link(pp);
 
@@ -1038,7 +1047,7 @@ static void synopsys_pcie_host_init(struct pcie_port *pp)
 	if ( val != 0x123411de ) {
 		dev_err(pp->dev, "synopsys_pcie_host_init: PCIE_GPEXD_ID error rc(0x%x != 0x123411de)\n",val);
 	}
-	
+#if 0	
 	/* PCIE2 (EP) */
 	val = synopsys_readl(pciegen3_base2 + PCIE_GPEXP_CFG_VENDORID);
 	if ( val != 0x000811de ) {
@@ -1074,25 +1083,26 @@ static void synopsys_pcie_host_init(struct pcie_port *pp)
 	if ( val != 0x11223344 ) {
 		dev_err(pp->dev, "synopsys_pcie_host_init: PCIE_GPEXD_SUBSYS_ID error ep(0x%x != 0x11223344)\n",val);
 	}
-	
+#endif	
 	/* SET GPEXD_CFG_RDY bit */
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXD_CFG_RDY);
 	if ( (val & 0x1) != 0x0 ) {
 		dev_err(pp->dev, "synopsys_pcie_host_init: PCIE_GPEXD_CFG_RDY error\n");
 	}
+/*
 	val = synopsys_readl(pciegen3_base2 + PCIE_GPEXD_CFG_RDY);
 	if ( (val & 0x1) != 0x0 ) {
 		dev_err(pp->dev, "synopsys_pcie_host_init: PCIE_GPEXD_CFG_RDY error\n");
 	}
-	
+*/	
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXD_CFG_RDY);
 	val |= 0x1;
 	synopsys_writel(pciegen3_base1 + PCIE_GPEXD_CFG_RDY, val);
-	
+/*	
 	val = synopsys_readl(pciegen3_base2 + PCIE_GPEXD_CFG_RDY);
 	val |= 0x1;
 	synopsys_writel(pciegen3_base2 + PCIE_GPEXD_CFG_RDY, val);
-	
+*/	
 	/* locally initialize more PCIE1 RC CFG regs (45xx legacy code) */
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_CACHE);
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_BASE3_IOBASE);
@@ -1115,6 +1125,7 @@ static void synopsys_pcie_host_init(struct pcie_port *pp)
 //	synopsys_writel(resetgen_base + PCIE1_MISC_CTRL, val);
 	
 	synopsys_pcie_enable_interrupts(pp);
+out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init: End\n");
 #endif
@@ -1200,6 +1211,9 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 	return 0;
 }
 
+/*
+ * PCI-Express Driver probe
+ */
 static int __init synopsys_pcie_probe(struct platform_device *pdev)
 {
 	struct pcie_port *pp;
@@ -1317,9 +1331,9 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto fail_bus_clk;
 
-	pp->controller = synopsys_pci.nr_controllers;
-	synopsys_pci.nr_controllers=-1;
+	synopsys_pci.nr_controllers = 1;
 	synopsys_pci.private_data = (void **)&pp;
+	pp->controller = synopsys_pci.nr_controllers;
 
 	pci_common_init(&synopsys_pci);
 	pci_assign_unassigned_resources();

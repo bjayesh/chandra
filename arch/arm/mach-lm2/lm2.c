@@ -305,9 +305,29 @@ static	struct platform_device lm2_i2c_device = {
 };
 
 static struct resource lm2_pcie_resource[]={
-       {
+       {	/* reset gen */
+               .start  = 0x04010000,
+               .end    = 0x040101ff,
+               .flags  = IORESOURCE_MEM,
+       },
+       {	/* warp */
+               .start  = 0x04a70000,
+               .end    = 0x04a701ff,
+               .flags  = IORESOURCE_MEM,
+       },
+       {	/* port 1 */
                .start  = 0x04a40000,
-               .end    = 0x04a80000,
+               .end    = 0x04a4ffff,
+               .flags  = IORESOURCE_MEM,
+       },
+       {	/* port 2 */
+               .start  = 0x04a50000,
+               .end    = 0x04a5ffff,
+               .flags  = IORESOURCE_MEM,
+       },
+       {	/* port 3 */
+               .start  = 0x04a60000,
+               .end    = 0x04a6ffff,
                .flags  = IORESOURCE_MEM,
        },
 };
