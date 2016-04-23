@@ -137,6 +137,28 @@ static void pci_fixup_unassign(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_WINBOND2, PCI_DEVICE_ID_WINBOND2_89C940F, pci_fixup_unassign);
 
+/* yamano debug */
+#if 0
+#define PCI_VENDOR_ID_FXCL	0x1135
+#define	PCI_DEVICE_ID_QUATRO	0x5500
+#endif
+static void pci_fixup_quatro(struct pci_dev *dev)
+{
+	int i;
+printk(KERN_ERR "pci fixup function for quatro\n");
+	if (dev->devfn == 0) {
+//		dev->class &= 0x060000;
+//		dev->class = 0x060000;
+//		dev->class |= PCI_CLASS_BRIDGE_HOST << 8;
+		for (i = 0; i < PCI_NUM_RESOURCES; i++) {
+			dev->resource[i].start = 0;
+			dev->resource[i].end   = 0;
+			dev->resource[i].flags = 0;
+		}
+	}
+}
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_FXCL, PCI_DEVICE_ID_QUATRO, pci_fixup_quatro);
+
 /*
  * Prevent the PCI layer from seeing the resources allocated to this device
  * if it is the host bridge by marking it as such.  These resources are of

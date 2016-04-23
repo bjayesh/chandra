@@ -136,6 +136,8 @@
 #define PCI_CLASS_OTHERS		0xff
 
 /* Vendors and devices.  Sort key: vendor first, device next. */
+#define	PCI_VENDOR_ID_FXCL		0x1135
+#define	PCI_DEVICE_ID_QUATRO		0x5500
 
 #define PCI_VENDOR_ID_TTTECH		0x0357
 #define PCI_DEVICE_ID_TTTECH_MC322	0x000a

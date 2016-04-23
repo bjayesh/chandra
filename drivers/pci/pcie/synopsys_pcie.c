@@ -227,7 +227,7 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 	struct pcie_port	*pp = sys_to_pcie(bus->sysdata);
 	void __iomem		*pcieconf_base;		/* Windows 0 cfg space */
 	u32			bdf_adr;
-
+	int	debugFlag = 0;
 #ifdef	DEBUG_TRACE1
 //	dev_err(pp->dev, "%s entry bus=%x DevFn=%x where=%x size=%d\n",__FUNCTION__, bus->number, devfn, where, size);
 #endif
@@ -248,6 +248,7 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 		if(devfn != 0)	return	PCIBIOS_DEVICE_NOT_FOUND;
 //		dev_err(pp->dev, "root read access");
 		pcieconf_base = (void __iomem *)((u32)pp->pciegen3_base1 + where);
+		debugFlag = 1;
 	}
 	if (size == 1)
 		*val = synopsys_readb(pcieconf_base);
@@ -256,7 +257,12 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 	else
 		*val = synopsys_readl(pcieconf_base);
 //	dev_err(pp->dev, " 0x%8.8lx : 0x%8.8lx\n", pcieconf_base, val);
-out:	
+out:
+	if(debugFlag == 1){
+		dev_err(pp->dev, "root read access %x : %x\n",where, *val);
+		if(where == 8)
+			*val = 0x06040000;
+	}
 #ifdef	DEBUG_TRACE1
 	dev_err(pp->dev, "%s exit\n", __FUNCTION__);
 #endif
@@ -299,6 +305,7 @@ static int synopsys_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 		if(devfn != 0)	return	PCIBIOS_DEVICE_NOT_FOUND;
 //		dev_err(pp->dev, "Root write access");
 		pcieconf_base = (void __iomem *)((u32)pp->pciegen3_base1 + where);
+		dev_err(pp->dev, "Root write access %x : %x",where,val);
 	}
 //	dev_err(pp->dev, " 0x%8.8lx : 0x%8.8x\n", pcieconf_base, val);
 	if(size == 1)
