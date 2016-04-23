@@ -218,13 +218,13 @@
 			interrupts = <61>;
 		};
 
-*/
+
 		sata@04a30000 {
 			compatible = "snps,spear-ahci","ahci";
 			reg = <0x04a30000 0x200>;
 			interrupts = <85>;
 		};
-/*
+
 		ethernet@04410000 {
 			compatible = "snps,dwmac";
 			reg = <0x04410000 0x10000>;
