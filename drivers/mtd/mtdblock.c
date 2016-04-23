@@ -70,8 +70,7 @@ static int erase_write (struct mtd_info *mtd, unsigned long pos,
 	wait_queue_head_t wait_q;
 	size_t retlen;
 	int ret;
-	int	i;	/* yamano */
-	char	*yamabuf;
+	char	*dmabuf;
 //printk( KERN_ERR "%s entry\n", __func__);
 	/*
 	 * First, let's erase the flash block.
@@ -104,12 +103,13 @@ static int erase_write (struct mtd_info *mtd, unsigned long pos,
 	 * Next, write the data to flash.
 	 */
 //for(i=0 ;i<len;i++){printk("%c",buf[i]);}
-	yamabuf=kzalloc(len,GFP_KERNEL);
-	if(yamabuf == NULL){printk("yamabuf error\n");return -EIO;}
-	for(i=0;i<len;i++){yamabuf[i] = buf[i];}
+	dmabuf=kzalloc(len,GFP_KERNEL);
+	if(dmabuf == NULL)
+		return -EIO;
+	memcpy(dmabuf,buf,len);
 //	ret = mtd_write(mtd, pos, len, &retlen, buf);
-	ret = mtd_write(mtd, pos, len, &retlen, yamabuf);
-	kfree(yamabuf);
+	ret = mtd_write(mtd, pos, len, &retlen, dmabuf);
+	kfree(dmabuf);
 	if (ret)
 		return ret;
 	if (retlen != len)
