@@ -159,6 +159,9 @@ static void dwmac1000_dma_operation_mode(void __iomem *ioaddr, int txmode,
 			csr6 |= DMA_CONTROL_RTC_128;
 	}
 
+	/* Disable Dropping TCP/IP CHKSUM Error Frames Set. */
+	csr6 |= DMA_CONTROL_DT;
+
 	writel(csr6, ioaddr + DMA_CONTROL);
 }
 

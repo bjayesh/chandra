@@ -45,6 +45,7 @@ static int stmmac_probe_config_dt(struct platform_device *pdev,
 	plat->mdio_bus_data = devm_kzalloc(&pdev->dev,
 					   sizeof(struct stmmac_mdio_bus_data),
 					   GFP_KERNEL);
+	plat->maxmtu = JUMBO_LEN;
 
 	/*
 	 * Currently only the properties needed on SPEAr600

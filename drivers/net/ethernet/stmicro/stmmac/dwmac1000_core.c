@@ -32,17 +32,22 @@
 #include <asm/io.h>
 #include "dwmac1000.h"
 
-/* ohkuma work around start */
+/* lm2 work around start */
 #define	GMAC_RDPD	0x8004
 #define	GMAC_RCPD	0x8008
 #define	GMAC_TDPD	0x800c
 #define	GMAC_TCPD	0x8010
-/* ohkuma work around end */
+/* lm2 work around end */
 
-static void dwmac1000_core_init(void __iomem *ioaddr)
+static void dwmac1000_core_init(void __iomem *ioaddr, int mtu)
 {
 	u32 value = readl(ioaddr + GMAC_CONTROL);
 	value |= GMAC_CORE_INIT;
+	if (mtu > 1500)
+		value |= GMAC_CONTROL_2K;
+	if (mtu > 2000)
+		value |= GMAC_CONTROL_JE;
+
 	writel(value, ioaddr + GMAC_CONTROL);
 
 	/* Mask GMAC interrupts */
@@ -278,25 +283,15 @@ static int dwmac1000_irq_status(void __iomem *ioaddr,
 				x->pcs_speed = SPEED_10;
 
 			x->pcs_link = 1;
-#if 1	/* ohkuma workaround */
+#ifdef  CONFIG_ARCH_LM2		/* lm2 workaround */
 			if ( x->pcs_speed == SPEED_1000 ) {
-#if 1	/* yamano */
 				writel(0x00000800,ioaddr + GMAC_TCPD);	/* GMACTCPD */
 				writel(0x00000000,ioaddr + GMAC_RCPD);	/* GMACRCPD */
-#else
-				writel(0x00000800,ioaddr + 0x0410);	/* GMACTCPD */
-				writel(0x00000000,ioaddr + 0x0408);	/* GMACRCPD */
-#endif
 			} else {
-#if 1	/* yamano */
 				writel(0x00003f00,ioaddr + GMAC_TCPD);	/* GMACTCPD */
 				writel(0x00003f00,ioaddr + GMAC_RCPD);	/* GMACRCPD */
-#else
-				writel(0x00003f00,ioaddr + 0x0410);	/* GMACTCPD */
-				writel(0x00003f00,ioaddr + 0x0408);	/* GMACRCPD */
-#endif
 			}
-#endif	/* ohkuma workaround */
+#endif	/* CONFIG_ARCH_LM2 */	/* lm2 workaround */
 			pr_debug("Link is Up - %d/%s\n", (int)x->pcs_speed,
 				 x->pcs_duplex ? "Full" : "Half");
 		} else {

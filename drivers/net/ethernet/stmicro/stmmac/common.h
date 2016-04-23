@@ -303,10 +303,12 @@ struct dma_features {
 #define STMMAC_CHAIN_MODE	0x1
 #define STMMAC_RING_MODE	0x2
 
+#define JUMBO_LEN		9000
+
 struct stmmac_desc_ops {
 	/* DMA RX descriptor ring initialization */
 	void (*init_rx_desc) (struct dma_desc *p, int disable_rx_ic, int mode,
-			      int end);
+			      int end, int size);
 	/* DMA TX descriptor ring initialization */
 	void (*init_tx_desc) (struct dma_desc *p, int mode, int end);
 
@@ -379,7 +381,7 @@ struct stmmac_dma_ops {
 
 struct stmmac_ops {
 	/* MAC core initialization */
-	void (*core_init) (void __iomem *ioaddr);
+	void (*core_init) (void __iomem *ioaddr, int mtu);
 	/* Enable and verify that the IPC module is supported */
 	int (*rx_ipc) (void __iomem *ioaddr);
 	/* Dump MAC registers */
@@ -430,7 +432,7 @@ struct mii_regs {
 
 struct stmmac_ring_mode_ops {
 	unsigned int (*is_jumbo_frm) (int len, int ehn_desc);
-	unsigned int (*jumbo_frm) (void *priv, struct sk_buff *skb, int csum);
+	int (*jumbo_frm) (void *priv, struct sk_buff *skb, int csum);
 	void (*refill_desc3) (void *priv, struct dma_desc *p);
 	void (*init_desc3) (struct dma_desc *p);
 	void (*clean_desc3) (void *priv, struct dma_desc *p);
@@ -441,7 +443,7 @@ struct stmmac_chain_mode_ops {
 	void (*init) (void *des, dma_addr_t phy_addr, unsigned int size,
 		      unsigned int extend_desc);
 	unsigned int (*is_jumbo_frm) (int len, int ehn_desc);
-	unsigned int (*jumbo_frm) (void *priv, struct sk_buff *skb, int csum);
+	int (*jumbo_frm) (void *priv, struct sk_buff *skb, int csum);
 	void (*refill_desc3) (void *priv, struct dma_desc *p);
 	void (*clean_desc3) (void *priv, struct dma_desc *p);
 };

@@ -42,6 +42,12 @@
 #include <asm/irq.h>
 #include <asm/uaccess.h>
 
+/* lm2 work around start */
+#define GMAC_RDPD       0x0004
+#define GMAC_RCPD       0x0008
+#define GMAC_TDPD       0x000c
+#define GMAC_TCPD       0x0010
+/* lm2 work around end */
 /**
  * phy_print_status - Convenience function to print out the current phy status
  * @phydev: the phy_device struct
@@ -280,6 +286,20 @@ int phy_ethtool_sset(struct phy_device *phydev, struct ethtool_cmd *cmd)
 	/* Restart the PHY */
 	phy_start_aneg(phydev);
 
+#ifdef	CONFIG_ARCH_LM2	/* lm2 workaround */
+{
+	void __iomem *base;
+	base = ioremap_nocache(0x04418000, 0x30);
+	if ( phydev->speed == SPEED_1000 ) {
+		writel(0x00000800,base + GMAC_TCPD);  /* GMACTCPD */
+		writel(0x00000000,base + GMAC_RCPD);  /* GMACRCPD */
+	} else {
+		writel(0x00003f00,base + GMAC_TCPD);  /* GMACTCPD */
+		writel(0x00003f00,base + GMAC_RCPD);  /* GMACRCPD */
+	}
+	iounmap(base);
+}
+#endif	/* CONFIG_ARCH_LM2 */ /* lm2 workaround */
 	return 0;
 }
 EXPORT_SYMBOL(phy_ethtool_sset);

@@ -281,15 +281,35 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 }
 
 static void enh_desc_init_rx_desc(struct dma_desc *p, int disable_rx_ic,
-				  int mode, int end)
+				  int mode, int end, int size)
 {
 	p->des01.erx.own = 1;
+#ifdef	CONFIG_ARCH_LM2
+	if ( size >= BUF_SIZE_8KiB ) {
+		p->des01.erx.buffer1_size = BUF_SIZE_4KiB + BUF_SIZE_2KiB;
+	} else {
+		p->des01.erx.buffer1_size = size;
+	}
+#else
 	p->des01.erx.buffer1_size = BUF_SIZE_8KiB - 1;
+#endif
 
 	if (mode == STMMAC_CHAIN_MODE)
 		ehn_desc_rx_set_on_chain(p, end);
-	else
+	else {
+#ifdef	CONFIG_ARCH_LM2
+		if ( size >= BUF_SIZE_8KiB ) {
+        		p->des01.erx.buffer2_size = BUF_SIZE_4KiB;
+		} else {
+			p->des01.erx.buffer2_size = 0;
+		}
+
+        	if (end)
+                	p->des01.erx.end_ring = 1;
+#else
 		ehn_desc_rx_set_on_ring(p, end);
+#endif
+	}
 
 	if (disable_rx_ic)
 		p->des01.erx.disable_ic = 1;
@@ -347,8 +367,17 @@ static void enh_desc_prepare_tx_desc(struct dma_desc *p, int is_fs, int len,
 
 	if (mode == STMMAC_CHAIN_MODE)
 		enh_set_tx_desc_len_on_chain(p, len);
-	else
+	else {
+#ifdef	CONFIG_ARCH_LM2
+		if (unlikely(len > (BUF_SIZE_8KiB - 1))) {
+			p->des01.etx.buffer1_size = BUF_SIZE_8KiB - 1;
+			p->des01.etx.buffer2_size = len - (BUF_SIZE_8KiB - 1);
+		} else
+			p->des01.etx.buffer1_size = len;
+#else
 		enh_set_tx_desc_len_on_ring(p, len);
+#endif
+	}
 
 	if (likely(csum_flag))
 		p->des01.etx.checksum_insertion = cic_full;
