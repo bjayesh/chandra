@@ -115,7 +115,7 @@ dev_err(dwc->dev, "phy_init on USB3\n");
 		phy_exit(dwc->usb2_generic_phy);
 		return ret;
 	}
-	mdelay(100);
+	mdelay(100*3);	/* yamano debug */
 
 dev_err(dwc->dev, "clear PHY reset ALL\n");
 	/* Clear USB3 PHY reset */
@@ -412,7 +412,7 @@ dev_err(dwc->dev, "dwc3_core_init entry\n");
 
 dev_err(dwc->dev, "prepare soft reset\n");
 	/* issue device SoftReset too */
-	timeout = jiffies + msecs_to_jiffies(500);
+	timeout = jiffies + msecs_to_jiffies(500*3);
 	dwc3_writel(dwc->regs, DWC3_DCTL, DWC3_DCTL_CSFTRST);
 	do {
 		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
@@ -660,7 +660,8 @@ static void usbd_hw_reset(void)
 	reg |= (RSTGENSWRSTSTATIC3__SYS_USSD_VCC__MASK |
 		RSTGENSWRSTSTATIC3__SYS_USSD__MASK);
 	writel(reg, rstgenswrststatic3);
-	udelay(10);
+	udelay(100);	/* yamano debug */
+//	udelay(10);
 	reg &= ~(RSTGENSWRSTSTATIC3__SYS_USSD_VCC__MASK |
 		RSTGENSWRSTSTATIC3__SYS_USSD__MASK);
 	writel(reg, rstgenswrststatic3);
