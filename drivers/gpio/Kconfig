@@ -325,6 +325,11 @@ config GPIO_GRGPIO
 	  Select this to support Aeroflex Gaisler GRGPIO cores from the GRLIB
 	  VHDL IP core library.
 
+config GPIO_LM2
+	tristate "LM2 MMIO GPIO"
+	depends on ARM
+
+
 comment "I2C GPIO expanders:"
 
 config GPIO_ARIZONA
