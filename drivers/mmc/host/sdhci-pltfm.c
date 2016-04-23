@@ -200,6 +200,7 @@ void sdhci_pltfm_free(struct platform_device *pdev)
 	iounmap(host->ioaddr);
 	release_mem_region(iomem->start, resource_size(iomem));
 	sdhci_free_host(host);
+	platform_set_drvdata(pdev, NULL);       /* add */
 }
 EXPORT_SYMBOL_GPL(sdhci_pltfm_free);
 

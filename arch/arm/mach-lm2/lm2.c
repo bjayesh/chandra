@@ -233,49 +233,6 @@ static	struct platform_device	lm2_gpio_device = {
 };
 
 /*
- *  * SDIO
- *   */
-static struct resource lm2_sdhci0_resources[] = {
-        [0] = {
-                .start  = LM2_SDIO0_BASE,
-                .end    = LM2_SDIO0_BASE + 0x100,
-                .flags  = IORESOURCE_MEM,
-        },
-        [1] = {
-                .start  = LM2_IRQ_SDIO_0_STAT,
-                .end    = LM2_IRQ_SDIO_0_STAT,
-                .flags  = IORESOURCE_IRQ,
-        },
-};
-
-static struct platform_device lm2_sdhci0_device = {
-        .name           = "sdhci-lm2",
-        .id             = 0,
-        .num_resources  = ARRAY_SIZE(lm2_sdhci0_resources),
-        .resource       = lm2_sdhci0_resources,
-};
-
-static struct resource lm2_sdhci1_resources[] = {
-        [0] = {
-                .start  = LM2_SDIO1_BASE,
-                .end    = LM2_SDIO1_BASE + 0x100,
-                .flags  = IORESOURCE_MEM,
-        },
-        [1] = {
-                .start  = LM2_IRQ_SDIO_1_STAT,
-                .end    = LM2_IRQ_SDIO_1_STAT,
-                .flags  = IORESOURCE_IRQ,
-        },
-};
-
-static struct platform_device lm2_sdhci1_device = {
-        .name           = "sdhci-lm2",
-        .id             = 1,
-        .num_resources  = ARRAY_SIZE(lm2_sdhci1_resources),
-        .resource       = lm2_sdhci1_resources,
-};
-
-/*
  * RTC
  */
 static  struct resource lm2_rtc_resource[] ={
@@ -337,35 +294,6 @@ static	struct platform_device lm2_i2c_device = {
 	.resource	= lm2_i2c_resource,
 	.num_resources	= ARRAY_SIZE(lm2_i2c_resource),
 };
-
-void __init lm2_sdhci_init(void)
-{
-//      void __iomem *virt_addr;
-
-	/* SDIO0 HRS0(slot1) */
-//      virt_addr = ioremap(0x00440000,0x100);
-//      writel(0x00000000, virt_addr + 0x20); /* SDIO0_HRS8 (SDIO0_SRS16_1=>0x40) */
-//      writel(0x00000000, virt_addr + 0x24); /* SDIO0_HRS9 (SDIO0_SRS17_1=>0x44) */
-//      writel(0x00000000, virt_addr + 0x28); /* SDIO0_HRS10(SDIO0_SRS18_1=>0x48) */
-//      writel(0x80480004, virt_addr + 0x70); /* SDIO0_HRS28(SDIO0_SRS24_1=>0x60) */
-//      writel(0x00000000, virt_addr + 0x74); /* SDIO0_HRS29(SDIO0_SRS25_1=>0x64) */
-//      writel(0x00000000, virt_addr + 0x78); /* SDIO0_HRS30(SDIO0_SRS26_1=>0x68) */
-//      writel(0x00000000, virt_addr + 0x7c); /* SDIO0_HRS31(SDIO0_SRS27_1=>0x6c) */
-//      iounmap(virt_addr);
-//      platform_device_register(&lm2_sdhci0_device);
-
-	/* SDIO1 HRS0(slot0) */
-//      virt_addr = ioremap(0x00450000,0x100);
-//      writel(0x00000000, virt_addr + 0x10); /* SDIO0_HRS4 (SDIO0_SRS16_0=>0x40) */
-//      writel(0x00000000, virt_addr + 0x14); /* SDIO0_HRS5 (SDIO0_SRS17_0=>0x44) */
-//      writel(0x00000000, virt_addr + 0x18); /* SDIO0_HRS6 (SDIO0_SRS18_0=>0x48) */
-//      writel(0x80000002, virt_addr + 0x60); /* SDIO0_HRS24(SDIO0_SRS24_0=>0x60) */
-//      writel(0x00000000, virt_addr + 0x64); /* SDIO0_HRS25(SDIO0_SRS25_0=>0x64) */
-//      writel(0x00000000, virt_addr + 0x68); /* SDIO0_HRS26(SDIO0_SRS26_0=>0x68) */
-//      writel(0x00000000, virt_addr + 0x6c); /* SDIO0_HRS27(SDIO0_SRS27_0=>0x6c) */
-//      iounmap(virt_addr);
-	platform_device_register(&lm2_sdhci1_device);
-}
 
 static void __init lm2_init_early(void)
 {

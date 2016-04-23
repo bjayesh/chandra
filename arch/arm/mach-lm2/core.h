@@ -28,4 +28,5 @@ void vexpress_dt_smp_map_io(void);
  */
 extern	int	lm2_sata_register(void);
 extern	int	lm2_usb_register(void);
+extern	int	lm2_sdhci_init(void);
 #endif

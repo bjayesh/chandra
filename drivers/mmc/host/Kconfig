@@ -170,6 +170,7 @@ config MMC_SDHCI_LM2
 	tristate "SDHCI support on the LM2 SoC"
 	depends on ARCH_LM2
 	depends on MMC_SDHCI_PLTFM
+	select MMC_SDHCI_IO_ACCESSORS
 	help
 	  This selects the SDHCI support for CNS3xxx System-on-Chip devices.
 

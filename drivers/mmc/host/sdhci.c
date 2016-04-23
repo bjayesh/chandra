@@ -77,6 +77,20 @@ static void sdhci_runtime_pm_bus_off(struct sdhci_host *host)
 }
 #endif
 
+#if 1	/* LM2 */
+static void sdhci_lm2_extadr_set(struct sdhci_host *host, u8 extadr)
+{
+	void __iomem *virt_addr;
+
+	if ( host->irq == (32 + 99) ) {
+		virt_addr = ioremap(0x040501b4,0x4);
+	} else {
+		virt_addr = ioremap(0x040501b8,0x4);
+	}
+	writel( (extadr&0xf)<<4 | 0x1, virt_addr);
+	iounmap(virt_addr);
+}
+#endif
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
 	pr_debug(DRIVER_NAME ": =========== REGISTER DUMP (%s)===========\n",
@@ -831,8 +845,13 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 				WARN_ON(1);
 				host->flags &= ~SDHCI_REQ_USE_DMA;
 			} else {
+#if 1  /* LM2 */
+				sdhci_writel(host, (host->adma_addr&0xffffffff), SDHCI_ADMA_ADDRESS);
+				sdhci_lm2_extadr_set(host, (host->adma_addr>>32)&0xf );
+#else
 				sdhci_writel(host, host->adma_addr,
 					SDHCI_ADMA_ADDRESS);
+#endif
 			}
 		} else {
 			int sg_cnt;
@@ -851,8 +870,16 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 				host->flags &= ~SDHCI_REQ_USE_DMA;
 			} else {
 				WARN_ON(sg_cnt != 1);
+#if 1	/* LM2 */
+				{
+					u64 val = sg_dma_address(data->sg);
+					sdhci_writel(host, (val&0xffffffff), SDHCI_DMA_ADDRESS);
+					sdhci_lm2_extadr_set(host, (val>>32)&0xf );
+				}
+#else
 				sdhci_writel(host, sg_dma_address(data->sg),
 					SDHCI_DMA_ADDRESS);
+#endif
 			}
 		}
 	}
@@ -2370,7 +2397,11 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		 * some controllers are faulty, don't trust them.
 		 */
 		if (intmask & SDHCI_INT_DMA_END) {
+#if 1	/* LM2 */
+			u64 dmastart, dmanow;
+#else
 			u32 dmastart, dmanow;
+#endif
 			dmastart = sg_dma_address(host->data->sg);
 			dmanow = dmastart + host->data->bytes_xfered;
 			/*
@@ -2384,7 +2415,12 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 				" next 0x%08x\n",
 				mmc_hostname(host->mmc), dmastart,
 				host->data->bytes_xfered, dmanow);
+#if 1	/* LM2 */
+			sdhci_writel(host, (dmanow&0xffffffff), SDHCI_DMA_ADDRESS);
+			sdhci_lm2_extadr_set(host, (dmanow>>32)&0xf );
+#else
 			sdhci_writel(host, dmanow, SDHCI_DMA_ADDRESS);
+#endif
 		}
 
 		if (intmask & SDHCI_INT_DATA_END) {
@@ -2845,6 +2881,8 @@ int sdhci_add_host(struct sdhci_host *host)
 				"buffers. Falling back to standard DMA.\n",
 				mmc_hostname(mmc));
 			host->flags &= ~SDHCI_USE_ADMA;
+			host->adma_desc = NULL;
+			host->align_buffer = NULL;
 		}
 	}
 

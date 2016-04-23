@@ -57,8 +57,8 @@
 #define	LM2_GMAC_BASE		(LM2_REGS_0 + 0x00410000)
 #define	LM2_USB3		(LM2_REGS_0 + 0x00500000)
 #define	LM2_USB2		(LM2_REGS_0 + 0x00600000)
-#define LM2_SDIO0_BASE          (LM2_REGS_0 + 0x00440200)       /* SD0 slot1 */
-#define LM2_SDIO1_BASE          (LM2_REGS_0 + 0x00450100)       /* SD1 slot0 */
+#define LM2_SDIO0_BASE		(LM2_REGS_0 + 0x00440000)
+#define LM2_SDIO1_BASE		(LM2_REGS_0 + 0x00450000)
 #define LM2_GPFSYS_BASE         (LM2_REGS_0 + 0x00050000)
 
 /*
