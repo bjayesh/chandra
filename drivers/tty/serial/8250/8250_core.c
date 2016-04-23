@@ -46,7 +46,7 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
-#include <linux/fxmodule/fx_uart.h>
+//#include <linux/fxmodule/fx_uart.h>
 
 #include "8250.h"
 /*
@@ -2862,32 +2862,32 @@ static int serial8250_ioctl(struct uart_port *p,
 	if (line < 0) return line;
 
 	switch(cmd) {
-		case UART_SLEEPING:
-			printk(KERN_INFO "8250 UART (%d) : UART_SLEEPING start\n", line);
-
-			mutex_unlock(&tty_p->mutex);
-			uart_suspend_port(&serial8250_reg, p);
-			mutex_lock(&tty_p->mutex);
-
-			printk(KERN_INFO "8250 UART (%d) : UART_SLEEPING end\n", line);
-
-			break;
-
-		case UART_WAKEUP:
-			printk(KERN_INFO "8250 UART (%d) : UART_WAKEUP start\n", line);
-
-			/* if not set, resume doesn't work */
-			set_bit(ASYNCB_SUSPENDED, &tty_p->flags);
-			clear_bit(ASYNCB_INITIALIZED, &tty_p->flags);
-			state->pm_state = UART_PM_STATE_OFF;
-
-			mutex_unlock(&tty_p->mutex);
-			serial8250_resume_port(line);
-			mutex_lock(&tty_p->mutex);
-
-			printk(KERN_INFO "8250 UART (%d) : UART_WAKEUP end\n", line);
-
-			break;
+//		case UART_SLEEPING:
+//			printk(KERN_INFO "8250 UART (%d) : UART_SLEEPING start\n", line);
+//
+//			mutex_unlock(&tty_p->mutex);
+//			uart_suspend_port(&serial8250_reg, p);
+//			mutex_lock(&tty_p->mutex);
+//
+//			printk(KERN_INFO "8250 UART (%d) : UART_SLEEPING end\n", line);
+//
+//			break;
+//
+//		case UART_WAKEUP:
+//			printk(KERN_INFO "8250 UART (%d) : UART_WAKEUP start\n", line);
+//
+//			/* if not set, resume doesn't work */
+//			set_bit(ASYNCB_SUSPENDED, &tty_p->flags);
+//			clear_bit(ASYNCB_INITIALIZED, &tty_p->flags);
+//			state->pm_state = UART_PM_STATE_OFF;
+//
+//			mutex_unlock(&tty_p->mutex);
+//			serial8250_resume_port(line);
+//			mutex_lock(&tty_p->mutex);
+//
+//			printk(KERN_INFO "8250 UART (%d) : UART_WAKEUP end\n", line);
+//
+//			break;
 
 		default:
 			return -ENOIOCTLCMD;

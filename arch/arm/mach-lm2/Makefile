@@ -2,7 +2,7 @@
 # Makefile for the linux kernel.
 #
 
-obj-y					:= lm2.o usb.o clock.o timer_alm.o lm2_pm.o lm2_pm_logger.o
+obj-y					:= lm2.o usb.o clock.o timer_alm.o lm2_pm.o 
 obj-$(CONFIG_SMP)			+= platsmp.o
 obj-$(CONFIG_SATA_AHCI_PLATFORM)	+= sata.o
 obj-$(CONFIG_MMC_SDHCI_PLTFM)		+= sdhci.o

@@ -26,8 +26,8 @@
 #include <linux/spi/xspi.h>
 #include <linux/debugfs.h>
 
-#include <linux/fxmodule/overlay.h>
-#include <linux/fxmodule/kernelOsddi.h>
+//#include <linux/fxmodule/overlay.h>
+//#include <linux/fxmodule/kernelOsddi.h>
 
 #include "core.h"
 #include <asm/lm2_pm_logger.h>
@@ -143,12 +143,12 @@ printk("LM2_PM: Wait %x from %x\n", set_data, set_address);
 
 static int lm2_pm_begin(suspend_state_t state)
 {
-	energyTraceKernel(NULL);
+//	energyTraceKernel(NULL);
 
 	lm2_deeepsleepup_addr_set();
 	printk("[PWRMGR] CPU OFF enter.\n");
 
-	energyTraceKernel(NULL);
+//	energyTraceKernel(NULL);
 	cpu_idle_poll_ctrl(true);
 
         return 0;
@@ -164,7 +164,7 @@ static void lm2_pm_end(void)
 #endif
 
 	printk("[PWRMGR] CPU OFF exit.\n");
-	energyTraceKernel(NULL);
+//	energyTraceKernel(NULL);
 
         cpu_idle_poll_ctrl(false);
 
@@ -216,8 +216,8 @@ static void lm2_pm_suspend(void)
 	unsigned int mpidr, cpu, cluster;
 
 	/* SATA */
-	energyTraceKernel(NULL);
-	kernelGioNegate(OS_GIO_HDD_PWR_CNT);
+//	energyTraceKernel(NULL);
+//	kernelGioNegate(OS_GIO_HDD_PWR_CNT);
 
 	mpidr = read_cpuid_mpidr();
 	cpu = MPIDR_AFFINITY_LEVEL(mpidr, 0);
@@ -227,14 +227,14 @@ static void lm2_pm_suspend(void)
 	BUG_ON(cluster >= LM2_CLUSTERS || cpu >= QUATRO55XX_MAX_CPUS_PER_CLUSTER);
 
 	/* FX */
-	energyTraceKernel(NULL);
+//	energyTraceKernel(NULL);
 	reset_for_swoff_retry();
 
-	overlaySdReset();
-	overlaySdClkDisable();
-	overlayEnergyStateGotoCpuoff();
-	overlayUartReset();
-	overlayUartClkDisable();
+//	overlaySdReset();
+//	overlaySdClkDisable();
+//	overlayEnergyStateGotoCpuoff();
+//	overlayUartReset();
+//	overlayUartClkDisable();
 
 	lm2_suspend_reg_set(LM2_SHARED_MEM_SEND_TO_A7, 0x01);
 	lm2_suspend_wait_reg(LM2_SHARED_MEM_RECV_FROM_A7, 0x81);/*0x81?*/
@@ -254,15 +254,15 @@ static void lm2_pm_suspend(void)
 	lm2_save_a15core();		// Save A15Core C2/C13/SP
 	lm2_wfi0();
 	/************* Resume Start *************/
-	overlayEnergyStateReturnCpuoff();
-	overlayUartClkEnable();
-	overlayUartUnreset();
-	overlaySdClkEnable();
-	overlaySdUnreset();
+//	overlayEnergyStateReturnCpuoff();
+//	overlayUartClkEnable();
+//	overlayUartUnreset();
+//	overlaySdClkEnable();
+//	overlaySdUnreset();
 
 	/* SATA : will be deleted from here */
-	kernelGioAssert(OS_GIO_HDD_PWR_CNT);
-	energyTraceKernel(NULL);
+//	kernelGioAssert(OS_GIO_HDD_PWR_CNT);
+//	energyTraceKernel(NULL);
 
 	//irq_to_a15(LM2_IRQ_CIPUI);	//  64
 	//irq_to_a15(LM2_IRQ_GMACK_STAT);	// 126
@@ -288,26 +288,26 @@ static int lm2_pm_enter(suspend_state_t suspend_state)
 #ifdef  LM2_PM_DEBUG
 printk(KERN_ERR "LM2_PM: Register Save\n");
 #endif
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			stmac_reg_save();
 #ifdef	CONFIG_PCIE_LM2
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			lm2_pcie_suspend();
 #endif
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			dw3_reg_save();
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			lm2_pm_suspend();
 #ifdef  LM2_PM_DEBUG
 printk(KERN_ERR "LM2_PM: Register Load\n");
 #endif
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			dw3_reg_load();
 #ifdef	CONFIG_PCIE_LM2
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			lm2_pcie_resume();
 #endif
-			energyTraceKernel(NULL);
+//			energyTraceKernel(NULL);
 			stmac_reg_load();
 			break;
 		default:
@@ -318,7 +318,7 @@ printk(KERN_ERR "LM2_PM: Register Load\n");
 
 static int lm2_pm_finish(void)
 {
-	energyTraceKernel(NULL);
+//	energyTraceKernel(NULL);
 	return 0;
 }
 
@@ -391,7 +391,7 @@ static int __init lm2_pm_init(void)
 		ret = -ENOMEM;
 	strcpy(&run_flag, "cold boot\n");
 	/* /sys/kernel/debug/pm_stamp */
-	lm2_pm_stamp_sysfs_entry();
+//	lm2_pm_stamp_sysfs_entry();
 #endif
 	return ret;
 }

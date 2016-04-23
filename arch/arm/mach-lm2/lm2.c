@@ -46,7 +46,32 @@
 
 #include "core.h"
 
+#if 1	/* WR Change */
+#define OS_PRODUCT_ID_BOMBORA    0x33
+#define OS_PRODUCT_ID_KAIMANA    0x34
+#define OS_PRODUCT_ID_TOMBOLO    0x3b
+#define OS_PRODUCT_ID_MARIS      0x3c
+int kernelGetProductId(void){
+        int* productid;
+        struct device_node *node;
+
+        node = of_find_node_by_path("/bootinfo");
+        if(node == NULL){
+                printk(KERN_ERR "[kernelGetProductId]of_find_node_by_path failed\n");
+                return ERROR;
+        }
+
+        productid = (int *)of_get_property(node, "productid", NULL);
+        if(productid == NULL){
+                printk(KERN_ERR "[kernelGetProductId]of_get_property failed\n");
+                return ERROR;
+        }
+
+        return *productid;
+}
+#else
 #include <linux/fxmodule/kernelOsddi.h>
+#endif
 
 extern	void	lm2_clocksource_init(void __iomem *gpt);
 extern	void	lm2_clockevent_init(int irq, void __iomem *gpt);

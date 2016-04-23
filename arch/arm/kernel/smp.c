@@ -668,13 +668,13 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 #ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
 	case IPI_RX_CMD_NOT_EMPTY:
 		irq_enter();
-		wakeup_for_cmd_not_empty();
+//		wakeup_for_cmd_not_empty();
 		irq_exit();
                 break;
 
 	case IPI_RX_CMD_NOT_FULL:
 		irq_enter();
-		wakeup_for_cmd_not_full();
+//		wakeup_for_cmd_not_full();
 		irq_exit();
                 break;
 #endif

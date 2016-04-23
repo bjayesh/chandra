@@ -172,6 +172,4 @@ source "drivers/powercap/Kconfig"
 
 source "drivers/phy/Kconfig"
 
-source "drivers/fxmodule/Kconfig"
-
 endmenu

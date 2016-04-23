@@ -25,7 +25,7 @@
 
 #include "xhci.h"
 
-#include <linux/fxmodule/xchi_ioctl.h>
+//#include <linux/fxmodule/xchi_ioctl.h>
 
 static int xchi_cdev_open(struct inode *inode, struct file *filp);
 static int xchi_cdev_release(struct inode *inode, struct file *filp);
@@ -148,12 +148,12 @@ static int xhci_plat_create_dev(struct platform_device *pdev)
 		return status;
 	}
 
-	g_xchi_cdev.dev = device_create(g_xchi_cdev.pclass, NULL, g_xchi_cdev.devno,NULL, XHCI_CDEV_DEVICE);
-	if (IS_ERR(g_xchi_cdev.dev)) {
-		pr_err("Failed to open char device\n");
-		class_destroy(g_xchi_cdev.pclass);
-		return(-ENODEV);
-	}
+//	g_xchi_cdev.dev = device_create(g_xchi_cdev.pclass, NULL, g_xchi_cdev.devno,NULL, XHCI_CDEV_DEVICE);
+//	if (IS_ERR(g_xchi_cdev.dev)) {
+//		pr_err("Failed to open char device\n");
+//		class_destroy(g_xchi_cdev.pclass);
+//		return(-ENODEV);
+//	}
 
 	g_xchi_cdev.pdev=pdev;
 	return 0;
@@ -421,16 +421,16 @@ static long xchi_cdev_ioctl(struct file *filp,unsigned int cmd, unsigned long ar
 	hcd = platform_get_drvdata(pdev);
 
 	switch(cmd) {
-		case XHCI_SLEEPING:
-			//turn off port power of roothub
-			xhci_hub_control(hcd, ClearPortFeature,USB_PORT_FEAT_POWER,1, 0, 0);
-			xhci_hub_control(hcd, ClearPortFeature,USB_PORT_FEAT_POWER,2, 0, 0);
-			break;
-
-		case XHCI_WAKEUP:
-			xhci_hub_control(hcd, SetPortFeature,USB_PORT_FEAT_POWER,1, 0, 0);
-			xhci_hub_control(hcd, SetPortFeature,USB_PORT_FEAT_POWER,2, 0, 0);
-			break;
+//		case XHCI_SLEEPING:
+//			//turn off port power of roothub
+//			xhci_hub_control(hcd, ClearPortFeature,USB_PORT_FEAT_POWER,1, 0, 0);
+//			xhci_hub_control(hcd, ClearPortFeature,USB_PORT_FEAT_POWER,2, 0, 0);
+//			break;
+//
+//		case XHCI_WAKEUP:
+//			xhci_hub_control(hcd, SetPortFeature,USB_PORT_FEAT_POWER,1, 0, 0);
+//			xhci_hub_control(hcd, SetPortFeature,USB_PORT_FEAT_POWER,2, 0, 0);
+//			break;
 		default:
 			return -EINVAL;
 	}
