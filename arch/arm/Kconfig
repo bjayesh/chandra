@@ -109,6 +109,12 @@ config HAVE_PWM
 config MIGHT_HAVE_PCI
 	bool
 
+config PCIEPORTBUS
+	bool
+
+config PCIE_LM2
+	bool
+
 config SYS_SUPPORTS_APM_EMULATION
 	bool
 
