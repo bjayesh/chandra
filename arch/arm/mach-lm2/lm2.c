@@ -97,7 +97,7 @@ static struct map_desc lm2_io_desc[] __initdata = {
 #if 0
 	{
 		.virtual	= 0xffc00000,
-		.pfn		= __phys_to_pfn(0x0000000004060000ULL),
+		.pfn		= __phys_to_pfn(0x0000000410000000ULL),
 		.length		= SZ_64K,
 		.type		= MT_DEVICE,
 	},
