@@ -227,6 +227,11 @@ static  struct resource lm2_rtc_resource[] ={
                 .end    = 0x04030100,
                 .flags  = IORESOURCE_MEM,
         },
+	{
+		.start	= 34,
+		.end	= 34,
+		.flags	= IORESOURCE_IRQ,
+	},
 };
 
 static	struct platform_device lm2_rtc_device = {
@@ -234,7 +239,6 @@ static	struct platform_device lm2_rtc_device = {
 	.id		= -1,
 	.resource	= lm2_rtc_resource,
 	.num_resources	= ARRAY_SIZE(lm2_rtc_resource),
-
 };
 
 /*
