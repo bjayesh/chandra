@@ -1,6 +1,63 @@
 #include <asm/setup.h>
 #include <libfdt.h>
 
+#ifdef	CONFIG_ARCH_LM2
+#include <asm/string.h>
+#include <asm/page.h>
+/*
+ * 0x7fff_f000 start virtual address
+ */
+#define	PARAM_ADDR	0x7ffff000
+#define	ATAGS_ADDR	0x80000100
+
+struct	lm2_param {
+	unsigned int	magic;
+	unsigned char	macaddr[6];
+	unsigned long long	ramsize;
+	unsigned char	bootparam[512];
+	unsigned long	initrd_addr;
+	unsigned long	initrd_size;
+	unsigned long	firm_addr;
+	unsigned long	firm_size;
+};
+
+static	void	prepare_atag_list(void)
+{
+	struct	lm2_param	*p_ptr = PARAM_ADDR;
+	struct	tag		*t_ptr = ATAGS_ADDR;
+
+	t_ptr->hdr.size = sizeof(struct tag_header) + sizeof(struct tag_core);
+	t_ptr->hdr.tag = ATAG_CORE;
+	t_ptr->u.core.flags= 0x1;
+	t_ptr->u.core.pagesize = PAGE_SIZE;
+	t_ptr->u.core.rootdev = 0xff;
+
+	t_ptr = t_ptr + t_ptr->hdr.size;
+
+	t_ptr->hdr.size = sizeof(struct tag_header) + sizeof(struct tag_mem32);
+	t_ptr->hdr.tag = ATAG_MEM;
+	t_ptr->u.mem.size = (unsigned long)p_ptr->ramsize;
+	t_ptr->u.mem.start = 0x80000000;
+
+	t_ptr = t_ptr + t_ptr->hdr.size;
+
+	t_ptr->hdr.size = sizeof(struct tag_header) + sizeof(struct tag_initrd);
+	t_ptr->hdr.tag = ATAG_INITRD;
+	t_ptr->u.initrd.start = p_ptr->initrd_addr;
+	t_ptr->u.initrd.size = p_ptr->initrd_size;
+
+	t_ptr = t_ptr + t_ptr->hdr.size;
+
+	t_ptr->hdr.size = sizeof(struct tag_header) + 512;
+	t_ptr->hdr.tag = ATAG_CMDLINE;
+	memcpy(t_ptr->u.cmdline.cmdline, p_ptr->bootparam, 512);
+
+	return;
+	
+}
+
+#endif	/* CONFIG_ARCH_LM2 */
+
 #if defined(CONFIG_ARM_ATAG_DTB_COMPAT_CMDLINE_EXTEND)
 #define do_extend_cmdline 1
 #else
@@ -111,6 +168,10 @@ int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 	uint32_t mem_reg_property[2 * 2 * NR_BANKS];
 	int memcount = 0;
 	int ret, memsize;
+
+#ifdef	CONFIG_ARCH_LM2
+	prepare_atag_list();
+#endif	/* CONFIG_ARCH_LM2 */
 
 	/* make sure we've got an aligned pointer */
 	if ((u32)atag_list & 0x3)

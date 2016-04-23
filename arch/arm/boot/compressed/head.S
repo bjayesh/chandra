@@ -196,7 +196,7 @@ not_angel:
 		addcc	r0, r0, pc
 		cmpcc	r4, r0
 		orrcc	r4, r4, #1		@ remember we skipped cache_on
-/*		blcs	cache_on */	/* yamano debug */
+		blcs	cache_on 	/* yamano debug */
 
 restart:	adr	r0, LC0
 		ldmia	r0, {r1, r2, r3, r6, r10, r11, r12}
@@ -407,9 +407,7 @@ dtb_check_done:
 #endif
 
 		tst	r4, #1
-/*
-		bleq	cache_clean_flush
-*/	/* yamano */
+		bleq	cache_clean_flush	/* yamano debug without */
 		adr	r0, BSYM(restart)
 		add	r0, r0, r6
 		mov	pc, r0
@@ -490,7 +488,7 @@ not_relocated:	mov	r0, #0
 		 */
 		tst	r4, #1
 		bic	r4, r4, #1
-/*		blne	cache_on	*/	/* yamano */
+		blne	cache_on		/* yamano */
 
 /*
  * The C runtime environment should now be setup sufficiently.
@@ -504,7 +502,7 @@ not_relocated:	mov	r0, #0
 		add	r2, sp, #0x10000	@ 64k max
 		mov	r3, r7
 		bl	decompress_kernel
-/*		bl	cache_clean_flush	*/	/* yamano */
+		bl	cache_clean_flush		/* yamano */
 /*		bl	cache_off		*/	/* yamano */
 		mov	r1, r7			@ restore architecture number
 		mov	r2, r8			@ restore atags pointer
@@ -756,7 +754,7 @@ __armv7_mmu_cache_on:
 		mcrne   p15, 0, r6, c2, c0, 2   @ load ttb control
 #endif	/* yamano */
 #endif
-#if 0	/* yamano */
+#if 1	/* yamano */
 		mcr	p15, 0, r0, c7, c5, 4	@ ISB
 		mcr	p15, 0, r0, c1, c0, 0	@ load control register
 		mrc	p15, 0, r0, c1, c0, 0	@ and read it back
