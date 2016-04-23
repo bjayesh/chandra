@@ -31,15 +31,21 @@ EXPORT_SYMBOL(clk_disable);
 
 unsigned long clk_get_rate(struct clk *clk)
 {
+#if 0
 	return clk->rate;
+#else
+	return	100;
+#endif
 }
 EXPORT_SYMBOL(clk_get_rate);
 
 long clk_round_rate(struct clk *clk, unsigned long rate)
 {
 	long ret = -EIO;
+#if 0
 	if (clk->ops && clk->ops->round)
 		ret = clk->ops->round(clk, rate);
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(clk_round_rate);
@@ -47,28 +53,35 @@ EXPORT_SYMBOL(clk_round_rate);
 int clk_set_rate(struct clk *clk, unsigned long rate)
 {
 	int ret = -EIO;
+#if 0
 	if (clk->ops && clk->ops->set)
 		ret = clk->ops->set(clk, rate);
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(clk_set_rate);
 
 long icst_clk_round(struct clk *clk, unsigned long rate)
 {
+#if 0
 	struct icst_vco vco;
 	vco = icst_hz_to_vco(clk->params, rate);
 	return icst_hz(clk->params, vco);
+#else
+	return	100;
+#endif
 }
 EXPORT_SYMBOL(icst_clk_round);
 
 int icst_clk_set(struct clk *clk, unsigned long rate)
 {
+#if 0
 	struct icst_vco vco;
 
 	vco = icst_hz_to_vco(clk->params, rate);
 	clk->rate = icst_hz(clk->params, vco);
 	clk->ops->setvco(clk, vco);
-
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(icst_clk_set);

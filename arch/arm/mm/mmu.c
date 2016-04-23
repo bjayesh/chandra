@@ -43,7 +43,6 @@
  */
 struct page *empty_zero_page;
 EXPORT_SYMBOL(empty_zero_page);
-static int	yamadebug = 0;
 /*
  * The pmd table for the upper-most set of pages.
  */
@@ -73,6 +72,46 @@ struct cachepolicy {
 	pteval_t	pte;
 	pteval_t	pte_s2;
 };
+#if 1 /* yamano */
+#define UART_BASE       0xfc160000
+#define UART_BASE2      0xffc10000
+#define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
+#define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
+
+static int	yamadebug = 0;
+static  void    putchar(u32 base, int c)
+{
+        while((UART_STAT(base) & 0x40) == 0)
+                barrier();
+        UART_DATA(base) = c;
+        return;
+}
+
+static  void    flush(u32 base)
+{
+        while((UART_STAT(base) & 0x40) == 0)
+                barrier();
+}
+
+static  void    putstr(u32 base, const char *ptr)
+{
+        char    c;
+
+        while((c = *ptr++) != '\0'){
+                if(c == '\n')
+                        putchar(base,'\r');
+                putchar(base,c);
+        }
+        flush(base);
+}
+
+static  int     getchar(u32 base)
+{
+        while((UART_STAT(base) & 0x01) == 0)
+                barrier();
+        return  UART_DATA(base);
+}
+#endif  /* yamano */
 
 #ifdef CONFIG_ARM_LPAE
 #define s2_policy(policy)	policy
@@ -596,18 +635,30 @@ EXPORT_SYMBOL(phys_mem_access_prot);
 
 static void __init *early_alloc_aligned(unsigned long sz, unsigned long align)
 {
+if(yamadebug == 0)
+putstr(UART_BASE,"early_alloc_aligned\n");
 	void *ptr = __va(memblock_alloc(sz, align));
+if(yamadebug == 0)
+putstr(UART_BASE,"alloc\n");
 	memset(ptr, 0, sz);
+if(yamadebug == 0)
+putstr(UART_BASE,"memset\n");
 	return ptr;
 }
 
 static void __init *early_alloc(unsigned long sz)
 {
+if(yamadebug == 0)
+putstr(UART_BASE,"early_alloc\n");
+else
+putstr(UART_BASE2,"early_alloc\n");
 	return early_alloc_aligned(sz, sz);
 }
 
 static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
 {
+if(yamadebug == 1)
+putstr(UART_BASE2,"early_pte_alloc\n");
 	if (pmd_none(*pmd)) {
 		pte_t *pte = early_alloc(PTE_HWTABLE_OFF + PTE_HWTABLE_SIZE);
 		__pmd_populate(pmd, __pa(pte), prot);
@@ -1003,6 +1054,11 @@ void __init sanity_check_meminfo(void)
 {
 	int i, j, highmem = 0;
 	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;
+	char	buf[256];	/* yamano debug */
+
+putstr(UART_BASE, "sanity\n");
+sprintf(buf, "%llx vmlimit\n", vmalloc_limit);
+putstr(UART_BASE, buf);
 
 	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {
 		struct membank *bank = &meminfo.bank[j];
@@ -1017,6 +1073,13 @@ void __init sanity_check_meminfo(void)
 			size_limit = vmalloc_limit - bank->start;
 
 		bank->highmem = highmem;
+
+putstr(UART_BASE, "meminfo->start");
+sprintf(buf, "%llx\n", bank->start);
+putstr(UART_BASE, buf);
+putstr(UART_BASE, "meminfo->highmem");
+sprintf(buf, "%lx\n", bank->highmem);
+putstr(UART_BASE, buf);
 
 #ifdef CONFIG_HIGHMEM
 		/*
@@ -1038,6 +1101,15 @@ void __init sanity_check_meminfo(void)
 				j++;
 			}
 			bank->size = size_limit;
+putstr(UART_BASE, "meminfo->start");
+sprintf(buf, "%llx\n", bank->start);
+putstr(UART_BASE, buf);
+putstr(UART_BASE, "meminfo->size");
+sprintf(buf, "%llx\n", bank->size);
+putstr(UART_BASE, buf);
+putstr(UART_BASE, "meminfo->highmem");
+sprintf(buf, "%lx\n", bank->highmem);
+putstr(UART_BASE, buf);
 		}
 #else
 		/*
@@ -1170,15 +1242,20 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	phys_addr_t	paddr;
 	void *vectors;
 
+putstr(UART_BASE,"devicemaps_init_entry\n");
 	/*
 	 * Allocate the vector page early.
 	 */
 	vectors = early_alloc(PAGE_SIZE * 2);
+putstr(UART_BASE,"early_alloc for vector\n");
+
 	early_trap_init(vectors);
+putstr(UART_BASE,"early_trap_init\n");
 
 	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 
+putstr(UART_BASE,"pmd_clear\n");
 	/*
 	 * Map the kernel if it is XIP.
 	 * It is always first in the modulearea.
@@ -1190,7 +1267,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	map.type = MT_ROM;
 	create_mapping(&map);
 #endif
-
+putstr(UART_BASE,"XIP\n");
 	/*
 	 * Map the cache flushing regions.
 	 */
@@ -1208,6 +1285,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	map.type = MT_MINICLEAN;
 	create_mapping(&map);
 #endif
+putstr(UART_BASE,"FLASH\n");
 
 	/*
 	 * Create a mapping for the machine vectors at the high-vectors
@@ -1215,8 +1293,8 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	 * create a mapping at the low-vectors virtual address.
 	 */
 	map.pfn = __phys_to_pfn(virt_to_phys(vectors));
-	paddr = virt_to_phys(vectors);
-	map.pfn = __phys_to_pfn(paddr);
+//	paddr = virt_to_phys(vectors);
+//	map.pfn = __phys_to_pfn(paddr);
 	map.virtual = 0xffff0000;
 	map.length = PAGE_SIZE;
 #ifdef CONFIG_KUSER_HELPERS
@@ -1225,6 +1303,8 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	map.type = MT_LOW_VECTORS;
 #endif
 	create_mapping(&map);
+putstr(UART_BASE,"vector\n");
+
 	if (!vectors_high()) {
 		map.virtual = 0;
 		map.length = PAGE_SIZE * 2;
@@ -1238,6 +1318,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	map.length = PAGE_SIZE;
 	map.type = MT_LOW_VECTORS;
 	create_mapping(&map);
+putstr(UART_BASE,"read only\n");
 	/*
 	 * Ask the machine support to map in the statically mapped devices.
 	 */
@@ -1245,8 +1326,10 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 		mdesc->map_io();
 	fill_pmd_gaps();
 
+putstr(UART_BASE,"fill_pmd_gaps\n");
 	/* Reserve fixed i/o space in VMALLOC region */
 	pci_reserve_io();
+putstr(UART_BASE,"pci_reserve_io\n");
 
 	/*
 	 * Finally flush the caches and tlb to ensure that we're in a
@@ -1261,6 +1344,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 static void __init kmap_init(void)
 {
 #ifdef CONFIG_HIGHMEM
+putstr(UART_BASE2,"kmap_init entry\n");
 	pkmap_page_table = early_pte_alloc(pmd_off_k(PKMAP_BASE),
 		PKMAP_BASE, _PAGE_KERNEL_TABLE);
 
@@ -1301,19 +1385,30 @@ void __init paging_init(struct machine_desc *mdesc)
 	char	buf[64];
 	int c;
 
+putstr(UART_BASE,"paging_init\n");
 	memblock_set_current_limit(arm_lowmem_limit);
-
+putstr(UART_BASE,"memblock_set_current_limit\n");
 	build_mem_type_table();
+putstr(UART_BASE,"build_mem_type_table\n");
 	prepare_page_table();
+putstr(UART_BASE,"prepare_page_table\n");
 	map_lowmem();
+putstr(UART_BASE,"map_lowmem\n");
 	dma_contiguous_remap();
-	devicemaps_init(mdesc);
+putstr(UART_BASE,"dma_contiguous_remap\n");
+	devicemaps_init(mdesc);	/* reset debug I/O map yamano befor used UART_BASE2 */
+	yamadebug = 1;
+putstr(UART_BASE2,"devicemaps_init\n");
 	kmap_init();
+putstr(UART_BASE2,"kmap_init\n");
 	tcm_init();
+putstr(UART_BASE2,"tcm_init\n");
 	top_pmd = pmd_off_k(0xffff0000);
+putstr(UART_BASE2,"top_off_k\n");
 
 	/* allocate the zero page. */
 	zero_page = early_alloc(PAGE_SIZE);
+putstr(UART_BASE2,"early_alloc\n");
 
 	bootmem_init();
 

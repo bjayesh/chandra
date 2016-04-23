@@ -40,7 +40,8 @@ struct tag_core {
 
 struct tag_mem32 {
 	__u32	size;
-	__u32	start;	/* physical start address */
+//	__u32	start;	/* physical start address */
+	phys_addr_t	start;	/* physical start address */
 };
 
 /* VGA text type displays */

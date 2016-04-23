@@ -671,6 +671,7 @@ ENDPROC(fixup_pv_table)
 	.type	__pv_phys_offset, %object
 __pv_phys_offset:
 	.long	0
+	.long	0
 	.size	__pv_phys_offset, . - __pv_phys_offset
 __pv_offset:
 	.long	0

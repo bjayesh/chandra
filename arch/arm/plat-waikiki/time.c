@@ -97,9 +97,9 @@ void	lm2_clocksource_init(__iomem void *gpt_base)
 	result = clocksource_mmio_init(HTCNTR_L(clksrc_base),"system_timer",tick_rate,
 		200, 32, clocksource_mmio_readl_up);
 
-	if(result != 0){
-		lm2_printk(0xfc000000,"clocksource error \n");
-	}
+//	if(result != 0){
+//		lm2_printk(0xfc000000,"clocksource error \n");
+//	}
 }
 
 static struct clock_event_device clkevt = {

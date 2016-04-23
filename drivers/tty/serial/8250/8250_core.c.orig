@@ -47,7 +47,7 @@
 #include <asm/irq.h>
 
 #include "8250.h"
-
+extern	void	lm2_printk(unsigned long ptr, const char *str);
 /*
  * Configuration:
  *   share_irqs - whether we pass IRQF_SHARED to request_irq().  This option

@@ -84,8 +84,14 @@ void	lm2_printk(unsigned long base, const char *ptr)
  */
 static struct map_desc lm2_io_desc[] __initdata = {
 	{
+		.virtual	= 0xffc00000,
+		.pfn		= __phys_to_pfn(0x0000000004060000ULL),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE,
+	},
+	{
 /*		.virtual	= LM2_DEBUG_SERIAL_VIRT,	*/
-		.virtual	= 0xfc000000,
+		.virtual	= 0xffc10000,
 		.pfn		= __phys_to_pfn(0x04160000ULL),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
@@ -287,7 +293,7 @@ static	struct platform_device lm2_i2c_device = {
 
 static void __init lm2_init_early(void)
 {
-	lm2_printk(0xfc000000,"lm2_init_early\n");
+//	lm2_printk(0xfc000000,"lm2_init_early\n");
 }
 
 static void lm2_power_off(void)
@@ -320,9 +326,9 @@ static void __init lm2_init_irq(void)
 	virt_dist = ioremap(LM2_GIC_DIST,SZ_4K);
 	virt_cpui = ioremap(LM2_GIC_CPU,SZ_4K);
 
-	lm2_printk(0xfc000000,"lm2_init_irq\n");
+//	lm2_printk(0xfc000000,"lm2_init_irq\n");
 	gic_init_bases(0,29,ioremap(LM2_GIC_DIST,SZ_4K),ioremap(LM2_GIC_CPU,SZ_4K),0,NULL);
-	lm2_printk(0xfc000000,"lm2_init_irq end\n");
+//	lm2_printk(0xfc000000,"lm2_init_irq end\n");
 }
 
 /*
@@ -335,8 +341,10 @@ static	void __init lm2_fixup_mem(struct tag *tags, char **form, struct meminfo *
 {
 #if 1	/* yamano debug */
 	meminfo->bank[0].start = 0x890000000ULL;
-	meminfo->bank[0].size = SZ_512M;
-	meminfo->nr_banks = 1;
+	meminfo->bank[0].size = 512*1024*1024;
+//	meminfo->bank[1].start = 0x8b0000000ULL;
+//	meminfo->bank[1].size = SZ_512M+SZ_512M+SZ_256M;
+	meminfo->nr_banks =1;
 #endif /* yamano debug */
 	return;
 }
@@ -368,9 +376,6 @@ static void __init lm2_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
-#ifdef	CONFIG_LM2_GPDMA
-	lm2_dma_register();
-#endif
 
 }
 
@@ -458,7 +463,7 @@ static void __init lm2_dt_timer_init(void)
 static void __init lm2_dt_init(void)
 {
 
-	l2x0_of_init(0x00400000, 0xfe0fffff);
+//	l2x0_of_init(0x00400000, 0xfe0fffff);
 }
 
 /*

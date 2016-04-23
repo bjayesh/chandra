@@ -166,7 +166,7 @@ static	int	gpio_probe(struct platform_device *pdev)
 	}else{
 		dev_info(&pdev->dev,"GPIO mapped\n");
 	}
-
+	return	0;
 }
 
 static	int	gpio_remove(struct platform_device *pdev)

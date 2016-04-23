@@ -9,11 +9,12 @@
 
 /*
  * BSP original macro
- */
+
 #define	LM2_PHYS_MEM_START	0x0000000800000000ULL
 #define	LM2_PHYS_MEM_END	0x0000000bffffffffULL
 
 #define	KERNEL_PHYS_OFFSET	0x0000000880000000ULL
+*/
 
 /*
  * Linux Standard macro

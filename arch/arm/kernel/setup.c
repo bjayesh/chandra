@@ -117,7 +117,7 @@ EXPORT_SYMBOL(outer_cache);
 
 #if 1 /* yamano */
 #define UART_BASE       0xfc160000
-#define	UART_BASE2	0xfc000000
+#define	UART_BASE2	0xffc10000
 #define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
 #define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
 
@@ -856,11 +856,14 @@ void __init setup_arch(char **cmdline_p)
 	*cmdline_p = cmd_line;
 	parse_early_param();
 
-
+putstr(UART_BASE,"parse_early_param\n");
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
 	sanity_check_meminfo();
+putstr(UART_BASE,"sanity_check_meminfo_OK\n");
 	arm_memblock_init(&meminfo, mdesc);
+putstr(UART_BASE,"arm_memblock_init\n");
 	paging_init(mdesc);	/* reset debug I/O memory page  yamano */
+putstr(UART_BASE2,"paging_init\n");
 	request_standard_resources(mdesc);
 	if (mdesc->restart)
 		arm_pm_restart = mdesc->restart;

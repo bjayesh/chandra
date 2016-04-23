@@ -38,7 +38,7 @@
 
 #if 1 /* yamano */
 #define UART_BASE       0xfc160000
-#define UART_BASE2      0xfc000000
+#define UART_BASE2      0xffc10000
 #define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
 #define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
 

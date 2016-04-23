@@ -50,7 +50,7 @@ static struct {
 };
 #else
 #ifndef	MEM_SIZE
-#define	MEM_SIZE	(512*1024*1024)		/* 512M */
+#define	MEM_SIZE	(768*1024*1024)		/* 2G */
 #endif	/* MEM_SIZE */
 static	struct {
 	struct	tag_header	hdr1;
@@ -235,6 +235,7 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 	char	buf[256];	/* yamano debug */
 
 	default_tags.mem.start = PHYS_OFFSET;
+//	default_tags.mem.start = 0x0000000890000000ULL;
 	sprintf(buf,"machine_nr:%x\n",machine_nr);
 	putstr(buf);
 	machine_nr = 0x157c;	/* yamano debug */
@@ -249,7 +250,7 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 			break;
 		}else{	/* yamano debug */
 			putstr(p->name);
-			sprintf(buf,"%x",p->nr);
+			sprintf(buf,"==%x==",p->nr);
 			putstr(buf);
 		}
 
@@ -258,12 +259,14 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 			    " (r1 = 0x%08x).\n\n", machine_nr);
 		dump_machine_table(); /* does not return */
 	}
-
-	if (__atags_pointer)
+#if 1
+	if (__atags_pointer){
+	putstr("atags point vaild\n");
 		tags = phys_to_virt(__atags_pointer);
-	else if (mdesc->atag_offset)
+	}else if (mdesc->atag_offset){
+	putstr("atag offset valid\n");
 		tags = (void *)(PAGE_OFFSET + mdesc->atag_offset);
-
+	}
 #if defined(CONFIG_DEPRECATED_PARAM_STRUCT)
 	/*
 	 * If we have the old style parameters, convert them to
@@ -273,9 +276,11 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 		convert_to_tag_list(tags);
 #endif
 	if (tags->hdr.tag != ATAG_CORE) {
+	putstr("atag header invalid end\n");
 		early_print("Warning: Neither atags nor dtb found\n");
 		tags = (struct tag *)&default_tags;
 	}
+#endif
 	if (mdesc->fixup)
 		mdesc->fixup(tags, &from, &meminfo);
 
@@ -286,6 +291,7 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 		parse_tags(tags);
 	}
 
+	putstr("atag execution end\n");
 	/* parse_early_param needs a boot_command_line */
 	strlcpy(boot_command_line, from, COMMAND_LINE_SIZE);
 
