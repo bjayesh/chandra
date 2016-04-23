@@ -272,6 +272,9 @@ extern struct page * grab_cache_page_nowait(struct address_space *mapping,
 				pgoff_t index);
 extern struct page * read_cache_page_async(struct address_space *mapping,
 				pgoff_t index, filler_t *filler, void *data);
+extern struct page * read_cache_page_async_nowait(struct address_space *mapping,
+				pgoff_t index, filler_t *filler,
+				void *data);
 extern struct page * read_cache_page(struct address_space *mapping,
 				pgoff_t index, filler_t *filler, void *data);
 extern struct page * read_cache_page_gfp(struct address_space *mapping,

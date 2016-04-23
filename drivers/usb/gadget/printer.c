@@ -827,6 +827,8 @@ done:
 
 static void printer_reset_interface(struct printer_dev *dev)
 {
+	unsigned long	flags;
+
 	if (dev->interface < 0)
 		return;
 
@@ -838,9 +840,11 @@ static void printer_reset_interface(struct printer_dev *dev)
 	if (dev->out_ep->desc)
 		usb_ep_disable(dev->out_ep);
 
+	spin_lock_irqsave(&dev->lock, flags);
 	dev->in_ep->desc = NULL;
 	dev->out_ep->desc = NULL;
 	dev->interface = -1;
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 /* Change our operational Interface. */
@@ -980,6 +984,15 @@ unknown:
 		break;
 	}
 	/* host either stalls (value < 0) or reports success */
+	if (value >= 0) {
+		req->length = value;
+		req->zero = value < wLength;
+		value = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
+		if (value < 0) {
+			ERROR(dev, "%s:%d Error!\n", __func__, __LINE__);
+			req->status = 0;
+		}
+	}
 	return value;
 }
 
@@ -1048,13 +1061,10 @@ static int printer_func_set_alt(struct usb_function *f,
 static void printer_func_disable(struct usb_function *f)
 {
 	struct printer_dev *dev = container_of(f, struct printer_dev, function);
-	unsigned long		flags;
 
 	DBG(dev, "%s\n", __func__);
 
-	spin_lock_irqsave(&dev->lock, flags);
 	printer_reset_interface(dev);
-	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static void printer_cfg_unbind(struct usb_configuration *c)

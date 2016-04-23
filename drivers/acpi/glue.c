@@ -174,28 +174,25 @@ EXPORT_SYMBOL_GPL(acpi_find_child);
 
 int acpi_bind_one(struct device *dev, acpi_handle handle)
 {
-	struct acpi_device *acpi_dev;
-	acpi_status status;
+	struct acpi_device *acpi_dev = NULL;
 	struct acpi_device_physical_node *physical_node, *pn;
 	char physical_node_name[sizeof(PHYSICAL_NODE_STRING) + 2];
 	int retval = -EINVAL;
 
-	if (ACPI_HANDLE(dev)) {
+	if (ACPI_COMPANION(dev)) {
 		if (handle) {
-			dev_warn(dev, "ACPI handle is already set\n");
+			dev_warn(dev, "ACPI companion already set\n");
 			return -EINVAL;
 		} else {
-			handle = ACPI_HANDLE(dev);
+			acpi_dev = ACPI_COMPANION(dev);
 		}
+	} else {
+		acpi_bus_get_device(handle, &acpi_dev);
 	}
-	if (!handle)
+	if (!acpi_dev)
 		return -EINVAL;
 
 	get_device(dev);
-	status = acpi_bus_get_device(handle, &acpi_dev);
-	if (ACPI_FAILURE(status))
-		goto err;
-
 	physical_node = kzalloc(sizeof(*physical_node), GFP_KERNEL);
 	if (!physical_node) {
 		retval = -ENOMEM;
@@ -227,8 +224,8 @@ int acpi_bind_one(struct device *dev, acpi_handle handle)
 
 	mutex_unlock(&acpi_dev->physical_node_lock);
 
-	if (!ACPI_HANDLE(dev))
-		ACPI_HANDLE_SET(dev, acpi_dev->handle);
+	if (!ACPI_COMPANION(dev))
+		ACPI_COMPANION_SET(dev, acpi_dev);
 
 	if (!physical_node->node_id)
 		strcpy(physical_node_name, PHYSICAL_NODE_STRING);
@@ -246,7 +243,7 @@ int acpi_bind_one(struct device *dev, acpi_handle handle)
 	return 0;
 
  err:
-	ACPI_HANDLE_SET(dev, NULL);
+	ACPI_COMPANION_SET(dev, NULL);
 	put_device(dev);
 	return retval;
 
@@ -259,17 +256,12 @@ EXPORT_SYMBOL_GPL(acpi_bind_one);
 
 int acpi_unbind_one(struct device *dev)
 {
+	struct acpi_device *acpi_dev = ACPI_COMPANION(dev);
 	struct acpi_device_physical_node *entry;
-	struct acpi_device *acpi_dev;
-	acpi_status status;
 	struct list_head *node, *next;
 
-	if (!ACPI_HANDLE(dev))
+	if (!acpi_dev)
 		return 0;
-
-	status = acpi_bus_get_device(ACPI_HANDLE(dev), &acpi_dev);
-	if (ACPI_FAILURE(status))
-		goto err;
 
 	mutex_lock(&acpi_dev->physical_node_lock);
 	list_for_each_safe(node, next, &acpi_dev->physical_node_list) {
@@ -293,20 +285,24 @@ int acpi_unbind_one(struct device *dev)
 
 		sysfs_remove_link(&acpi_dev->dev.kobj, physical_node_name);
 		sysfs_remove_link(&dev->kobj, "firmware_node");
-		ACPI_HANDLE_SET(dev, NULL);
+		ACPI_COMPANION_SET(dev, NULL);
 		/* acpi_bind_one increase refcnt by one */
 		put_device(dev);
 		kfree(entry);
 	}
 	mutex_unlock(&acpi_dev->physical_node_lock);
-
 	return 0;
-
-err:
-	dev_err(dev, "Oops, 'acpi_handle' corrupt\n");
-	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(acpi_unbind_one);
+
+void acpi_preset_companion(struct device *dev, acpi_handle parent, u64 addr)
+{
+	struct acpi_device *adev;
+
+	if (!acpi_bus_get_device(acpi_get_child(parent, addr), &adev))
+		ACPI_COMPANION_SET(dev, adev);
+}
+EXPORT_SYMBOL_GPL(acpi_preset_companion);
 
 static int acpi_platform_notify(struct device *dev)
 {

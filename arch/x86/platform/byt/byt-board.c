@@ -43,34 +43,23 @@ static int byt_spi_board_setup(void)
 
 static int byt_clk_setup(void)
 {
+
 	struct clk *clk;
 
-	/* Make sure the root clk required by the LPSS driver is registered */
-	clk = clk_get(NULL, "lpss_clk");
-	if (IS_ERR(clk)) {
-		clk = clk_register_fixed_rate(NULL, "lpss_clk", NULL, CLK_IS_ROOT,
-							100000000);
-	}
+	/* Make clock tree required by the SPI/DMA/PWM driver */
+	clk = clk_register_fixed_rate(NULL, "lpss_clk", NULL, CLK_IS_ROOT,
+								100000000);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
 
-	/* 
-	 * to check has the spi_clk been registered by the ACPI mode,
-	 * if yes, skip it, otherwise, register those clks.
-	*/
-	clk = clk_get(NULL, "spi_clk");
-	if (IS_ERR(clk)) {
-		clk = clk_register_fixed_rate(NULL, "spi_clk", "lpss_clk", 0, 50000000);
-		if (IS_ERR(clk))
-			return PTR_ERR(clk);
-	} else
+	clk_register_clkdev(clk, "hclk", "0000:00:1e.0");
+
+	clk = clk_register_fixed_rate(NULL, "spi_clk", "lpss_clk", 0, 50000000);
+	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 
 	clk_register_clkdev(clk, NULL, "0000:00:1e.5");
 
-	/* register the clock for DW DMA engines */
-	clk_register_clkdev(clk, "hclk", "0000:00:18.0");
-	clk_register_clkdev(clk, "hclk", "0000:00:1e.0");
-
-	/* Make clock tree required by the PWM driver */
 	clk = clk_register_fixed_rate(NULL, "pwm_clk", "lpss_clk", 0, 25000000);
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
@@ -79,6 +68,7 @@ static int byt_clk_setup(void)
 	clk_register_clkdev(clk, NULL, "0000:00:1e.2");
 
 	return 0;
+
 }
 
 static int __init byt_board_init(void)

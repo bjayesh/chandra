@@ -586,6 +586,7 @@ struct btrfs_path {
 	unsigned int skip_locking:1;
 	unsigned int leave_spinning:1;
 	unsigned int search_commit_root:1;
+	unsigned int skip_release_on_error:1;
 };
 
 /*
@@ -3407,6 +3408,11 @@ int verify_dir_item(struct btrfs_root *root,
 		    struct extent_buffer *leaf,
 		    struct btrfs_dir_item *dir_item);
 
+struct btrfs_dir_item *btrfs_match_dir_item_name(struct btrfs_root *root,
+						struct btrfs_path *path,
+						const char *name,
+						int name_len);
+
 /* orphan.c */
 int btrfs_insert_orphan_item(struct btrfs_trans_handle *trans,
 			     struct btrfs_root *root, u64 offset);
@@ -3655,6 +3661,22 @@ void btrfs_printk(const struct btrfs_fs_info *fs_info, const char *fmt, ...)
 #define btrfs_debug(fs_info, fmt, args...) \
 	btrfs_printk(fs_info, KERN_DEBUG fmt, ##args)
 
+#ifdef CONFIG_BTRFS_ASSERT
+
+static inline void assfail(char *expr, char *file, int line)
+{
+	printk(KERN_ERR "BTRFS assertion failed: %s, file: %s, line: %d",
+	       expr, file, line);
+	BUG();
+}
+
+#define ASSERT(expr)	\
+	(likely(expr) ? (void)0 : assfail(#expr, __FILE__, __LINE__))
+#else
+#define ASSERT(expr)	((void)0)
+#endif
+
+#define btrfs_assert()
 __printf(5, 6)
 void __btrfs_std_error(struct btrfs_fs_info *fs_info, const char *function,
 		     unsigned int line, int errno, const char *fmt, ...);

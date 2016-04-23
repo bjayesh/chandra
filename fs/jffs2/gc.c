@@ -445,6 +445,9 @@ int jffs2_garbage_collect_pass(struct jffs2_sb_info *c)
 
 	jffs2_gc_release_inode(c, f);
 
+	if (!ret)
+		goto release_sem;
+
  test_gcnode:
 	if (jeb->dirty_size == gcblock_dirty && !ref_obsolete(jeb->gc_node)) {
 		/* Eep. This really should never happen. GC is broken */
@@ -1308,7 +1311,10 @@ static int jffs2_garbage_collect_dnode(struct jffs2_sb_info *c, struct jffs2_era
 	if (IS_ERR(pg_ptr)) {
 		pr_warn("read_cache_page() returned error: %ld\n",
 			PTR_ERR(pg_ptr));
-		return PTR_ERR(pg_ptr);
+		if (PTR_ERR(pg_ptr) == -EBUSY)
+			 return 0;
+		else
+			return PTR_ERR(pg_ptr);
 	}
 
 	offset = start;

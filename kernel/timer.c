@@ -852,7 +852,7 @@ unsigned long apply_slack(struct timer_list *timer, unsigned long expires)
 
 	bit = find_last_bit(&mask, BITS_PER_LONG);
 
-	mask = (1 << bit) - 1;
+	mask = (1UL << bit) - 1;
 
 	expires_limit = expires_limit & ~(mask);
 
@@ -1439,6 +1439,8 @@ static void run_timer_softirq(struct softirq_action *h)
 {
 	struct tvec_base *base = __this_cpu_read(tvec_bases);
 
+	hrtimer_run_pending();
+
 #if defined(CONFIG_IRQ_WORK) && defined(CONFIG_PREEMPT_RT_FULL)
 	irq_work_run();
 #endif
@@ -1452,39 +1454,10 @@ static void run_timer_softirq(struct softirq_action *h)
  */
 void run_local_timers(void)
 {
-	struct tvec_base *base = __this_cpu_read(tvec_bases);
 
 	hrtimer_run_queues();
-	/*
-	 * We can access this lockless as we are in the timer
-	 * interrupt. If there are no timers queued, nothing to do in
-	 * the timer softirq.
-	 */
-#ifdef CONFIG_PREEMPT_RT_FULL
-	/* On RT, irq work runs from softirq */
-	if (irq_work_needs_cpu()) {
-		raise_softirq(TIMER_SOFTIRQ);
-		return;
-	}
-
-	if (!spin_do_trylock(&base->lock)) {
-		raise_softirq(TIMER_SOFTIRQ);
-		return;
-	}
-#endif
-
-	if (!base->active_timers)
-		goto out;
-
-	/* Check whether the next pending timer has expired */
-	if (time_before_eq(base->next_timer, jiffies))
-		raise_softirq(TIMER_SOFTIRQ);
-out:
-#ifdef CONFIG_PREEMPT_RT_FULL
-	rt_spin_unlock_after_trylock_in_irq(&base->lock);
-#endif
-	/* The ; ensures that gcc won't complain in the !RT case */
-	;
+	
+	raise_softirq(TIMER_SOFTIRQ);
 }
 
 #ifdef __ARCH_WANT_SYS_ALARM

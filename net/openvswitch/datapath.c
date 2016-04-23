@@ -260,9 +260,9 @@ void ovs_dp_process_received_packet(struct vport *p, struct sk_buff *skb)
 
 out:
 	/* Update datapath statistics. */
-	u64_stats_update_begin(&stats->sync);
+	u64_stats_update_begin(&stats->syncp);
 	(*stats_counter)++;
-	u64_stats_update_end(&stats->sync);
+	u64_stats_update_end(&stats->syncp);
 }
 
 static struct genl_family dp_packet_genl_family = {
@@ -305,9 +305,9 @@ int ovs_dp_upcall(struct datapath *dp, struct sk_buff *skb,
 err:
 	stats = this_cpu_ptr(dp->stats_percpu);
 
-	u64_stats_update_begin(&stats->sync);
+	u64_stats_update_begin(&stats->syncp);
 	stats->n_lost++;
-	u64_stats_update_end(&stats->sync);
+	u64_stats_update_end(&stats->syncp);
 
 	return err;
 }

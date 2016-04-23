@@ -730,11 +730,6 @@ static int acpi_idle_enter_c1(struct cpuidle_device *dev,
 	if (unlikely(!pr))
 		return -EINVAL;
 
-	if (cx->entry_method == ACPI_CSTATE_FFH) {
-		if (current_set_polling_and_test())
-			return -EINVAL;
-	}
-
 	lapic_timer_state_broadcast(pr, cx, 1);
 	acpi_idle_do_entry(cx);
 
@@ -788,11 +783,6 @@ static int acpi_idle_enter_simple(struct cpuidle_device *dev,
 	if (unlikely(!pr))
 		return -EINVAL;
 
-	if (cx->entry_method == ACPI_CSTATE_FFH) {
-		if (current_set_polling_and_test())
-			return -EINVAL;
-	}
-
 	/*
 	 * Must be done before busmaster disable as we might need to
 	 * access HPET !
@@ -842,11 +832,6 @@ static int acpi_idle_enter_bm(struct cpuidle_device *dev,
 			acpi_safe_halt();
 			return -EBUSY;
 		}
-	}
-
-	if (cx->entry_method == ACPI_CSTATE_FFH) {
-		if (current_set_polling_and_test())
-			return -EINVAL;
 	}
 
 	acpi_unlazy_tlb(smp_processor_id());
@@ -1099,9 +1084,9 @@ int acpi_processor_cst_has_changed(struct acpi_processor *pr)
 
 	if (pr->id == 0 && cpuidle_get_driver() == &acpi_idle_driver) {
 
-		cpuidle_pause_and_lock();
 		/* Protect against cpu-hotplug */
 		get_online_cpus();
+		cpuidle_pause_and_lock();
 
 		/* Disable all cpuidle devices */
 		for_each_online_cpu(cpu) {
@@ -1128,8 +1113,8 @@ int acpi_processor_cst_has_changed(struct acpi_processor *pr)
 				cpuidle_enable_device(dev);
 			}
 		}
-		put_online_cpus();
 		cpuidle_resume_and_unlock();
+		put_online_cpus();
 	}
 
 	return 0;

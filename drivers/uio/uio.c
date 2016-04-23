@@ -39,6 +39,7 @@ struct uio_device {
 	struct uio_info		*info;
 	struct kobject		*map_dir;
 	struct kobject		*portio_dir;
+	struct kref		kref;
 };
 
 static int uio_major;
@@ -58,6 +59,8 @@ struct uio_map {
 	struct uio_mem *mem;
 };
 #define to_map(map) container_of(map, struct uio_map, kobj)
+
+static void uio_free_dev(struct kref *kref);
 
 static ssize_t map_name_show(struct uio_mem *mem, char *buf)
 {
@@ -272,6 +275,8 @@ static int uio_dev_add_attributes(struct uio_device *idev)
 	struct uio_port *port;
 	struct uio_portio *portio;
 
+	kref_get(&idev->kref);
+
 	for (mi = 0; mi < MAX_UIO_MAPS; mi++) {
 		mem = &idev->info->mem[mi];
 		if (mem->size == 0)
@@ -338,6 +343,7 @@ err_map:
 		map = mem->map;
 		kobject_put(&map->kobj);
 	}
+	kref_put(&idev->kref, uio_free_dev);
 	kobject_put(idev->map_dir);
 	dev_err(idev->dev, "error creating sysfs files (%d)\n", ret);
 	return ret;
@@ -364,6 +370,8 @@ static void uio_dev_del_attributes(struct uio_device *idev)
 		kobject_put(&port->portio->kobj);
 	}
 	kobject_put(idev->portio_dir);
+
+	kref_put(&idev->kref, uio_free_dev);
 }
 
 static int uio_get_minor(struct uio_device *idev)
@@ -454,6 +462,8 @@ static int uio_open(struct inode *inode, struct file *filep)
 	listener->event_count = atomic_read(&idev->event);
 	filep->private_data = listener;
 
+	kref_get(&idev->kref);
+
 	if (idev->info->open) {
 		ret = idev->info->open(idev->info, inode);
 		if (ret)
@@ -462,6 +472,7 @@ static int uio_open(struct inode *inode, struct file *filep)
 	return 0;
 
 err_infoopen:
+	kref_put(&idev->kref, uio_free_dev);
 	kfree(listener);
 
 err_alloc_listener:
@@ -490,6 +501,8 @@ static int uio_release(struct inode *inode, struct file *filep)
 
 	module_put(idev->owner);
 	kfree(listener);
+	kref_put(&idev->kref, uio_free_dev);
+
 	return ret;
 }
 
@@ -845,6 +858,8 @@ int __uio_register_device(struct module *owner,
 		goto err_device_create;
 	}
 
+	kref_init(&idev->kref);
+
 	ret = uio_dev_add_attributes(idev);
 	if (ret)
 		goto err_uio_dev_add_attributes;
@@ -873,6 +888,22 @@ err_kzalloc:
 }
 EXPORT_SYMBOL_GPL(__uio_register_device);
 
+static void uio_free_dev(struct kref *kref)
+{
+	struct uio_device *idev = container_of(kref, struct uio_device, kref);
+	struct uio_info *info = idev->info;
+
+	uio_free_minor(idev);
+
+	if (info->irq && (info->irq != UIO_IRQ_CUSTOM))
+		free_irq(info->irq, idev);
+
+	uio_dev_del_attributes(idev);
+
+	device_destroy(&uio_class, MKDEV(uio_major, idev->minor));
+	kfree(idev);
+}
+
 /**
  * uio_unregister_device - unregister a industrial IO device
  * @info:	UIO device capabilities
@@ -887,15 +918,7 @@ void uio_unregister_device(struct uio_info *info)
 
 	idev = info->uio_dev;
 
-	uio_free_minor(idev);
-
-	if (info->irq && (info->irq != UIO_IRQ_CUSTOM))
-		free_irq(info->irq, idev);
-
-	uio_dev_del_attributes(idev);
-
-	device_destroy(&uio_class, MKDEV(uio_major, idev->minor));
-	kfree(idev);
+	kref_put(&idev->kref, uio_free_dev);
 
 	return;
 }

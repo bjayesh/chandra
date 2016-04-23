@@ -522,8 +522,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Also note the kernel might malfunction if you disable
 			some critical bits.
 
-	cma=nn[MG]	[ARM,KNL]
-			Sets the size of kernel global memory area for contiguous
+	cma=nn[MG]@[start[MG][-end[MG]]]
+			[ARM,X86,KNL]
+			Sets the size of kernel global memory area for
+			contiguous memory allocations and optionally the
+			placement constraint by the physical address range of
 			memory allocations. For more information, see
 			include/linux/dma-contiguous.h
 
@@ -825,6 +828,14 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			the real console.
 
 			The xen output can only be used by Xen PV guests.
+
+	edac_report=	[HW,EDAC] Control how to report EDAC event
+			Format: {"on" | "off" | "force"}
+			on: enable EDAC to report H/W event. May be overridden
+			by other higher priority error reporting module.
+			off: disable H/W event reporting through EDAC.
+			force: enforce the use of EDAC to report H/W event.
+			default: on.
 
 	ekgdboc=	[X86,KGDB] Allow early kernel console debugging
 			ekgdboc=kbd
@@ -1195,6 +1206,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 		       disable
 		         Do not enable intel_pstate as the default
 		         scaling driver for the supported processors
+		       no_hwp
+		         Do not enable hardware P state control (HWP)
+			 if available.
 
 	intremap=	[X86-64, Intel-IOMMU]
 			on	enable Interrupt Remapping (default)
@@ -2060,10 +2074,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	noreplace-smp	[X86-32,SMP] Don't replace SMP instructions
 			with UP alternatives
 
-	nordrand	[X86] Disable the direct use of the RDRAND
-			instruction even if it is supported by the
-			processor.  RDRAND is still available to user
-			space applications.
+	nordrand	[X86] Disable kernel use of the RDRAND and
+			RDSEED instructions even if they are supported
+			by the processor.  RDRAND and RDSEED are still
+			available to user space applications.
 
 	noresume	[SWSUSP] Disables resume and restores original swap
 			space.
@@ -3227,14 +3241,24 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 					of CONFIG_HIGHPTE.
 
 	vdso=		[X86,SH]
-			vdso=2: enable compat VDSO (default with COMPAT_VDSO)
-			vdso=1: enable VDSO (default)
+			On X86_32, this is an alias for vdso32=.  Otherwise:
+
+			vdso=1: enable VDSO (the default)
 			vdso=0: disable VDSO mapping
 
-	vdso32=		[X86]
-			vdso32=2: enable compat VDSO (default with COMPAT_VDSO)
-			vdso32=1: enable 32-bit VDSO (default)
-			vdso32=0: disable 32-bit VDSO mapping
+	vdso32=		[X86] Control the 32-bit vDSO
+			vdso32=1: enable 32-bit VDSO
+			vdso32=0 or vdso32=2: disable 32-bit VDSO
+
+			See the help text for CONFIG_COMPAT_VDSO for more
+			details.  If CONFIG_COMPAT_VDSO is set, the default is
+			vdso32=0; otherwise, the default is vdso32=1.
+
+			For compatibility with older kernels, vdso32=2 is an
+			alias for vdso32=0.
+
+			Try vdso32=0 if you encounter an error that says:
+			dl_main: Assertion `(void *) ph->p_vaddr == _rtld_local._dl_sysinfo_dso' failed!
 
 	vector=		[IA-64,SMP]
 			vector=percpu: enable percpu vector domain

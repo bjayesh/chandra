@@ -718,9 +718,9 @@ static void module_unload_free(struct module *mod)
 		list_del(&use->target_list);
 		kfree(use);
 	}
+	mutex_unlock(&module_mutex);
 	blocking_notifier_call_chain(&module_notify_list,
 				     MODULE_STATE_GONE, mod);
-	mutex_unlock(&module_mutex);
 
 	free_percpu(mod->refptr);
 }
@@ -1879,7 +1879,9 @@ static void free_module(struct module *mod)
 
 	/* We leave it in list to prevent duplicate loads, but make sure
 	 * that noone uses it while it's being deconstructed. */
+	mutex_lock(&module_mutex);
 	mod->state = MODULE_STATE_UNFORMED;
+	mutex_unlock(&module_mutex);
 
 	/* Remove dynamic debug info */
 	ddebug_remove_module(mod->name);
@@ -3291,6 +3293,9 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	}
 
 	dynamic_debug_setup(info->debug, info->num_debug);
+
+	/* Ftrace init must be called in the MODULE_STATE_UNFORMED state */
+	ftrace_module_init(mod);
 
 	/* Finally it's fully formed, ready to start executing. */
 	err = complete_formation(mod, info);

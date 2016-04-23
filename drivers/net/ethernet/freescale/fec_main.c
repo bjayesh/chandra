@@ -344,6 +344,7 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	 */
 	status |= (BD_ENET_TX_READY | BD_ENET_TX_INTR
 			| BD_ENET_TX_LAST | BD_ENET_TX_TC);
+	dmb();
 	bdp->cbd_sc = status;
 
 	if (fep->bufdesc_ex) {

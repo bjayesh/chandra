@@ -46,7 +46,7 @@ static int read_eraseblock_by_page(int ebnum)
 {
 	size_t read;
 	int i, ret, err = 0;
-	loff_t addr = ebnum * mtd->erasesize;
+	loff_t addr = (loff_t)ebnum * mtd->erasesize;
 	void *buf = iobuf;
 	void *oobbuf = iobuf1;
 
@@ -129,7 +129,7 @@ static void dump_eraseblock(int ebnum)
 
 static int is_block_bad(int ebnum)
 {
-	loff_t addr = ebnum * mtd->erasesize;
+	loff_t addr = (loff_t)ebnum * mtd->erasesize;
 	int ret;
 
 	ret = mtd_block_isbad(mtd, addr);

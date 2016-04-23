@@ -270,10 +270,6 @@ static int write_ear(struct m25p *flash, u32 addr)
 	u8 ear;
 	int ret;
 
-	/* Wait until finished previous write command. */
-	if (wait_till_ready(flash))
-		return 1;
-
 	if (flash->mtd.size <= (0x1000000) << flash->shift)
 		return 0;
 
@@ -300,6 +296,9 @@ static int write_ear(struct m25p *flash, u32 addr)
 
 	flash->curbank = ear;
 
+	if (wait_till_ready(flash))
+		return 1;
+
 	return 0;
 }
 
@@ -313,10 +312,6 @@ static int erase_chip(struct m25p *flash)
 	pr_debug("%s: %s %lldKiB\n", dev_name(&flash->spi->dev), __func__,
 			(long long)(flash->mtd.size >> 10));
 
-	/* Wait until finished previous write command. */
-	if (wait_till_ready(flash))
-		return 1;
-
 	if (flash->isstacked)
 		flash->spi->master->flags &= ~SPI_MASTER_U_PAGE;
 
@@ -329,9 +324,6 @@ static int erase_chip(struct m25p *flash)
 	spi_write(flash->spi, flash->command, 1);
 
 	if (flash->isstacked) {
-		/* Wait until finished previous write command. */
-		if (wait_till_ready(flash))
-			return 1;
 
 		flash->spi->master->flags |= SPI_MASTER_U_PAGE;
 
@@ -371,10 +363,6 @@ static int erase_sector(struct m25p *flash, u32 offset)
 {
 	pr_debug("%s: %s %dKiB at 0x%08x\n", dev_name(&flash->spi->dev),
 			__func__, flash->mtd.erasesize / 1024, offset);
-
-	/* Wait until finished previous write command. */
-	if (wait_till_ready(flash))
-		return 1;
 
 	/* update Extended Address Register */
 	if (write_ear(flash, offset))
@@ -428,6 +416,8 @@ static int m25p80_erase(struct mtd_info *mtd, struct erase_info *instr)
 			mutex_unlock(&flash->lock);
 			return -EIO;
 		}
+		if (wait_till_ready(flash))
+			return 1;
 
 	/* REVISIT in some cases we could speed up erasing large regions
 	 * by using OPCODE_SE instead of OPCODE_BE_4K.  We may have set up
@@ -457,6 +447,9 @@ static int m25p80_erase(struct mtd_info *mtd, struct erase_info *instr)
 
 			addr += mtd->erasesize;
 			len -= mtd->erasesize;
+
+			if (wait_till_ready(flash))
+				return 1;
 		}
 	}
 
@@ -496,11 +489,6 @@ static int m25p80_read(struct mtd_info *mtd, loff_t from, size_t len,
 	t[1].rx_buf = buf;
 	t[1].len = len;
 	spi_message_add_tail(&t[1], &m);
-
-	/* Wait till previous write/erase is done. */
-	if (wait_till_ready(flash))
-		/* REVISIT status return?? */
-		return 1;
 
 	/* FIXME switch to OPCODE_FAST_READ.  It's required for higher
 	 * clocks; and at this writing, every chip this driver handles
@@ -596,9 +584,6 @@ static int m25p80_write(struct mtd_info *mtd, loff_t to, size_t len,
 	t[1].tx_buf = buf;
 	spi_message_add_tail(&t[1], &m);
 
-	/* Wait until finished previous write command. */
-	if (wait_till_ready(flash))
-		return 1;
 
 	write_enable(flash);
 
@@ -649,6 +634,9 @@ static int m25p80_write(struct mtd_info *mtd, loff_t to, size_t len,
 			*retlen += m.actual_length - m25p_cmdsz(flash);
 		}
 	}
+
+	if (wait_till_ready(flash))
+		return 1;
 
 	return 0;
 }
@@ -726,11 +714,6 @@ static int sst_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 	mutex_lock(&flash->lock);
 
-	/* Wait until finished previous write command. */
-	ret = wait_till_ready(flash);
-	if (ret)
-		goto time_out;
-
 	write_enable(flash);
 
 	actual = to % 2;
@@ -790,6 +773,7 @@ static int sst_write(struct mtd_info *mtd, loff_t to, size_t len,
 		write_disable(flash);
 	}
 
+	ret = wait_till_ready(flash);
 time_out:
 	mutex_unlock(&flash->lock);
 	return ret;
@@ -803,11 +787,6 @@ static int m25p80_lock(struct mtd_info *mtd, loff_t ofs, uint64_t len)
 	int res = 0;
 
 	mutex_lock(&flash->lock);
-	/* Wait until finished previous command */
-	if (wait_till_ready(flash)) {
-		res = 1;
-		goto err;
-	}
 
 	status_old = read_sr(flash);
 
@@ -848,11 +827,6 @@ static int m25p80_unlock(struct mtd_info *mtd, loff_t ofs, uint64_t len)
 	int res = 0;
 
 	mutex_lock(&flash->lock);
-	/* Wait until finished previous command */
-	if (wait_till_ready(flash)) {
-		res = 1;
-		goto err;
-	}
 
 	status_old = read_sr(flash);
 

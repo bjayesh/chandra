@@ -30,6 +30,7 @@
 #include <trace/events/block.h>
 
 #include "../wrapper/tracepoint.h"
+#include "../lttng-kernel-version.h"
 
 /*
  * Create LTTng tracepoint probes.

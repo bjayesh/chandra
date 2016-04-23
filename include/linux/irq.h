@@ -378,7 +378,8 @@ extern void remove_percpu_irq(unsigned int irq, struct irqaction *act);
 
 extern void irq_cpu_online(void);
 extern void irq_cpu_offline(void);
-extern int __irq_set_affinity_locked(struct irq_data *data,  const struct cpumask *cpumask);
+extern int irq_set_affinity_locked(struct irq_data *data,
+				   const struct cpumask *cpumask, bool force);
 
 #ifdef CONFIG_GENERIC_HARDIRQS
 
@@ -581,6 +582,8 @@ static inline struct msi_desc *irq_data_get_msi(struct irq_data *d)
 {
 	return d->msi_desc;
 }
+
+unsigned int arch_dynirq_lower_bound(unsigned int from);
 
 int __irq_alloc_descs(int irq, unsigned int from, unsigned int cnt, int node,
 		struct module *owner);

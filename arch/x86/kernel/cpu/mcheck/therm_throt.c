@@ -250,6 +250,21 @@ static __cpuinit int thermal_throttle_add_dev(struct device *dev,
 
 static __cpuinit void thermal_throttle_remove_dev(struct device *dev)
 {
+	int cpu = raw_smp_processor_id();
+	struct cpuinfo_x86 *c = &cpu_data(cpu);
+
+	if(cpu_has(c, X86_FEATURE_PLN))
+		sysfs_remove_file_from_group(&dev->kobj,
+						&dev_attr_core_power_limit_count.attr,
+						thermal_attr_group.name);
+	if(cpu_has(c, X86_FEATURE_PTS))
+		sysfs_remove_file_from_group(&dev->kobj,
+						&dev_attr_package_throttle_count.attr,
+						thermal_attr_group.name);
+	if(cpu_has(c, X86_FEATURE_PLN))
+		sysfs_remove_file_from_group(&dev->kobj,
+						&dev_attr_package_power_limit_count.attr,
+						thermal_attr_group.name);
 	sysfs_remove_group(&dev->kobj, &thermal_attr_group);
 }
 

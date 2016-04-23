@@ -509,9 +509,12 @@ static int device_add_attrs(struct device *dev)
 	int error;
 
 	if (class) {
-		error = device_add_attributes(dev, class->dev_attrs);
+		error = device_add_groups(dev, class->dev_groups);
 		if (error)
 			return error;
+		error = device_add_attributes(dev, class->dev_attrs);
+		if (error)
+			goto err_remove_class_groups;
 		error = device_add_bin_attributes(dev, class->dev_bin_attrs);
 		if (error)
 			goto err_remove_class_attrs;
@@ -544,6 +547,9 @@ static int device_add_attrs(struct device *dev)
  err_remove_class_attrs:
 	if (class)
 		device_remove_attributes(dev, class->dev_attrs);
+ err_remove_class_groups:
+	if (class)
+		device_remove_groups(dev, class->dev_groups);
 
 	return error;
 }
@@ -562,6 +568,7 @@ static void device_remove_attrs(struct device *dev)
 	if (class) {
 		device_remove_attributes(dev, class->dev_attrs);
 		device_remove_bin_attributes(dev, class->dev_bin_attrs);
+		device_remove_groups(dev, class->dev_groups);
 	}
 }
 
@@ -783,12 +790,12 @@ class_dir_create_and_add(struct class *class, struct kobject *parent_kobj)
 	return &dir->kobj;
 }
 
+static DEFINE_MUTEX(gdp_mutex);
 
 static struct kobject *get_device_parent(struct device *dev,
 					 struct device *parent)
 {
 	if (dev->class) {
-		static DEFINE_MUTEX(gdp_mutex);
 		struct kobject *kobj = NULL;
 		struct kobject *parent_kobj;
 		struct kobject *k;
@@ -852,7 +859,9 @@ static void cleanup_glue_dir(struct device *dev, struct kobject *glue_dir)
 	    glue_dir->kset != &dev->class->p->glue_dirs)
 		return;
 
+	mutex_lock(&gdp_mutex);
 	kobject_put(glue_dir);
+	mutex_unlock(&gdp_mutex);
 }
 
 static void cleanup_device_parent(struct device *dev)

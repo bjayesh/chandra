@@ -449,6 +449,12 @@ int x86_pmu_hw_config(struct perf_event *event)
 	if (event->attr.type == PERF_TYPE_RAW)
 		event->hw.config |= event->attr.config & X86_RAW_EVENT_MASK;
 
+	if (event->attr.sample_period && x86_pmu.limit_period) {
+		if (x86_pmu.limit_period(event, event->attr.sample_period) >
+				event->attr.sample_period)
+			return -EINVAL;
+	}
+
 	return x86_setup_perfctr(event);
 }
 
@@ -962,6 +968,9 @@ int x86_perf_event_set_period(struct perf_event *event)
 	if (left > x86_pmu.max_period)
 		left = x86_pmu.max_period;
 
+	if (x86_pmu.limit_period)
+		left = x86_pmu.limit_period(event, left);
+
 	per_cpu(pmc_prev_left[idx], smp_processor_id()) = left;
 
 	/*
@@ -1253,10 +1262,20 @@ void perf_events_lapic_init(void)
 static int __kprobes
 perf_event_nmi_handler(unsigned int cmd, struct pt_regs *regs)
 {
+	int ret;
+	u64 start_clock;
+	u64 finish_clock;
+
 	if (!atomic_read(&active_events))
 		return NMI_DONE;
 
-	return x86_pmu.handle_irq(regs);
+	start_clock = local_clock();
+	ret = x86_pmu.handle_irq(regs);
+	finish_clock = local_clock();
+
+	perf_sample_event_took(finish_clock - start_clock);
+
+	return ret;
 }
 
 struct event_constraint emptyconstraint;

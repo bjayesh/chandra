@@ -1,7 +1,7 @@
 VERSION = 3
 PATCHLEVEL = 10
-SUBLEVEL = 38
-EXTRAVERSION = -ltsi
+SUBLEVEL = 62
+EXTRAVERSION =
 NAME = TOSSUG Baby Fish
 
 # *DOCUMENTATION*
@@ -620,6 +620,8 @@ KBUILD_CFLAGS	+= -fno-omit-frame-pointer
 endif
 endif
 endif
+
+KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
 
 ifdef CONFIG_DEBUG_INFO
 KBUILD_CFLAGS	+= -g

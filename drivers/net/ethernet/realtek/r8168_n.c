@@ -2059,7 +2059,7 @@ rtl8168_rx_vlan_skb(struct rtl8168_private *tp,
 	}
 #else
 	if (opts2 & RxVlanTag)
-		__vlan_hwaccel_put_tag(skb, swab16(opts2 & 0xffff));
+		__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), swab16(opts2 & 0xffff));
 #endif
 
 	desc->opts2 = 0;

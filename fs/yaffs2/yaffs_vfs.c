@@ -168,6 +168,7 @@ static uint32_t YCALCBLOCKS(uint64_t partition_size, uint32_t block_size)
 #include <linux/uaccess.h>
 #include <linux/mtd/mtd.h>
 
+#include "../internal.h"
 #include "yportenv.h"
 #include "yaffs_trace.h"
 #include "yaffs_guts.h"
@@ -240,6 +241,11 @@ MODULE_PARM(yaffs_gc_control, "i");
 #define update_dir_time(dir) do {\
 			(dir)->i_ctime = (dir)->i_mtime = CURRENT_TIME; \
 		} while (0)
+
+typedef struct {
+	struct inode *inode;
+	struct list_head list;
+} yaffs_inode_list_t;
 
 static void yaffs_fill_inode_from_obj(struct inode *inode,
 				      struct yaffs_obj *obj);
@@ -934,7 +940,7 @@ static int yaffs_setxattr(struct dentry *dentry, const char *name,
 	/* Currently we don't support posix ACL so never accept any settings
 	 * start with "system.posix_acl_".
 	 */
-	if (strncmp(name, "system.posix_acl_", 17))
+	if (!strncmp(name, "system.posix_acl_", 17))
 		error = -EOPNOTSUPP;
 
 	if (error == 0) {
@@ -2101,29 +2107,195 @@ static void yaffs_bg_stop(struct yaffs_dev *dev)
 #endif
 
 
-static void yaffs_flush_inodes(struct super_block *sb)
-{
-	struct inode *iptr;
-	struct yaffs_obj *obj;
-
-	list_for_each_entry(iptr, &sb->s_inodes, i_sb_list) {
-		obj = yaffs_inode_to_obj(iptr);
-		if (obj) {
-			yaffs_trace(YAFFS_TRACE_OS,
-				"flushing obj %d",
-				obj->obj_id);
-			yaffs_flush_file(obj, 1, 0);
-		}
-	}
+static int yaffs_delay_iput(struct list_head *delayed_iput_list, struct inode *inode) {
+     
+        yaffs_inode_list_t *allocated = kmalloc(sizeof(yaffs_inode_list_t), GFP_NOWAIT);
+        if (unlikely(allocated == NULL)) {
+                printk(KERN_ERR "yaffs has no memory to allocate item for delayed iput\n");
+               
+                return -ENOMEM;
+        }
+        allocated->inode = inode;
+        INIT_LIST_HEAD(&(allocated->list));
+        list_add(&allocated->list, delayed_iput_list);
+        return 0;
 }
 
-static void yaffs_flush_super(struct super_block *sb, int do_checkpoint)
+
+static void yaffs_iput_inodes(struct list_head *delayed_iput_list) {
+        yaffs_inode_list_t *item, *next;
+        list_for_each_entry_safe(item, next, delayed_iput_list, list) {
+                iput(item->inode);
+                list_del_init(&item->list);
+                kfree(item);
+        }
+}
+
+
+
+static void yaffs_flush_inodes(struct super_block *sb, struct list_head* delayed_iput_list)
+{
+	struct inode *inode;
+	struct yaffs_obj *obj;
+
+
+	/* 
+	 * This lock is needed to have exclusive access to inodes list in sb (superblock)
+ 	 * Precisely this lock protects pointers linking elements of list.
+ 	 * This lock is used only during switch from current inode to next one.
+ 	 * So during processing of current inode, list manipulation is allowed.
+	 * In effect after flush performed by this loop it is not guaranted
+ 	 * that all inodes at that time are flushed. New nodes could have been added
+	 * or old removed.
+	 */
+	spin_lock(&inode_sb_list_lock);
+	list_for_each_entry(inode, &sb->s_inodes, i_sb_list) {
+
+		obj = yaffs_inode_to_obj(inode);
+		/*
+		 * Actual work on current node during iteration
+		 * is performed by yaffs_flush_file().
+ 		 * This function doesn't process nodes without yaffs_obj attached
+ 		 * and also those with attached one but not in dirty state.
+ 		 * So to move forward quickly we can do this checks now
+ 		 * and continue interation when conditions are not met.
+		 */
+
+		if (!obj || !obj->dirty) {
+			continue;
+		}
+
+		/* 
+		 * This spinlock protects i_state and i_count which we need.
+ 		 * There are inode states that are not suitable for flushing.
+ 		 * Precisely I_NEW state which means 'inode under construction'
+ 		 * And I_FREEING which means 'inode beeing evicted'
+ 		 * i_count is incremented by __iget() and we use that to
+ 		 * mark node as 'used' during flushing to prevent evict
+ 		 * beeing triggered when i_count reaches 0.
+ 		 */
+
+		spin_lock(&inode->i_lock);
+
+		/*
+ 		 * More on i_state states:
+ 		 *
+ 		 * We cannot __iget() an inode in state I_FREEING
+ 		 * this state is set in inode.c in iput_final()
+ 		 * just befor call to evict() which in turn
+ 		 * removes inode from superblocks list of inodes 
+ 		 * __iget() won't prevent this in any way.
+ 		 * If indode is dirty at that time in must be handled
+ 		 * in yaffs_evict_inode() callback - not here
+ 		 *
+ 		 * I_WILL_FREE is not possible state for yaffs
+ 		 * In inode.c in iput_final() drop variable is always 1 (true)
+ 		 * so this state won't ever be set.
+ 		 * This is in turn because yaffs doesn't provide
+ 		 * drop_inode() callback.
+ 		 * Default one: generic_drop_inode() defaults to 1 (true)
+ 		 * when there are no users for inode (i_count is 0).
+ 		 * So it is skipped as yaffs doesn't make use of it.
+ 		 * Eventually in the future when yaffs will do
+ 		 * writing node schould be handled by write_inode_now()
+ 		 *
+ 		 * I_NEW is set by iget_locked() called from yaffs_iget()
+ 		 * during creation of inode.
+ 		 * Then gross lock is locked and yaffs creates new yaffs_obj
+ 		 * for inode. Then grosslock is unlocked and I_NEW is cleared
+ 		 * by unlock_new_inode() to finish inode creation
+ 		 * This loop can reach I_NEW inodes and there
+ 		 * would be two cases:
+ 		 * 1) inode in I_NEW state but without yaffs_obj
+ 		 *    this one would be skipped
+ 		 * 2) i node in I_NEW state with new yaffs_obj
+ 		 *    just before clearing I_NEW state
+ 		 * But as I_NEW marks inode creation and can be
+ 		 * extended in future it would be good to skip it also
+ 		 * as it means inode under construction
+ 		 *
+ 		 * So this states are always skipped during iteration
+ 		 */
+
+		if (inode->i_state & (I_FREEING|I_WILL_FREE|I_NEW)) {
+			spin_unlock(&inode->i_lock);
+			continue;
+		}
+
+		/*
+		* "If i_count is zero, the inode cannot have any watches and
+		* doing an __iget/iput with MS_ACTIVE clear would actually
+		* evict all inodes with zero i_count from icache which is
+		* unnecessarily violent and may in fact be illegal to do."
+		* found in fs/notify/inode_mark.c
+		*
+		* I guess that this refers to logic from iput_final()
+		* to cases when drop is 0 (false) for nodes with i_count == 0
+		* As mentioned earlier for yaffs this cases are not possible.
+		* For yaffs nodes with i_count == 0 are always evicted.
+		* Precisely when i_count == 0 i_state is changed to I_FREEING
+		* under protection of i_lock (see iput() ... iput_final())
+		* and we skip such nodes as beeing removed and let yaffs_evict_inode()
+		* do the job.
+		*
+		* So this is not important for yaffs
+		*/
+		if (unlikely(yaffs_delay_iput(delayed_iput_list, inode))) {
+                 
+			spin_unlock(&inode->i_lock);
+			continue; 
+		}
+		/*
+		 * Increment use counter to preven node removal during flush operation
+		 */
+		 __iget(inode);
+
+		/*
+		 * Data protected by this lock is not accesed or changed anymore.
+		 * inode won't be removed from list because we declared use of it by calling __iget()
+		 */
+		spin_unlock(&inode->i_lock);
+
+		/*
+		* yaffs_flush_file do I/O and can possibly loose CPU this is not allowed
+		* with spinlock beeing locked. We need to release it.
+		* It is done here because:
+		* 1) all quick continue conditions are over current inode is dirty and needs flushing
+		* 2) there is locking order for those two spinlock that we use
+		* and inode_sb_list_lock need to be unlocked after i_lock
+ 		*/
+		spin_unlock(&inode_sb_list_lock);
+
+
+		/*
+		* Store this inode on temporary list.
+		* Is is needed beacuse iput() must be called to revert __iget()
+		* but this may lead eventually to yaffs_evict_inode() as we can be last users of it.
+		* But yaffs_evict_inode needs gross lock which we hold.
+		* We need to call iput() later when gross lock is released
+		* This is why this temporary list is beeing used.
+		* Oryginal patch used in WR4.3 was releasing here gross lock to call iput().
+		* This was wrong as in case we were holding last reference
+		* this would immediately trigger iput_final() .. evict() .. yaffs_evict_inode()
+		* which will removed node from list and iteration will fail.
+		*/
+		yaffs_trace(YAFFS_TRACE_OS,
+                        "flushing obj %d", obj->obj_id);
+                yaffs_flush_file(obj, 1, 0);
+
+		spin_lock(&inode_sb_list_lock);
+	}
+
+	spin_unlock(&inode_sb_list_lock);
+}
+
+static void yaffs_flush_super(struct super_block *sb, int do_checkpoint, struct list_head * delayed_iput_list)
 {
 	struct yaffs_dev *dev = yaffs_super_to_dev(sb);
 	if (!dev)
 		return;
 
-	yaffs_flush_inodes(sb);
+	yaffs_flush_inodes(sb, delayed_iput_list);
 	yaffs_update_dirty_dirs(dev);
 	yaffs_flush_whole_cache(dev);
 	if (do_checkpoint)
@@ -2135,6 +2307,7 @@ struct mutex yaffs_context_lock;
 
 static void yaffs_put_super(struct super_block *sb)
 {
+	LIST_HEAD(delayed_iput_list);
 	struct yaffs_dev *dev = yaffs_super_to_dev(sb);
 	struct mtd_info *mtd = yaffs_dev_to_mtd(dev);
 
@@ -2149,12 +2322,12 @@ static void yaffs_put_super(struct super_block *sb)
 
 	yaffs_gross_lock(dev);
 
-	yaffs_flush_super(sb, 1);
+	yaffs_flush_super(sb, 1, &delayed_iput_list); 
 
 	yaffs_deinitialise(dev);
 
 	yaffs_gross_unlock(dev);
-
+	yaffs_iput_inodes(&delayed_iput_list);
 	mutex_lock(&yaffs_context_lock);
 	list_del_init(&(yaffs_dev_to_lc(dev)->context_list));
 	mutex_unlock(&yaffs_context_lock);
@@ -2438,6 +2611,7 @@ static int yaffs_statfs(struct super_block *sb, struct statfs *buf)
 static int yaffs_do_sync_fs(struct super_block *sb, int request_checkpoint)
 {
 
+	LIST_HEAD(delayed_iput_list);
 	struct yaffs_dev *dev = yaffs_super_to_dev(sb);
 	unsigned int oneshot_checkpoint = (yaffs_auto_checkpoint & 4);
 	unsigned gc_urgent = yaffs_bg_gc_urgency(dev);
@@ -2456,13 +2630,14 @@ static int yaffs_do_sync_fs(struct super_block *sb, int request_checkpoint)
 			 oneshot_checkpoint) && !dev->is_checkpointed;
 
 	if (dirty || do_checkpoint) {
-		yaffs_flush_super(sb, !dev->is_checkpointed && do_checkpoint);
+		yaffs_flush_super(sb, !dev->is_checkpointed && do_checkpoint, &delayed_iput_list);
 		yaffs_clear_super_dirty(dev);
 		if (oneshot_checkpoint)
 			yaffs_auto_checkpoint &= ~4;
 	}
 	yaffs_gross_unlock(dev);
 
+	yaffs_iput_inodes(&delayed_iput_list);
 	return 0;
 }
 

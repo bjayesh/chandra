@@ -1218,6 +1218,8 @@ static int __cpufreq_remove_dev_prepare(struct device *dev,
 					 "from: %d\n",__func__, new_cpu, cpu);
 			}
 		}
+	} else if (cpufreq_driver->stop_cpu && cpufreq_driver->setpolicy) {
+		cpufreq_driver->stop_cpu(policy);
 	}
 
 	return 0;
@@ -1739,6 +1741,13 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 #else
 	struct cpufreq_governor *gov = NULL;
 #endif
+
+	/*
+	 * Governor might not be initiated here if ACPI _PPC changed
+	 * notification happened, so check it.
+	 */
+	if (!policy->governor)
+		return -EINVAL;
 
 	if (policy->governor->max_transition_latency &&
 	    policy->cpuinfo.transition_latency >

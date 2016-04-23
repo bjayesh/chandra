@@ -269,6 +269,7 @@ struct cpufreq_driver {
 	int	(*bios_limit)	(int cpu, unsigned int *limit);
 
 	int	(*exit)		(struct cpufreq_policy *policy);
+	void	(*stop_cpu)	(struct cpufreq_policy *policy);
 	int	(*suspend)	(struct cpufreq_policy *policy);
 	int	(*resume)	(struct cpufreq_policy *policy);
 	struct freq_attr	**attr;
@@ -311,6 +312,13 @@ struct freq_attr {
 	ssize_t (*show)(struct cpufreq_policy *, char *);
 	ssize_t (*store)(struct cpufreq_policy *, const char *, size_t count);
 };
+
+static inline void
+cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy)
+{
+	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
+			policy->cpuinfo.max_freq);
+}
 
 #define cpufreq_freq_attr_ro(_name)		\
 static struct freq_attr _name =			\

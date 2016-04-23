@@ -431,7 +431,7 @@ static void ghes_do_proc(struct ghes *ghes,
 #ifdef CONFIG_ACPI_APEI_MEMORY_FAILURE
 			if (sev == GHES_SEV_RECOVERABLE &&
 			    sec_sev == GHES_SEV_RECOVERABLE &&
-			    mem_err->validation_bits & CPER_MEM_VALID_PHYSICAL_ADDRESS) {
+			    mem_err->validation_bits & CPER_MEM_VALID_PA) {
 				unsigned long pfn;
 				pfn = mem_err->physical_addr >> PAGE_SHIFT;
 				memory_failure_queue(pfn, 0, 0);

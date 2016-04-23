@@ -518,13 +518,14 @@ static void unlock_softirq(int which)
 static void do_single_softirq(int which, int need_rcu_bh_qs)
 {
 	unsigned long old_flags = current->flags;
+	int cpu = smp_processor_id();
 
 	current->flags &= ~PF_MEMALLOC;
 	vtime_account_irq_enter(current);
 	current->flags |= PF_IN_SOFTIRQ;
 	lockdep_softirq_enter();
 	local_irq_enable();
-	handle_softirq(which, smp_processor_id(), need_rcu_bh_qs);
+	handle_softirq(which, cpu, need_rcu_bh_qs);
 	local_irq_disable();
 	lockdep_softirq_exit();
 	current->flags &= ~PF_IN_SOFTIRQ;
@@ -846,7 +847,7 @@ __tasklet_common_schedule(struct tasklet_struct *t, struct tasklet_head *head, u
 		 */
 		else if (cmpxchg(&t->state, exp | TASKLET_STATEF_RUN,
 				 exp|TASKLET_STATEF_RUN|TASKLET_STATEF_SCHED)
-			 == exp | TASKLET_STATEF_RUN)
+			 == (exp | TASKLET_STATEF_RUN))
 			return;
 
 		/* If SCHED is already set, do nothing...
@@ -1386,3 +1387,8 @@ int __init __weak arch_early_irq_init(void)
 	return 0;
 }
 #endif
+
+unsigned int __weak arch_dynirq_lower_bound(unsigned int from)
+{
+	return from;
+}

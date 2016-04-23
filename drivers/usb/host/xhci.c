@@ -167,6 +167,16 @@ int xhci_reset(struct xhci_hcd *xhci)
 	command |= CMD_RESET;
 	xhci_writel(xhci, command, &xhci->op_regs->command);
 
+	/* Existing Intel xHCI controllers require a delay of 1 mS,
+	 * after setting the CMD_RESET bit, and before accessing any
+	 * HC registers. This allows the HC to complete the
+	 * reset operation and be ready for HC register access.
+	 * Without this delay, the subsequent HC register access,
+	 * may result in a system hang very rarely.
+	 */
+	if (xhci->quirks & XHCI_INTEL_HOST)
+               udelay(1000);
+
 	ret = xhci_handshake(xhci, &xhci->op_regs->command,
 			CMD_RESET, 0, 10 * 1000 * 1000);
 	if (ret)
@@ -394,16 +404,16 @@ static int xhci_try_enable_msi(struct usb_hcd *hcd)
 
 #else
 
-static int xhci_try_enable_msi(struct usb_hcd *hcd)
+static inline int xhci_try_enable_msi(struct usb_hcd *hcd)
 {
 	return 0;
 }
 
-static void xhci_cleanup_msix(struct xhci_hcd *xhci)
+static inline void xhci_cleanup_msix(struct xhci_hcd *xhci)
 {
 }
 
-static void xhci_msix_sync_irqs(struct xhci_hcd *xhci)
+static inline void xhci_msix_sync_irqs(struct xhci_hcd *xhci)
 {
 }
 
@@ -960,7 +970,7 @@ int xhci_suspend(struct xhci_hcd *xhci)
  */
 int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 {
-	u32			command, temp = 0;
+	u32			command, temp = 0, status;
 	struct usb_hcd		*hcd = xhci_to_hcd(xhci);
 	struct usb_hcd		*secondary_hcd;
 	int			retval = 0;
@@ -1084,8 +1094,12 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 
  done:
 	if (retval == 0) {
-		usb_hcd_resume_root_hub(hcd);
-		usb_hcd_resume_root_hub(xhci->shared_hcd);
+		/* Resume root hubs only when have pending events. */
+		status = readl(&xhci->op_regs->status);
+		if (status & STS_EINT) {
+			usb_hcd_resume_root_hub(hcd);
+			usb_hcd_resume_root_hub(xhci->shared_hcd);
+		}
 	}
 
 	/*

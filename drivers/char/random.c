@@ -507,9 +507,8 @@ static void _mix_pool_bytes(struct entropy_store *r, const void *in,
 	tap4 = r->poolinfo->tap4;
 	tap5 = r->poolinfo->tap5;
 
-	smp_rmb();
-	input_rotate = ACCESS_ONCE(r->input_rotate);
-	i = ACCESS_ONCE(r->add_ptr);
+	input_rotate = r->input_rotate;
+	i = r->add_ptr;
 
 	/* mix one byte at a time to simplify size handling and churn faster */
 	while (nbytes--) {
@@ -536,9 +535,8 @@ static void _mix_pool_bytes(struct entropy_store *r, const void *in,
 		input_rotate += i ? 7 : 14;
 	}
 
-	ACCESS_ONCE(r->input_rotate) = input_rotate;
-	ACCESS_ONCE(r->add_ptr) = i;
-	smp_wmb();
+	r->input_rotate = input_rotate;
+	r->add_ptr = i;
 
 	if (out)
 		for (j = 0; j < 16; j++)
@@ -814,6 +812,8 @@ void add_interrupt_randomness(int irq, int irq_flags, __u64 ip)
 	struct fast_pool	*fast_pool = &__get_cpu_var(irq_randomness);
 	unsigned long		now = jiffies;
 	__u32			input[4], cycles = get_cycles();
+	unsigned long		seed;
+	int			credit = 0;
 
 	input[0] = cycles ^ jiffies;
 	input[1] = irq;
@@ -828,28 +828,41 @@ void add_interrupt_randomness(int irq, int irq_flags, __u64 ip)
 	    !time_after(now, fast_pool->last + HZ))
 		return;
 
-	fast_pool->last = now;
-
 	r = nonblocking_pool.initialized ? &input_pool : &nonblocking_pool;
-#ifndef CONFIG_PREEMPT_RT_FULL
+	if (!spin_trylock(&r->lock)) {
+		fast_pool->count--;
+		return;
+	}
+	fast_pool->last = now;
 	__mix_pool_bytes(r, &fast_pool->pool, sizeof(fast_pool->pool), NULL);
-#else
-	mix_pool_bytes(r, &fast_pool->pool, sizeof(fast_pool->pool), NULL);
-#endif
+
+	/*
+	 * If we have architectural seed generator, produce a seed and
+	 * add it to the pool.  For the sake of paranoia count it as
+	 * 50% entropic.
+	 */
+	if (arch_get_random_seed_long(&seed)) {
+		__mix_pool_bytes(r, &seed, sizeof(seed), NULL);
+		credit += sizeof(seed) * 4;
+	}
+	spin_unlock(&r->lock);
+
 	/*
 	 * If we don't have a valid cycle counter, and we see
 	 * back-to-back timer interrupts, then skip giving credit for
-	 * any entropy.
+	 * any entropy, otherwise credit 1 bit.
 	 */
+	credit++;
 	if (cycles == 0) {
 		if (irq_flags & __IRQF_TIMER) {
 			if (fast_pool->last_timer_intr)
-				return;
+				credit--;
 			fast_pool->last_timer_intr = 1;
 		} else
 			fast_pool->last_timer_intr = 0;
 	}
-	credit_entropy_bits(r, 1);
+
+	credit_entropy_bits(r, credit);
 }
 
 #ifdef CONFIG_BLOCK
@@ -978,14 +991,25 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	int i;
 	union {
 		__u32 w[5];
-		unsigned long l[LONGS(EXTRACT_SIZE)];
+		unsigned long l[LONGS(20)];
 	} hash;
 	__u32 workspace[SHA_WORKSPACE_WORDS];
 	__u8 extract[64];
 	unsigned long flags;
 
-	/* Generate a hash across the pool, 16 words (512 bits) at a time */
+	/*
+	 * If we have a architectural hardware random number
+	 * generator, use it for SHA's initial vector 
+	 */
 	sha_init(hash.w);
+	for (i = 0; i < LONGS(20); i++) {
+		unsigned long v;
+		if (!arch_get_random_long(&v))
+			break;
+		hash.l[i] = v;
+	}
+
+	/* Generate a hash across the pool, 16 words (512 bits) at a time */
 	spin_lock_irqsave(&r->lock, flags);
 	for (i = 0; i < r->poolinfo->poolwords; i += 16)
 		sha_transform(hash.w, (__u8 *)(r->pool + i), workspace);
@@ -1007,8 +1031,8 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	 * pool while mixing, and hash one final time.
 	 */
 	sha_transform(hash.w, extract, workspace);
-	memset(extract, 0, sizeof(extract));
-	memset(workspace, 0, sizeof(workspace));
+	memzero_explicit(extract, sizeof(extract));
+	memzero_explicit(workspace, sizeof(workspace));
 
 	/*
 	 * In case the hash function has some recognizable output
@@ -1019,19 +1043,8 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	hash.w[1] ^= hash.w[4];
 	hash.w[2] ^= rol32(hash.w[2], 16);
 
-	/*
-	 * If we have a architectural hardware random number
-	 * generator, mix that in, too.
-	 */
-	for (i = 0; i < LONGS(EXTRACT_SIZE); i++) {
-		unsigned long v;
-		if (!arch_get_random_long(&v))
-			break;
-		hash.l[i] ^= v;
-	}
-
 	memcpy(out, &hash, EXTRACT_SIZE);
-	memset(&hash, 0, sizeof(hash));
+	memzero_explicit(&hash, sizeof(hash));
 }
 
 static ssize_t extract_entropy(struct entropy_store *r, void *buf,
@@ -1079,7 +1092,7 @@ static ssize_t extract_entropy(struct entropy_store *r, void *buf,
 	}
 
 	/* Wipe data just returned from memory */
-	memset(tmp, 0, sizeof(tmp));
+	memzero_explicit(tmp, sizeof(tmp));
 
 	return ret;
 }
@@ -1117,7 +1130,7 @@ static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
 	}
 
 	/* Wipe data just returned from memory */
-	memset(tmp, 0, sizeof(tmp));
+	memzero_explicit(tmp, sizeof(tmp));
 
 	return ret;
 }
@@ -1187,7 +1200,8 @@ static void init_std_data(struct entropy_store *r)
 	r->last_data_init = false;
 	mix_pool_bytes(r, &now, sizeof(now), NULL);
 	for (i = r->poolinfo->poolbytes; i > 0; i -= sizeof(rv)) {
-		if (!arch_get_random_long(&rv))
+		if (!arch_get_random_seed_long(&rv) &&
+		    !arch_get_random_long(&rv))
 			break;
 		mix_pool_bytes(r, &rv, sizeof(rv), NULL);
 	}
@@ -1228,6 +1242,37 @@ void rand_initialize_disk(struct gendisk *disk)
 }
 #endif
 
+/*
+ * Attempt an emergency refill using arch_get_random_seed_long().
+ *
+ * As with add_interrupt_randomness() be paranoid and only
+ * credit the output as 50% entropic.
+ */
+static int arch_random_refill(void)
+{
+	const unsigned int nlongs = 64;	/* Arbitrary number */
+	unsigned int n = 0;
+	unsigned int i;
+	unsigned long buf[nlongs];
+
+	if (!arch_has_random_seed())
+		return 0;
+
+	for (i = 0; i < nlongs; i++) {
+		if (arch_get_random_seed_long(&buf[n]))
+			n++;
+	}
+
+	if (n) {
+		unsigned int rand_bytes = n * sizeof(unsigned long);
+
+		mix_pool_bytes(&input_pool, buf, rand_bytes, NULL);
+		credit_entropy_bits(&input_pool, rand_bytes*4);
+	}
+
+	return n;
+}
+
 static ssize_t
 random_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 {
@@ -1254,6 +1299,10 @@ random_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 			  n*8, (nbytes-n)*8);
 
 		if (n == 0) {
+		/* First try an emergency refill */
+		if (arch_random_refill())
+			continue;
+
 			if (file->f_flags & O_NONBLOCK) {
 				retval = -EAGAIN;
 				break;

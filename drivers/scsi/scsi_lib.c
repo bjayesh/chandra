@@ -434,6 +434,8 @@ static void scsi_run_queue(struct request_queue *q)
 	list_splice_init(&shost->starved_list, &starved_list);
 
 	while (!list_empty(&starved_list)) {
+		struct request_queue *slq;
+
 		/*
 		 * As long as shost is accepting commands and we have
 		 * starved queues, call blk_run_queue. scsi_request_fn
@@ -456,11 +458,25 @@ static void scsi_run_queue(struct request_queue *q)
 			continue;
 		}
 
-		spin_unlock(shost->host_lock);
-		spin_lock(sdev->request_queue->queue_lock);
-		__blk_run_queue(sdev->request_queue);
-		spin_unlock(sdev->request_queue->queue_lock);
-		spin_lock(shost->host_lock);
+		/*
+		 * Once we drop the host lock, a racing scsi_remove_device()
+		 * call may remove the sdev from the starved list and destroy
+		 * it and the queue.  Mitigate by taking a reference to the
+		 * queue and never touching the sdev again after we drop the
+		 * host lock.  Note: if __scsi_remove_device() invokes
+		 * blk_cleanup_queue() before the queue is run from this
+		 * function then blk_run_queue() will return immediately since
+		 * blk_cleanup_queue() marks the queue with QUEUE_FLAG_DYING.
+		 */
+		slq = sdev->request_queue;
+		if (!blk_get_queue(slq))
+			continue;
+		spin_unlock_irqrestore(shost->host_lock, flags);
+
+		blk_run_queue(slq);
+		blk_put_queue(slq);
+
+		spin_lock_irqsave(shost->host_lock, flags);
 	}
 	/* put any unprocessed entries back */
 	list_splice(&starved_list, &shost->starved_list);
@@ -815,6 +831,14 @@ void scsi_io_completion(struct scsi_cmnd *cmd, unsigned int good_bytes)
 			scsi_next_command(cmd);
 			return;
 		}
+	} else if (blk_rq_bytes(req) == 0 && result && !sense_deferred) {
+		/*
+		 * Certain non BLOCK_PC requests are commands that don't
+		 * actually transfer anything (FLUSH), so cannot use
+		 * good_bytes != blk_rq_bytes(req) as the signal for an error.
+		 * This sets the error explicitly for the problem case.
+		 */
+		error = __scsi_error_from_host_byte(cmd, result);
 	}
 
 	/* no bidi support for !REQ_TYPE_BLOCK_PC yet */

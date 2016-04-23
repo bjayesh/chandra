@@ -158,7 +158,15 @@ void __jbd2_log_wait_for_space(journal_t *journal)
 				/* We were able to recover space; yay! */
 				;
 			} else if (tid) {
+				/*
+				 * jbd2_journal_commit_transaction() may want
+				 * to take the checkpoint_mutex if JBD2_FLUSHED
+				 * is set.  So we need to temporarily drop it.
+				 */
+				mutex_unlock(&journal->j_checkpoint_mutex);
 				jbd2_log_wait_commit(journal, tid);
+				write_lock(&journal->j_state_lock);
+				continue;
 			} else {
 				printk(KERN_ERR "%s: needed %d blocks and "
 				       "only had %d space available\n",
@@ -692,9 +700,7 @@ void __jbd2_journal_drop_transaction(journal_t *journal, transaction_t *transact
 	J_ASSERT(transaction->t_state == T_FINISHED);
 	J_ASSERT(transaction->t_buffers == NULL);
 	J_ASSERT(transaction->t_forget == NULL);
-	J_ASSERT(transaction->t_iobuf_list == NULL);
 	J_ASSERT(transaction->t_shadow_list == NULL);
-	J_ASSERT(transaction->t_log_list == NULL);
 	J_ASSERT(transaction->t_checkpoint_list == NULL);
 	J_ASSERT(transaction->t_checkpoint_io_list == NULL);
 	J_ASSERT(atomic_read(&transaction->t_updates) == 0);

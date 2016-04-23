@@ -282,6 +282,9 @@ void list_interrupts(struct lttng_session *session)
 }
 #endif
 
+/*
+ * Called with task lock held.
+ */
 static
 void lttng_statedump_process_ns(struct lttng_session *session,
 		struct task_struct *p,
@@ -293,7 +296,6 @@ void lttng_statedump_process_ns(struct lttng_session *session,
 	struct nsproxy *proxy;
 	struct pid_namespace *pid_ns;
 
-	task_lock(p);
 	proxy = p->nsproxy;
 	if (proxy) {
 		pid_ns = lttng_get_proxy_pid_ns(proxy);
@@ -306,7 +308,6 @@ void lttng_statedump_process_ns(struct lttng_session *session,
 		trace_lttng_statedump_process_state(session,
 			p, type, mode, submode, status, NULL);
 	}
-	task_unlock(p);
 }
 
 static

@@ -242,12 +242,11 @@ static inline unsigned long regs_get_kernel_stack_nth(struct pt_regs *regs,
  *
  * So force IRET path after a ptrace stop.
  */
-#define arch_ptrace_stop_needed(code, info) \
-({ \
- set_thread_flag(TIF_NOTIFY_RESUME); \
- false; \
+#define arch_ptrace_stop_needed(code, info)				\
+({									\
+	set_thread_flag(TIF_NOTIFY_RESUME);				\
+	false;								\
 })
-
 
 struct user_desc;
 extern int do_get_thread_area(struct task_struct *p, int idx,

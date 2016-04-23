@@ -24,6 +24,7 @@
 #include <linux/ioport.h>
 #include <linux/cache.h>
 #include <linux/slab.h>
+#include <linux/bootmem.h>
 #include "pci.h"
 
 
@@ -204,7 +205,19 @@ static int __pci_assign_resource(struct pci_bus *bus, struct pci_dev *dev,
 	resource_size_t min;
 	int ret;
 
+#ifdef CONFIG_64BIT
+	/*
+	 * For 64-bit pci device, assign resource start from the next page
+	 * boundary above the maximum physical page address
+	 */
+	resource_size_t min_iomem;
+
+	min_iomem = (res->flags & IORESOURCE_MEM_64) ?
+		    (max_pfn + 1) << PAGE_SHIFT : PCIBIOS_MIN_MEM;
+	min = (res->flags & IORESOURCE_IO) ? PCIBIOS_MIN_IO : min_iomem;
+#else
 	min = (res->flags & IORESOURCE_IO) ? PCIBIOS_MIN_IO : PCIBIOS_MIN_MEM;
+#endif
 
 	/* First, try exact prefetching match.. */
 	ret = pci_bus_alloc_resource(bus, res, size, align, min,

@@ -108,7 +108,9 @@ static const char * const mem_types[] = {
 	[MEM_RDDR2] = "Registered-DDR2",
 	[MEM_XDR] = "XDR",
 	[MEM_DDR3] = "Unbuffered-DDR3",
-	[MEM_RDDR3] = "Registered-DDR3"
+	[MEM_RDDR3] = "Registered-DDR3",
+	[MEM_DDR4] = "Unbuffered-DDR4",
+	[MEM_RDDR4] = "Registered-DDR4"
 };
 
 static const char * const dev_types[] = {
@@ -289,10 +291,6 @@ static const struct attribute_group *csrow_attr_groups[] = {
 
 static void csrow_attr_release(struct device *dev)
 {
-	struct csrow_info *csrow = container_of(dev, struct csrow_info, dev);
-
-	edac_dbg(1, "Releasing csrow device %s\n", dev_name(dev));
-	kfree(csrow);
 }
 
 static struct device_type csrow_attr_type = {
@@ -304,8 +302,6 @@ static struct device_type csrow_attr_type = {
  * possible dynamic channel DIMM Label attribute files
  *
  */
-
-#define EDAC_NR_CHANNELS	6
 
 DEVICE_CHANNEL(ch0_dimm_label, S_IRUGO | S_IWUSR,
 	channel_dimm_label_show, channel_dimm_label_store, 0);
@@ -369,9 +365,6 @@ static int edac_create_csrow_object(struct mem_ctl_info *mci,
 				    struct csrow_info *csrow, int index)
 {
 	int err, chan;
-
-	if (csrow->nr_channels >= EDAC_NR_CHANNELS)
-		return -ENODEV;
 
 	csrow->dev.type = &csrow_attr_type;
 	csrow->dev.bus = mci->bus;
@@ -589,10 +582,6 @@ static const struct attribute_group *dimm_attr_groups[] = {
 
 static void dimm_attr_release(struct device *dev)
 {
-	struct dimm_info *dimm = container_of(dev, struct dimm_info, dev);
-
-	edac_dbg(1, "Releasing dimm device %s\n", dev_name(dev));
-	kfree(dimm);
 }
 
 static struct device_type dimm_attr_type = {
@@ -887,10 +876,6 @@ static const struct attribute_group *mci_attr_groups[] = {
 
 static void mci_attr_release(struct device *dev)
 {
-	struct mem_ctl_info *mci = container_of(dev, struct mem_ctl_info, dev);
-
-	edac_dbg(1, "Releasing csrow device %s\n", dev_name(dev));
-	kfree(mci);
 }
 
 static struct device_type mci_attr_type = {

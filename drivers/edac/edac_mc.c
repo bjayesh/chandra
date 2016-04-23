@@ -149,6 +149,9 @@ const char *edac_mem_types[] = {
 	"Rambus XDR",
 	"Unbuffered DDR3 RAM",
 	"Registered DDR3 RAM",
+	"Load-Reduced DDR3 RAM",
+	"Unbuffered DDR4 RAM",
+	"Registered DDR4 RAM",
 };
 EXPORT_SYMBOL_GPL(edac_mem_types);
 
@@ -467,6 +470,11 @@ void edac_mc_free(struct mem_ctl_info *mci)
 {
 	edac_dbg(1, "\n");
 
+	/* the mci instance is freed here, when the sysfs object is dropped */
+	if (device_is_registered(&mci->dev)) {
+		edac_unregister_sysfs(mci);
+	}
+
 	/* If we're not yet registered with sysfs free only what was allocated
 	 * in edac_mc_alloc().
 	 */
@@ -474,9 +482,6 @@ void edac_mc_free(struct mem_ctl_info *mci)
 		_edac_mc_free(mci);
 		return;
 	}
-
-	/* the mci instance is freed here, when the sysfs object is dropped */
-	edac_unregister_sysfs(mci);
 }
 EXPORT_SYMBOL_GPL(edac_mc_free);
 

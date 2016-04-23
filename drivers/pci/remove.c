@@ -24,7 +24,7 @@ static void pci_stop_dev(struct pci_dev *dev)
 	if (dev->is_added) {
 		pci_proc_detach_device(dev);
 		pci_remove_sysfs_dev_files(dev);
-		device_del(&dev->dev);
+		device_release_driver(&dev->dev);
 		dev->is_added = 0;
 	}
 
@@ -34,6 +34,8 @@ static void pci_stop_dev(struct pci_dev *dev)
 
 static void pci_destroy_dev(struct pci_dev *dev)
 {
+	device_del(&dev->dev);
+
 	down_write(&pci_bus_sem);
 	list_del(&dev->bus_list);
 	up_write(&pci_bus_sem);
@@ -126,7 +128,7 @@ void pci_stop_root_bus(struct pci_bus *bus)
 		pci_stop_bus_device(child);
 
 	/* stop the host bridge */
-	device_del(&host_bridge->dev);
+	device_release_driver(&host_bridge->dev);
 }
 
 void pci_remove_root_bus(struct pci_bus *bus)
@@ -145,5 +147,5 @@ void pci_remove_root_bus(struct pci_bus *bus)
 	host_bridge->bus = NULL;
 
 	/* remove the host bridge */
-	put_device(&host_bridge->dev);
+	device_unregister(&host_bridge->dev);
 }

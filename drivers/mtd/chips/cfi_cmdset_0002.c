@@ -2072,6 +2072,14 @@ static int __xipram do_erase_oneblock(struct map_info *map, struct flchip *chip,
 	chip->state = FL_READY;
 	DISABLE_VPP(map);
 	put_chip(map, chip, adr);
+	if (waitqueue_active(&chip->wq)) {
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		add_wait_queue(&chip->wq, &wait);
+		mutex_unlock(&chip->mutex);
+		schedule_timeout(msecs_to_jiffies(3));
+		remove_wait_queue(&chip->wq, &wait);
+		return ret;
+	}
 	mutex_unlock(&chip->mutex);
 	return ret;
 }
