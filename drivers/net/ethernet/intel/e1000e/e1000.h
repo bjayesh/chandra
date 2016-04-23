@@ -150,7 +150,6 @@ struct e1000_ps_page {
 };
 
 #define	WR_E1000E_WORKAROUND
-#define	WR_E1000E_WORKAROUND2
 /* wrappers around a pointer to a socket buffer,
  * so a DMA handle can be stored along with the buffer
  */

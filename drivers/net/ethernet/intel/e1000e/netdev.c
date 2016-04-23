@@ -5510,7 +5510,11 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 		count++;
 	count++;
 
+#ifdef WR_E1000E_WORKAROUND
+	count += DIV_ROUND_UP(len, 256);
+#else
 	count += DIV_ROUND_UP(len, adapter->tx_fifo_limit);
+#endif
 
 	nr_frags = skb_shinfo(skb)->nr_frags;
 	for (f = 0; f < nr_frags; f++)
@@ -6652,7 +6656,7 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 			 "PHY reset is blocked due to SOL/IDER session.\n");
 
 	/* Set initial default active device features */
-#ifdef WR_E1000E_WORKAROUND2	/* Workaround */
+#ifdef WR_E1000E_WORKAROUND	/* Workaround */
 	netdev->features = (
 #else
 	netdev->features = (NETIF_F_SG |
@@ -6674,7 +6678,7 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (adapter->flags & FLAG_HAS_HW_VLAN_FILTER)
 		netdev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 
-#ifdef WR_E1000E_WORKAROUND2	/* Workaround */
+#ifdef WR_E1000E_WORKAROUND	/* Workaround */
 	netdev->vlan_features |= (
 #else
 	netdev->vlan_features |= (NETIF_F_SG |
