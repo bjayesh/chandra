@@ -210,7 +210,7 @@ static inline unsigned long __phys_to_virt(unsigned long x)
 extern phys_addr_t  __pv_phys_offset;
 #define PHYS_OFFSET __pv_phys_offset
 #define __virt_to_phys(x)	(phys_addr_t)((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET)
-#define __phys_to_virt(x)	((phys_addr_t)(x) - PHYS_OFFSET + PAGE_OFFSET)
+#define __phys_to_virt(x)	(unsigned long)((phys_addr_t)(x) - PHYS_OFFSET + PAGE_OFFSET)
 #endif	/* CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY */	/* yamano */
 #endif
 #endif /* __ASSEMBLY__ */
@@ -264,7 +264,7 @@ static inline void *phys_to_virt(phys_addr_t x)
  */
 #define __pa(x)			__virt_to_phys((unsigned long)(x))
 #ifdef	CONFIG_ARM_LPAE_HIGH_ADDR_MEMORY
-#define __va(x)			((void *)__phys_to_virt((phys_addr_t)(x)))
+#define __va(x)			((void *)(__phys_to_virt((phys_addr_t)(x))))
 #else
 #define __va(x)			((void *)__phys_to_virt((unsigned long)(x)))
 #endif

@@ -104,7 +104,8 @@ static	void	gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
 			dat &= ~(1 << (offset - 64));
 			writel(dat, gpio->regbase + PIODATC);
 		}else{
-			dev_err(&chip->dev, "GPIO could not access port\n");
+			printk(KERN_ERR "%s GPIO could not access port\n", __func__);
+//			dev_err(&chip->dev, "GPIO could not access port\n");
 		}
 	}else{
 		if(offset < 32){
@@ -120,7 +121,8 @@ static	void	gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
 			dat |= value << (offset - 64);
 			writel(dat, gpio->regbase + PIODATC);
 		}else{
-			dev_err(&chip->dev, "GPIO could not access port\n");
+//			dev_err(&chip->dev, "GPIO could not access port\n");
+			printk(KERN_ERR "%s GPIO could not access port\n", __func__);
 		}
 	}
 }

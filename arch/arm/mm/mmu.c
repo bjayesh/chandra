@@ -112,7 +112,7 @@ static  int     getchar(u32 base)
         return  UART_DATA(base);
 }
 #else
-static int	yamadebug = 0;
+//static int	yamadebug = 0;
 #define putchar(a,b)    {}
 #define flush(a)        {}
 #define putstr(a,b)     {}
@@ -1244,22 +1244,22 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	unsigned long addr;
 //	phys_addr_t	paddr;
 	void *vectors;
-	char	buf[128];
+//	char	buf[128];
 
-putstr(UART_BASE,"devicemaps_init_entry\n");
+//putstr(UART_BASE,"devicemaps_init_entry\n");
 	/*
 	 * Allocate the vector page early.
 	 */
 	vectors = early_alloc(PAGE_SIZE * 2);
-putstr(UART_BASE,"early_alloc for vector\n");
+//putstr(UART_BASE,"early_alloc for vector\n");
 
 	early_trap_init(vectors);
-putstr(UART_BASE,"early_trap_init\n");
+//putstr(UART_BASE,"early_trap_init\n");
 
 	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 
-putstr(UART_BASE,"pmd_clear\n");
+//putstr(UART_BASE,"pmd_clear\n");
 	/*
 	 * Map the kernel if it is XIP.
 	 * It is always first in the modulearea.
@@ -1271,7 +1271,7 @@ putstr(UART_BASE,"pmd_clear\n");
 	map.type = MT_ROM;
 	create_mapping(&map);
 #endif
-putstr(UART_BASE,"XIP\n");
+//putstr(UART_BASE,"XIP\n");
 	/*
 	 * Map the cache flushing regions.
 	 */
@@ -1289,7 +1289,7 @@ putstr(UART_BASE,"XIP\n");
 	map.type = MT_MINICLEAN;
 	create_mapping(&map);
 #endif
-putstr(UART_BASE,"FLASH\n");
+//putstr(UART_BASE,"FLASH\n");
 
 	/*
 	 * Create a mapping for the machine vectors at the high-vectors
@@ -1306,8 +1306,8 @@ putstr(UART_BASE,"FLASH\n");
 #else
 	map.type = MT_LOW_VECTORS;
 #endif
-sprintf(buf,"create_mapping phy=0x%llx vir=0x%x\n", virt_to_phys(vectors), map.virtual);
-putstr(UART_BASE,buf);
+//sprintf(buf,"create_mapping phy=0x%llx vir=0x%x\n", virt_to_phys(vectors), map.virtual);
+//putstr(UART_BASE,buf);
 	create_mapping(&map);
 //putstr(UART_BASE,"vector\n");
 
@@ -1405,7 +1405,7 @@ void __init paging_init(struct machine_desc *mdesc)
 	dma_contiguous_remap();
 //putstr(UART_BASE,"dma_contiguous_remap\n");
 	devicemaps_init(mdesc);	/* reset debug I/O map yamano befor used UART_BASE2 */
-	yamadebug = 1;
+//	yamadebug = 1;
 //putstr(UART_BASE2,"devicemaps_init\n");
 	kmap_init();
 //putstr(UART_BASE2,"kmap_init\n");
