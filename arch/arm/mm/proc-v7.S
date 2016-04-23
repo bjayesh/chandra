@@ -352,8 +352,30 @@ __v7_setup:
 
 4:	mov	r10, #0
 	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
+	mcr	p15, 0, r10, c7, c5, 6		@ Branch predictor invalidate all yamano
+	isb
 #ifdef CONFIG_MMU
 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
+/*5:	b	5b 	* yamano */
+/* r10=zero,r4=ttbr,r8=ttbr1,tmp=r5 */ 
+	mov	r10, #0x08	/* yamano */
+#if 0	/* yamano debug page table walk */
+	mov	r6, r8
+	mov	r5, r6, lsr #(32-ARCH_PGD_SHIFT)
+	mov	r6, r6, lsl #ARCH_PGD_SHIFT
+	addls	r6, r6, #TTBR1_OFFSET
+	mcrr	p15, 1, r6, r10, c2		@ TTBR1
+	isb
+	mov	r6, r4
+	mov	r5, r6, lsr #(32 - ARCH_PGD_SHIFT)
+	mov	r6, r6, lsl #ARCH_PGD_SHIFT
+	orr	r6, r6, #0x3
+	mrrc	p15, 0, r5, r8, c2
+	mcrr	p15, 0, r6, r10, c2		@ TTBR0
+ 	isb
+	mcrr	p15, 0, r5, r8, c2
+	isb
+#endif
 	v7_ttb_setup r10, r4, r8, r5		@ TTBCR, TTBRx setup
 	ldr	r5, =PRRR			@ PRRR
 	ldr	r6, =NMRR			@ NMRR

@@ -36,6 +36,47 @@
 
 #include "mm.h"
 
+#if 1 /* yamano */
+#define UART_BASE       0xfc160000
+#define UART_BASE2      0xfc000000
+#define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
+#define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
+
+static  void    putchar(u32 base, int c)
+{
+        while((UART_STAT(base) & 0x40) == 0)
+                barrier();
+        UART_DATA(base) = c;
+        return;
+}
+
+static  void    flush(u32 base)
+{
+        while((UART_STAT(base) & 0x40) == 0)
+                barrier();
+}
+
+static  void    putstr(u32 base, const char *ptr)
+{
+        char    c;
+
+        while((c = *ptr++) != '\0'){
+                if(c == '\n')
+                        putchar(base,'\r');
+                putchar(base,c);
+        }
+        flush(base);
+}
+
+static  int     getchar(u32 base)
+{
+        while((UART_STAT(base) & 0x01) == 0)
+                barrier();
+        return  UART_DATA(base);
+}
+#endif  /* yamano */
+
+
 static phys_addr_t phys_initrd_start __initdata = 0;
 static unsigned long phys_initrd_size __initdata = 0;
 
@@ -391,6 +432,7 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 void __init bootmem_init(void)
 {
 	unsigned long min, max_low, max_high;
+	char	buf[128];
 
 	max_low = max_high = 0;
 
