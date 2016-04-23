@@ -110,7 +110,7 @@ static int lm2_wdt_probe(struct platform_device *pdev)
 		return	-EINVAL;
 	}
 
-	wdev->reg_base = devm_ioremap_resource(&pdev->dev,mem);
+	wdev->reg_base = ioremap(mem->start,0x100);
 
 	lm2_wdt->info		= &lm2_wdt_info;
 	lm2_wdt->ops		= &lm2_wdt_ops;
