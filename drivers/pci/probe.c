@@ -1690,7 +1690,7 @@ struct pci_bus *pci_create_root_bus(struct device *parent, int bus,
 	char bus_addr[64];
 	char *fmt;
 
-dev_dbg(&b2->dev, "%s entry\n",__FUNCTION__);
+printk(KERN_ERR "%s entry\n",__FUNCTION__);
 	b = pci_alloc_bus();
 	if (!b)
 		return NULL;
@@ -1773,7 +1773,7 @@ dev_dbg(&b2->dev, "%s entry\n",__FUNCTION__);
 	list_add_tail(&b->node, &pci_root_buses);
 	up_write(&pci_bus_sem);
 
-dev_dbg(&b2->dev, "%s exit\n",__FUNCTION__);
+printk(KERN_ERR "%s exit\n",__FUNCTION__);
 	return b;
 
 class_dev_reg_err:
@@ -1788,7 +1788,7 @@ int pci_bus_insert_busn_res(struct pci_bus *b, int bus, int bus_max)
 {
 	struct resource *res = &b->busn_res;
 	struct resource *parent_res, *conflict;
-
+printk(KERN_ERR " # %s : Entry bus = %x bus_max = %x\n",__FUNCTION__,bus,bus_max);
 	res->start = bus;
 	res->end = bus_max;
 	res->flags = IORESOURCE_BUS;
@@ -1807,7 +1807,7 @@ int pci_bus_insert_busn_res(struct pci_bus *b, int bus, int bus_max)
 			   "busn_res: can not insert %pR under %s%pR (conflicts with %s %pR)\n",
 			    res, pci_is_root_bus(b) ? "domain " : "",
 			    parent_res, conflict->name, conflict);
-
+printk(KERN_ERR " # %s : Exit conflict = %x\n",__FUNCTION__,conflict);
 	return conflict == NULL;
 }
 
@@ -1824,9 +1824,9 @@ printk(KERN_ERR " ## %s : Entry bus=%x bus_max= %x\n",__FUNCTION__,b,bus_max);
 printk(KERN_ERR " ## %s : start %d > bus_max %d \n",__FUNCTION__,res->start,bus_max);
 		return -EINVAL;
 	}	/* yamano debug */
-printk( KERN_ERR "res->start =%x\n",res->start);
-printk( KERN_ERR "res->end =%x\n",res->end);
-printk( KERN_ERR "res->flags =%x\n",res->flags);
+dev_info(&b->dev,"res->start =%llx\n",res->start);
+printk(KERN_ERR "res->end =%llx\n",res->end);
+printk(KERN_ERR "res->flags =%x\n",res->flags);
 
 	size = bus_max - res->start + 1;
 	ret = adjust_resource(res, res->start, size);
@@ -1871,6 +1871,7 @@ struct pci_bus *pci_scan_root_bus(struct device *parent, int bus,
 
 	list_for_each_entry(window, resources, list)
 		if (window->res->flags & IORESOURCE_BUS) {
+printk(KERN_ERR "## %s : IORESOURCE_BUS\n",__FUNCTION__);
 			found = true;
 			break;
 		}
@@ -1878,7 +1879,7 @@ struct pci_bus *pci_scan_root_bus(struct device *parent, int bus,
 	b = pci_create_root_bus(parent, bus, ops, sysdata, resources);
 	if (!b)
 		return NULL;
-printk(KERN_ERR " ## %s : root bus = %x\n",__FUNCTION__,b);
+printk(KERN_ERR " ## %s : root bus = %x found = %d\n",__FUNCTION__,b,found);
 	if (!found) {
 		dev_info(&b->dev,
 		 "No busn resource found for root bus, will use [bus %02x-ff]\n",

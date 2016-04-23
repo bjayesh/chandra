@@ -56,7 +56,7 @@ void pci_bus_add_resource(struct pci_bus *bus, struct resource *res,
 			  unsigned int flags)
 {
 	struct pci_bus_resource *bus_res;
-
+dev_info(&bus->dev," $$$ %s Entry bus = %x res = %x\n",__FUNCTION__,bus,res);
 	bus_res = kzalloc(sizeof(struct pci_bus_resource), GFP_KERNEL);
 	if (!bus_res) {
 		dev_err(&bus->dev, "can't add %pR resource\n", res);
@@ -66,6 +66,7 @@ void pci_bus_add_resource(struct pci_bus *bus, struct resource *res,
 	bus_res->res = res;
 	bus_res->flags = flags;
 	list_add_tail(&bus_res->list, &bus->resources);
+dev_info(&bus->dev," $$$ %s Exit\n",__FUNCTION__);
 }
 
 struct resource *pci_bus_resource_n(const struct pci_bus *bus, int n)

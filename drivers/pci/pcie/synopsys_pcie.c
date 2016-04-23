@@ -180,7 +180,7 @@ printk(KERN_ERR "print offset mem = %llx\n",sys->mem_offset);
 printk(KERN_ERR "print offset io = %llx\n",sys->io_offset);
 	pci_add_resource_offset(&sys->resources, &pp->config[0].mem, sys->mem_offset);
 	pci_add_resource_offset(&sys->resources, &pp->config[0].io, sys->io_offset);
-
+	
 #ifdef	DEBUG_CALLBACK
 	dev_err(pp->dev, "##### %s : End\n",__FUNCTION__);
 #endif
@@ -329,6 +329,7 @@ static struct pci_bus *synopsys_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	if (pp) {
 		pp->root_bus_nr = sys->busnr;
 dev_err(pp->dev, "%s resources=%x\n",__FUNCTION__,sys->resources);
+	
 		bus = pci_scan_root_bus(NULL, sys->busnr, &synopsys_pcie_ops, sys, &sys->resources);
 	} else {
 		bus = NULL;
