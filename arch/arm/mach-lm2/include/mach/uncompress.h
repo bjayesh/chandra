@@ -41,29 +41,36 @@ static unsigned long get_uart_base(void)
  */
 static inline void putc(int c)
 {
+#if 0
 	unsigned long base = get_uart_base();
 
 	while ((AMBA_UART_LSR(base) & 0x40) == 0)
 		barrier();
 
 	AMBA_UART_DR(base) = c;
+#endif
 }
 
 static inline void flush(void)
 {
+#if 0
 	unsigned long base = get_uart_base();
 
 	while ((AMBA_UART_LSR(base) & 0x40) == 0)
 		barrier();
+#endif
 }
+
 
 static	inline	int getc(void)
 {
+#if 0
 	unsigned long base = get_uart_base();
 
 	while(( AMBA_UART_LSR(base) & 0x01) == 0)
 		barrier();
 	return	AMBA_UART_DR(base);
+#endif
 }
 /*
  * nothing to do
