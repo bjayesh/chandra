@@ -133,15 +133,6 @@ static void lm2_pm_end(void)
 #endif  /* LM2_PM_DEBUG */
 }
 
-static int lm2_suspend_finish(unsigned long val)
-{
-        outer_flush_all();
-        outer_disable();
-        cpu_do_idle();
-
-        return 0;
-}
-
 
 static void lm2_pm_suspend(void)
 {
@@ -159,7 +150,7 @@ static void lm2_pm_suspend(void)
 #else	/* PM_TEST */
 	irq_to_a7(LM2_IRQ_CIPUI);	//  64
 #endif	/* PM_TEST */
-        irq_to_a7(LM2_IRQ_GMACK_STAT);	// 126
+	irq_to_a7(LM2_IRQ_GMACK_STAT);	// 126
 	irq_to_a7(LM2_IRQ_SPI_0);	//  44
 	irq_to_a7(LM2_IRQ_SPI_2);	//  46
 
@@ -174,6 +165,8 @@ extern void dw3_reg_save(void);
 extern void dw3_reg_load(void);
 extern void lm2_pcie_suspend(void);
 extern void lm2_pcie_resume(void);
+extern void stmac_reg_save(void);
+extern void stmac_reg_load(void);
 
 static int lm2_pm_enter(suspend_state_t suspend_state)
 {
@@ -181,11 +174,19 @@ static int lm2_pm_enter(suspend_state_t suspend_state)
 	switch (suspend_state) {
 		case PM_SUSPEND_STANDBY:
 		case PM_SUSPEND_MEM:
+#ifdef  LM2_PM_DEBUG
+printk(KERN_ERR "LM2_PM: Register Save\n");
+#endif
+			stmac_reg_save();
 			lm2_pcie_suspend();
 			dw3_reg_save();
 			lm2_pm_suspend();
+#ifdef  LM2_PM_DEBUG
+printk(KERN_ERR "LM2_PM: Register Load\n");
+#endif
 			dw3_reg_load();
 			lm2_pcie_resume();
+			stmac_reg_load();
 			break;
 		default:
 			ret = -EINVAL;

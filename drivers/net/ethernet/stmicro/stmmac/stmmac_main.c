@@ -149,7 +149,6 @@ static void stmmac_exit_fs(void);
 #define STMMAC_COAL_TIMER(x) (jiffies + usecs_to_jiffies(x))
 
 #ifdef	CONFIG_ARCH_LM2
-//#define	LM2_PM_DEBUG
 struct reg_access_t {
         unsigned short  offset;
         unsigned int    variable;
@@ -1615,9 +1614,6 @@ static int stmmac_open(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int ret;
-#ifdef LM2_PM_DEBUG
-printk(KERN_ERR "== %s\n",__func__);
-#endif
 
 	clk_prepare_enable(priv->stmmac_clk);
 
@@ -1767,9 +1763,6 @@ static int stmmac_release(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
         int ret;
-#ifdef LM2_PM_DEBUG
-printk(KERN_ERR "== %s\n",__func__);
-#endif
 
 	if (priv->eee_enabled)
 		del_timer_sync(&priv->eee_ctrl_timer);
@@ -2861,8 +2854,6 @@ int stmmac_dvr_remove(struct net_device *ndev)
 #ifdef CONFIG_PM
 
 #ifdef	CONFIG_ARCH_LM2
-#define	LM2_OHKU_OK
-
 #define	LM2_REGBAK_SIZE	100
 static unsigned int	reg_bak[LM2_REGBAK_SIZE];
 					// 0x0000 - 0x003C backup
@@ -2923,6 +2914,7 @@ void stmac_reg_save(void) {
 	for(i=0; i<LM2_REGBAK_SIZE; i++)
 		reg_bak_chksum += reg_bak[i];
 }
+EXPORT_SYMBOL(stmac_reg_save);
 
 void stmac_reg_load(void) {
 	int i=0;
@@ -2945,15 +2937,10 @@ void stmac_reg_load(void) {
 	iounmap(base);
 
 	base = ioremap_nocache(0x04411000, 0x30);
-#ifdef	LM2_OHKU_OK
 	gmac_reg_load(base, &i, 0x000,  3);
 	i++;
 	i++;
 	gmac_reg_load(base, &i, 0x014,  5);
-#else
-	lm2_wdt        = reg_bak[i + 9];
-	i += 10;
-#endif
 	iounmap(base);
 
 	base = ioremap_nocache(0x04418000, 0x20);
@@ -2961,6 +2948,7 @@ void stmac_reg_load(void) {
 	gmac_reg_load(base, &i, 0x01c,  1);
 	iounmap(base);
 }
+EXPORT_SYMBOL(stmac_reg_load);
 #endif	/* CONFIG_ARCH_LM2 */
 
 int stmmac_suspend(struct net_device *ndev)
@@ -2971,9 +2959,6 @@ int stmmac_suspend(struct net_device *ndev)
 	if (!ndev || !netif_running(ndev))
 		return 0;
 
-#ifdef  LM2_PM_DEBUG
-printk(KERN_ERR "== %s:\n",__func__);
-#endif
 	if (priv->eee_enabled)
 		del_timer_sync(&priv->eee_ctrl_timer);
 
@@ -3010,9 +2995,6 @@ printk(KERN_ERR "== %s:\n",__func__);
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	stmmac_release_ptp(priv);
-#ifdef  CONFIG_ARCH_LM2
-	stmac_reg_save();
-#endif	/* CONFIG_ARCH_LM2 */
 	return 0;
 }
 
@@ -3024,13 +3006,6 @@ int stmmac_resume(struct net_device *ndev)
 
 	if (!netif_running(ndev))
 		return 0;
-
-#ifdef  LM2_PM_DEBUG
-printk(KERN_ERR "== %s:\n",__func__);
-#endif
-#ifdef  CONFIG_ARCH_LM2
-        stmac_reg_load();
-#endif  /* CONFIG_ARCH_LM2 */
 
 	rtn = stmmac_init_phy(ndev);
 	if (rtn) {

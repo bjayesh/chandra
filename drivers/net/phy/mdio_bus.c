@@ -358,9 +358,6 @@ static int mdio_bus_suspend(struct device *dev)
 	struct phy_driver *phydrv = to_phy_driver(dev->driver);
 	struct phy_device *phydev = to_phy_device(dev);
 
-#ifdef	CONFIG_ARCH_LM2
-	return phydrv->suspend(phydev);
-#else	/* CONFIG_ARCH_LM2 */
 	/*
 	 * We must stop the state machine manually, otherwise it stops out of
 	 * control, possibly with the phydev->lock held. Upon resume, netdev
@@ -374,7 +371,6 @@ static int mdio_bus_suspend(struct device *dev)
 		return 0;
 
 	return phydrv->suspend(phydev);
-#endif	/* CONFIG_ARCH_LM2 */
 }
 
 static int mdio_bus_resume(struct device *dev)
@@ -383,11 +379,6 @@ static int mdio_bus_resume(struct device *dev)
 	struct phy_device *phydev = to_phy_device(dev);
 	int ret;
 
-#ifdef	CONFIG_ARCH_LM2
-	ret = phydrv->resume(phydev);
-	if (ret < 0)
-		return ret;
-#else	/* CONFIG_ARCH_LM2 */
 	if (!mdio_bus_phy_may_suspend(phydev))
 		goto no_resume;
 
@@ -400,7 +391,6 @@ no_resume:
 		phy_start_machine(phydev, NULL);
 
 	return 0;
-#endif	/* CONFIG_ARCH_LM2 */
 }
 
 static int mdio_bus_restore(struct device *dev)

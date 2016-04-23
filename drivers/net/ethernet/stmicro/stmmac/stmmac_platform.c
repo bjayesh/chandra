@@ -28,6 +28,8 @@
 #include <linux/of_net.h>
 #include "stmmac.h"
 
+#define GMAC_EXTCFG	0x801c
+
 #ifdef CONFIG_OF
 static int stmmac_probe_config_dt(struct platform_device *pdev,
 				  struct plat_stmmacenet_data *plat,
@@ -135,6 +137,10 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+#ifdef  CONFIG_ARCH_LM2	/* No19 */
+	/* GMAC_EXTCFG Set */
+	writel(0x18 , priv->ioaddr + GMAC_EXTCFG);
+#endif	/* CONFIG_ARCH_LM2 */
 	/*
 	 * On some platforms e.g. SPEAr the wake up irq differs from the mac irq
 	 * The external wake up irq can be passed through the platform code

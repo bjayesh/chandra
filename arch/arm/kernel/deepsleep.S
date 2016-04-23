@@ -8,6 +8,7 @@
  */
 
 #define LM2_CHKSUM_ADDR chksum_info
+#define LM2_FORCE_LOOP
 
 	__HEAD
 ENTRY(deepsleep_up)
@@ -212,7 +213,14 @@ ENTRY(lm2_wfi0)
 	str	r1, [r0, #0x08]
 	bl	set_chksum
 	bl	v7_flush_kern_cache_all
+#ifdef	LM2_FORCE_LOOP
+__lm2_force_loop0:
 	wfi
+	nop
+	b	__lm2_force_loop0
+#else
+	wfi
+#endif	/* LM2_FORCE_LOOP */
 __core0_start:
 	ldmfd   sp!, {r0-r12, pc}
 ENDPROC(lm2_wfi0)
@@ -227,8 +235,17 @@ ENTRY(lm2_wfi1)
 	str	r1, [r0, #0x08]
 	bl	set_chksum
 	bl	v7_flush_kern_cache_all
+#ifdef  LM2_FORCE_LOOP
+__lm2_force_loop1:
+	wfi
+	nop
+	b	__lm2_force_loop1
 __core1_start:
 	wfi
+#else	/* LM2_FORCE_LOOP */
+__core1_start:
+	wfi
+#endif	/* LM2_FORCE_LOOP */
 	ldmfd	sp!, {r0-r12, pc}
 ENDPROC(lm2_wfi1)
 

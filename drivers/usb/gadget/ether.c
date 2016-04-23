@@ -352,8 +352,25 @@ fail:
 static int __exit eth_unbind(struct usb_composite_dev *cdev)
 {
 	gether_cleanup(the_dev);
+}
+
+#if 0
+static void gether_suspend(struct usb_composite_dev *cdev)
+{
+#ifdef LM2_PM_DEBUG
+printk(KERN_ERR "%s:\n",__func__);
+#endif
+	eth_unbind(cdev);
+}
+static void gether_resume(struct usb_composite_dev *cdev)
+{
+#ifdef LM2_PM_DEBUG
+printk(KERN_ERR "%s:\n",__func__);
+#endif
+	eth_bind(cdev);
 	return 0;
 }
+#endif	/* CONFIG_ARCH_LM2 */
 
 static __refdata struct usb_composite_driver eth_driver = {
 	.name		= "g_ether",
@@ -362,6 +379,10 @@ static __refdata struct usb_composite_driver eth_driver = {
 	.max_speed	= USB_SPEED_SUPER,
 	.bind		= eth_bind,
 	.unbind		= __exit_p(eth_unbind),
+#if  0
+	.suspend	= gether_suspend,
+	.resume		= gether_resume,
+#endif	/* CONFIG_ARCH_LM2 */
 };
 
 MODULE_DESCRIPTION(PREFIX DRIVER_DESC);
