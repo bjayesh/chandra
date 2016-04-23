@@ -1204,6 +1204,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 {
 	struct pcie_port *pp;
 #if 1
+	dev_info(&pdev->dev, "synopsys_pcie_probe :Start\n");
 #else
 	struct device_node *np = pdev->dev.of_node;
 	struct of_pci_range range;
@@ -1348,17 +1349,26 @@ static int __exit synopsys_pcie_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id synopsys_pcie_of_match[] = {
-	{ .compatible = "synopsys,exynos5440-pcie", },
+	{ .compatible = "synopsys-pcie", },
 	{},
 };
-MODULE_DEVICE_TABLE(of, synopsys_pcie_of_match);
+//MODULE_DEVICE_TABLE(of, synopsys_pcie_of_match);
+
+static	const struct platform_device_id pcie_id_table[]={
+	{	"synopsys-pcie",	},
+	{},
+};
+
+MODULE_DEVICE_TABLE( platform, pcie_id_table);
 
 static struct platform_driver synopsys_pcie_driver = {
 	.remove		= __exit_p(synopsys_pcie_remove),
+	.probe		= synopsys_pcie_probe,
+	.id_table	= pcie_id_table,
 	.driver = {
 		.name	= "synopsys-pcie",
 		.owner	= THIS_MODULE,
-		.of_match_table = of_match_ptr(synopsys_pcie_of_match),
+//		.of_match_table = of_match_ptr(synopsys_pcie_of_match),
 	},
 };
 
@@ -1413,7 +1423,8 @@ static int __init pcie_init(void)
 #endif
 	hook_fault_code(16 + 6, synopsys_pcie_abort, SIGBUS, 0, "imprecise external abort");
 
-	platform_driver_probe(&synopsys_pcie_driver, synopsys_pcie_probe);
+//	platform_driver_probe(&synopsys_pcie_driver, synopsys_pcie_probe);
+	platform_driver_register(&synopsys_pcie_driver);
 #ifdef	DEBUG_TRACE
 	printk(KERN_ERR "pcie_init: End\n");
 #endif

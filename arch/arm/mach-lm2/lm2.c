@@ -53,6 +53,10 @@ extern	void	lm2_clockevent_init(int irq, void __iomem *gpt);
 #define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
 #define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
 
+#ifdef	CONFIG_LM2_GPDMA
+extern	lm2_dma_register(void);
+#endif	/* CONFIG_LM2_GPDMA */
+
 static	void	lm2_putchar(unsigned long base, char c)
 {
 #if 0
@@ -300,6 +304,21 @@ static	struct platform_device lm2_i2c_device = {
 	.num_resources	= ARRAY_SIZE(lm2_i2c_resource),
 };
 
+static struct resource lm2_pcie_resource[]={
+       {
+               .start  = 0x04a40000,
+               .end    = 0x04a80000,
+               .flags  = IORESOURCE_MEM,
+       },
+};
+
+static	struct platform_device lm2_pcie_device = {
+	.name		= "synopsys-pcie",
+	.id		=-1,
+	.resource	= lm2_pcie_resource,
+	.num_resources	= ARRAY_SIZE(lm2_pcie_resource),
+};
+
 static void __init lm2_init_early(void)
 {
 //	lm2_printk(0xfc000000,"lm2_init_early\n");
@@ -375,6 +394,9 @@ static void __init lm2_init(void)
 #ifdef	CONFIG_MMC_SDHCI_PLTFM
         lm2_sdhci_init();
 #endif
+#ifdef	CONFIG_LM2_GPDMA
+	lm2_dma_register();
+#endif	/* CONFIG_LM2_GPDMA */
 
 	platform_device_register(&lm2_gpio_device);
 	platform_device_register(&lm2_rtc_device);
@@ -383,7 +405,7 @@ static void __init lm2_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
-
+	platform_device_register(&lm2_pcie_device);
 }
 
 MACHINE_START(LM2, "FujiXerox Waikiki")
@@ -495,6 +517,9 @@ static void __init lm2_dt_init(void)
 #ifdef	CONFIG_MMC_SDHCI_PLTFM
         lm2_sdhci_init();
 #endif
+#ifdef	CONFIG_LM2_GPDMA
+	lm2_dma_register();
+#endif	/* CONFIG_LM2_GPDMA */
 	platform_device_register(&lm2_gpio_device);
 	platform_device_register(&lm2_rtc_device);
 	platform_device_register(&lm2_i2c_device);
@@ -502,6 +527,7 @@ static void __init lm2_dt_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
+	platform_device_register(&lm2_pcie_device);
 
 //	l2x0_of_init(0x00400000, 0xfe0fffff);
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
