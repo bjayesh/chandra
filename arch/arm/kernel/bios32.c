@@ -137,35 +137,6 @@ static void pci_fixup_unassign(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_WINBOND2, PCI_DEVICE_ID_WINBOND2_89C940F, pci_fixup_unassign);
 
-#ifdef YAMANO_CHANGE
-/* yamano debug */
-#if 0
-#define PCI_VENDOR_ID_FXCL	0x1135
-#define	PCI_DEVICE_ID_QUATRO	0x5500
-#endif
-static void pci_fixup_quatro(struct pci_dev *dev)
-{
-	int i;
-//printk(KERN_ERR "pci fixup function for quatro\n");
-	if (dev->devfn == 0) {
-//		dev->resource[0].flags = IORESOURCE_MEM;
-//		dev->resource[1].flags = IORESOURCE_IO;
-//		dev->class &= 0x060000;
-//		dev->class = 0x060000;
-//		dev->class |= PCI_CLASS_BRIDGE_HOST << 8;
-		for (i = 0; i < PCI_NUM_RESOURCES; i++) {
-//printk(KERN_ERR " dev->resource[%d].start = %llx\n",i,dev->resource[i].start);
-//printk(KERN_ERR " dev->resource[%d].end = %llx\n",i,dev->resource[i].end);
-//printk(KERN_ERR " dev->resource[%d].flags = %x\n",i,dev->resource[i].flags);
-			dev->resource[i].start = 0;
-			dev->resource[i].end   = 0;
-			dev->resource[i].flags = 0;
-		}
-	}
-}
-DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_FXCL, PCI_DEVICE_ID_QUATRO, pci_fixup_quatro);
-#endif	/* YAMANO_CHANGE */
-
 /*
  * Prevent the PCI layer from seeing the resources allocated to this device
  * if it is the host bridge by marking it as such.  These resources are of
@@ -392,22 +363,6 @@ void pcibios_fixup_bus(struct pci_bus *bus)
 }
 EXPORT_SYMBOL(pcibios_fixup_bus);
 
-#ifdef YAMANO_CHANGE
-void pcibios_add_bus(struct pci_bus *bus)
-{
-	struct pci_sys_data *sys = bus->sysdata;
-	if (sys->add_bus)
-		sys->add_bus(bus);
-}
-
-void pcibios_remove_bus(struct pci_bus *bus)
-{
-	struct pci_sys_data *sys = bus->sysdata;
-	if (sys->remove_bus)
-		sys->remove_bus(bus);
-}
-#endif	/* YAMANO_CHANGE */
-
 /*
  * Swizzle the device pin each time we cross a bridge.  If a platform does
  * not provide a swizzle function, we perform the standard PCI swizzling.
@@ -490,12 +445,7 @@ static int pcibios_init_resources(int busnr, struct pci_sys_data *sys)
 	return 0;
 }
 
-#ifdef YAMANO_CHANGE
-static void pcibios_init_hw(struct device *parent, struct hw_pci *hw,
-			    struct list_head *head)
-#else	/* YAMANO_CHANGE */
 static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
-#endif	/* YAMANO_CHANGE */
 {
 	struct pci_sys_data *sys = NULL;
 	int ret;
@@ -513,10 +463,6 @@ static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
 		sys->swizzle = hw->swizzle;
 		sys->map_irq = hw->map_irq;
 		sys->align_resource = hw->align_resource;
-#ifdef YAMANO_CHANGE
-		sys->add_bus = hw->add_bus;
-		sys->remove_bus = hw->remove_bus;
-#endif	/* YAMANO_CHANGE */
 		INIT_LIST_HEAD(&sys->resources);
 
 		if (hw->private_data)
@@ -534,13 +480,8 @@ static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
 			if (hw->scan)
 				sys->bus = hw->scan(nr, sys);
 			else
-#ifdef	YAMANO_CHANGE
-				sys->bus = pci_scan_root_bus(parent, sys->busnr,
-						hw->ops, sys, &sys->resources);
-#else	 /* YAMANO_CHANGE */
 				sys->bus = pci_scan_root_bus(NULL, sys->busnr,
 						hw->ops, sys, &sys->resources);
-#endif	/* YAMANO_CHANGE */
 
 			if (!sys->bus)
 				panic("PCI: unable to scan bus!");
@@ -556,11 +497,7 @@ static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
 	}
 }
 
-#ifdef	YAMANO_CHANGE
-void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
-#else
 void pci_common_init(struct hw_pci *hw)
-#endif
 {
 	struct pci_sys_data *sys;
 	LIST_HEAD(head);
@@ -568,11 +505,7 @@ void pci_common_init(struct hw_pci *hw)
 	pci_add_flags(PCI_REASSIGN_ALL_RSRC);
 	if (hw->preinit)
 		hw->preinit();
-#ifdef YAMANO_CHANGE
-	pcibios_init_hw(parent, hw, &head);
-#else
 	pcibios_init_hw(hw, &head);
-#endif
 	if (hw->postinit)
 		hw->postinit();
 
@@ -591,13 +524,10 @@ void pci_common_init(struct hw_pci *hw)
 			 * Assign resources.
 			 */
 			pci_bus_assign_resources(bus);
-#ifdef	YAMANO_CHANGE
-#else
 			/*
 			 * Enable bridges
 			 */
 			pci_enable_bridges(bus);
-#endif
 		}
 
 		/*
@@ -607,10 +537,7 @@ void pci_common_init(struct hw_pci *hw)
 	}
 }
 
-#ifdef	YAMANO_CHANGE
-#else
 EXPORT_SYMBOL_GPL(pci_common_init);
-#endif
 #ifndef CONFIG_PCI_HOST_ITE8152
 void pcibios_set_master(struct pci_dev *dev)
 {
@@ -698,9 +625,6 @@ int pcibios_enable_device(struct pci_dev *dev, int mask)
 	 */
 	if ((dev->class >> 16) == PCI_BASE_CLASS_BRIDGE)
 		cmd |= PCI_COMMAND_IO | PCI_COMMAND_MEMORY;
-#ifdef	YAMANO_CHANGE
-	cmd |= PCI_COMMAND_IO;	/* yamano for intel cardfor intel card */
-#endif	/* YAMANO_CHANGE */
 	if (cmd != old_cmd) {
 		printk("PCI: enabling device %s (%04x -> %04x)\n",
 		       pci_name(dev), old_cmd, cmd);

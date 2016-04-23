@@ -67,115 +67,6 @@ MODULE_PARM_DESC(debug, "Debug level (0=none,...,16=all)");
 
 static void e1000e_disable_aspm(struct pci_dev *pdev, u16 state);
 
-#ifdef	WR_DEBUG
-#define PRINT_OFFSET		656
-#define PRINT_OFFSET_END	800
-static void print_pkt(unsigned char *buf, int len)
-{
-        int j;
-        unsigned char   tmp[64];
-        int             tmp_len=0;
-        int             moni_len;
-	memset(&tmp, 0, sizeof(tmp));
-        if ( len > 0 && len > PRINT_OFFSET ) {
-		if ( PRINT_OFFSET_END != 0 ) {
-			moni_len = PRINT_OFFSET_END;
-		} else {
-			moni_len = len;
-		}
-                printk(KERN_ERR "frm_len=%d byte, bufaddr=0x%p\n", len, buf);
-                for (j = PRINT_OFFSET; j < moni_len; j++) {
-                        if ((j % 16) == 0) {
-                                if ( j != PRINT_OFFSET )
-                                        printk(KERN_ERR "%s\n",tmp);
-
-                                memset(&tmp, 0, sizeof(tmp));
-                                sprintf(tmp, "%04d: %02x",j,buf[j]);
-                        } else {
-                                sprintf(&tmp[tmp_len], " %02x",buf[j]);
-                        }
-                        tmp_len=strlen(tmp);
-                }
-                printk(KERN_ERR "%s\n",tmp);
-        }
-}
-static void print_reg(void)
-{
-	void    __iomem *virt_address;
-	unsigned long long	adr;
-	unsigned int		remap_size;
-	int	i;
-	unsigned char		tmp[128];
-	
-	/* PCIE1 PCIE Controller 1 registers */
-	adr=0x4A40000;
-	remap_size=0xf90;
-	virt_address = ioremap(adr, remap_size);
-	printk(KERN_ERR "== PCIE1 PCIE Controller 1 registers dump\n");
-	for(i=0;i<remap_size;i+=16) {
-		if ( (i >= 0x200 && i < 0x400 ) || (i >= 0x700 && i < 0x800 ) )
-			continue;
-		memset(&tmp, 0, sizeof(tmp));
-		sprintf(tmp, "%09llx: %08x %08x %08x %08x",(adr+i),
-			readl(virt_address+i), readl(virt_address+i+4), readl(virt_address+i+8), readl(virt_address+i+0xc));
-		printk(KERN_ERR "%s\n",tmp);
-	}
-	iounmap(virt_address);
-
-	/* PCIEWRAP: PCIe General Function registers */
-	adr=0x4A70000;
-	remap_size=0x140;
-	virt_address = ioremap(adr, remap_size);
-	printk(KERN_ERR "== PCIEWRAP: PCIe General Function registers dump\n");
-	for(i=0;i<remap_size;i+=16) {
-		if ( (i >= 0x80 && i < 0x100 )  )
-			continue;
-		memset(&tmp, 0, sizeof(tmp));
-		if ( i == 0 )
-			sprintf(tmp, "%09llx:                            %08x",(adr+i), readl(virt_address+12));
-		else if ( i == 0x20  || i == 0x70 )
-		sprintf(tmp, "%09llx: %08x %08x %08x",(adr+i),
-			readl(virt_address+i), readl(virt_address+i+4), readl(virt_address+i+8));
-		else if ( i == 0x40 )
-		sprintf(tmp, "%09llx: %08x                   %08x",(adr+i),
-			readl(virt_address+i), readl(virt_address+i+12));
-		else if ( i == 0x130 )
-		sprintf(tmp, "%09llx: %08x",(adr+i),
-			readl(virt_address+i));
-		else
-		sprintf(tmp, "%09llx: %08x %08x %08x %08x",(adr+i),
-			readl(virt_address+i), readl(virt_address+i+4), readl(virt_address+i+8), readl(virt_address+i+0xc));
-		printk(KERN_ERR "%s\n",tmp);
-	}
-	iounmap(virt_address);
-
-	/* Reset Control registers */
-	adr=0x4010000;
-	remap_size=0x170;
-	virt_address = ioremap(adr, remap_size);
-	printk(KERN_ERR "== Reset Control registers dump\n");
-	for(i=0;i<remap_size;i+=16) {
-		if ( (i >= 0x50 && i < 0x80 ) || (i >= 0xa0 && i < 0x100 ) || (i >= 0x110 && i < 0x160 ) )
-			continue;
-		memset(&tmp, 0, sizeof(tmp));
-		if ( i == 0 )
-			sprintf(tmp, "%09llx: %08x",(adr+i), readl(virt_address+0));
-		else if ( i == 0x20  || i == 0x40)
-			sprintf(tmp, "%09llx: %08x %08x",(adr+i), readl(virt_address+i+0), readl(virt_address+i+4));
-		else if ( i == 0x30 )
-			sprintf(tmp, "%09llx: %08x          %08x %08x",(adr+i), readl(virt_address+i+0), readl(virt_address+i+8), readl(virt_address+i+12));
-		else if ( i == 0x100 || i == 0x140 || i == 0x160)
-			sprintf(tmp, "%09llx: %08x %08x %08x",(adr+i), readl(virt_address+i+0), readl(virt_address+i+4), readl(virt_address+i+8));
-		else
-		sprintf(tmp, "%09llx: %08x %08x %08x %08x",(adr+i),
-			readl(virt_address+i), readl(virt_address+i+4), readl(virt_address+i+8), readl(virt_address+i+0xc));
-		printk(KERN_ERR "%s\n",tmp);
-	}
-	iounmap(virt_address);
-
-}
-#endif
-
 static const struct e1000_info *e1000_info_tbl[] = {
 	[board_82571]		= &e1000_82571_info,
 	[board_82572]		= &e1000_82572_info,
@@ -1323,9 +1214,6 @@ static bool e1000_clean_tx_irq(struct e1000_ring *tx_ring)
 
 			e1000_put_txbuf(tx_ring, buffer_info);
 			tx_desc->upper.data = 0;
-#ifdef WR_DEBUG
-printk(KERN_ERR "%s: Tx %02x Clean\n",__func__,i);
-#endif
 
 			i++;
 			if (i == tx_ring->count)
@@ -1845,9 +1733,6 @@ static irqreturn_t e1000_intr_msi(int __always_unused irq, void *data)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	u32 icr = er32(ICR);
-#ifdef  WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 
 	/* read ICR disables interrupts using IAM */
 	if (icr & E1000_ICR_LSC) {
@@ -1914,9 +1799,6 @@ static irqreturn_t e1000_intr(int __always_unused irq, void *data)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	u32 rctl, icr = er32(ICR);
-#ifdef  WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 
 	if (!icr || test_bit(__E1000_DOWN, &adapter->state))
 		return IRQ_NONE;  /* Not our interrupt */
@@ -1992,9 +1874,6 @@ static irqreturn_t e1000_msix_other(int __always_unused irq, void *data)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	u32 icr = er32(ICR);
-#ifdef  WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 
 	if (!(icr & E1000_ICR_INT_ASSERTED)) {
 		if (!test_bit(__E1000_DOWN, &adapter->state))
@@ -2028,9 +1907,6 @@ static irqreturn_t e1000_intr_msix_tx(int __always_unused irq, void *data)
 	struct e1000_hw *hw = &adapter->hw;
 	struct e1000_ring *tx_ring = adapter->tx_ring;
 
-#ifdef	WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 	adapter->total_tx_bytes = 0;
 	adapter->total_tx_packets = 0;
 
@@ -2047,9 +1923,6 @@ static irqreturn_t e1000_intr_msix_rx(int __always_unused irq, void *data)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_ring *rx_ring = adapter->rx_ring;
 
-#ifdef	WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 	/* Write the ITR value calculated at the end of the
 	 * previous interrupt.
 	 */
@@ -4256,9 +4129,6 @@ static irqreturn_t e1000_intr_msi_test(int __always_unused irq, void *data)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	u32 icr = er32(ICR);
-#ifdef  WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 
 	e_dbg("icr is %08X\n", icr);
 	if (icr & E1000_ICR_RXSEQ) {
@@ -5356,9 +5226,6 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 		if (dma_mapping_error(&pdev->dev, buffer_info->dma))
 			goto dma_error;
 
-#ifdef	WR_DEBUG
-printk(KERN_ERR "%s: %02x length=%d time_stamp=%x\n",__func__, i, buffer_info->length, buffer_info->time_stamp);
-#endif
 		len -= size;
 		offset += size;
 		count++;
@@ -5478,9 +5345,6 @@ static void e1000_tx_queue(struct e1000_ring *tx_ring, int tx_flags, int count)
 		if ( buffer_info->end == 0 ) 
 			tx_desc->lower.data &= ~(cpu_to_le32(E1000_TXD_CMD_IFCS));
 #endif	/* Workaround */
-#ifdef	WR_DEBUG
-printk(KERN_ERR "%s: %02x upper=0x%08x lower=0x%08x\n",__func__, i, tx_desc->upper.data, tx_desc->lower.data);
-#endif
 		i++;
 		if (i == tx_ring->count)
 			i = 0;
@@ -5492,11 +5356,6 @@ printk(KERN_ERR "%s: %02x upper=0x%08x lower=0x%08x\n",__func__, i, tx_desc->upp
 	if (unlikely(tx_flags & E1000_TX_FLAGS_NO_FCS))
 		tx_desc->lower.data &= ~(cpu_to_le32(E1000_TXD_CMD_IFCS));
 
-#ifdef	WR_DEBUG
-printk(KERN_ERR "%s:                     lower=0x%08x\n",__func__, tx_desc->lower.data);
-if ( (tx_desc->lower.data & 0xfff) > 700 )
-	print_reg();
-#endif
 	/* Force memory writes to complete before letting h/w
 	 * know there are new descriptors to fetch.  (Only
 	 * applicable for weak-ordered memory model archs,
@@ -5667,10 +5526,6 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 	if (e1000_maybe_stop_tx(tx_ring, count + 2))
 		return NETDEV_TX_BUSY;
 
-#ifdef	WR_DEBUG
-printk(KERN_ERR "*** skb->len=%d ***\n", skb->len);
-print_pkt(skb->data,skb->len);
-#endif
 	if (vlan_tx_tag_present(skb)) {
 		tx_flags |= E1000_TX_FLAGS_VLAN;
 		tx_flags |= (vlan_tx_tag_get(skb) << E1000_TX_FLAGS_VLAN_SHIFT);
@@ -6375,9 +6230,6 @@ static irqreturn_t e1000_intr_msix(int __always_unused irq, void *data)
 	struct net_device *netdev = data;
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 
-#ifdef  WR_DEBUG
-printk(KERN_ERR "%s int Call\n",__func__);
-#endif
 	if (adapter->msix_entries) {
 		int vector, msix_irq;
 

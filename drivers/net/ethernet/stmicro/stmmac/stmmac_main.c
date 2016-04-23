@@ -2050,10 +2050,11 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 			packet_len = ((skb->data[ETH_HLEN + 2] *256) + skb->data[ETH_HLEN + 2 +1]);	
 			/* IPv4 */
 			Iptype = skb->data[23];
-			if ( Iptype == 0x06 ) {
+			if ( ((skb->data[14]>>4)==4) && (Iptype == 0x06 || Iptype == 0x11) ) {
 				/* tcp */
 				int i;
 				unsigned int	checksum=0;
+				unsigned int	checksum_ichi;
 				unsigned short	tmp;
 				unsigned char	pseudo_header[32];
 				unsigned int	tcp_header_start = ETH_HLEN + (skb->data[ETH_HLEN] & 0x0f)*4 ;
@@ -2064,7 +2065,7 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 				memcpy(&pseudo_header[0], &skb->data[ETH_HLEN + 12], 4);
 				memcpy(&pseudo_header[4], &skb->data[ETH_HLEN + 16], 4);
 				pseudo_header[8]=0;
-				pseudo_header[9]=0x6;
+				pseudo_header[9]=Iptype;
 				pseudo_header[10]= ((packet_len-20)&0xff00) >> 8;
 				pseudo_header[11]= ((packet_len-20)&0x00ff) ;
 				for(i=0;i<12;i+=2) {
@@ -2073,8 +2074,12 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 						checksum += tmp;
 					}
 				}
+				if(Iptype==0x06)
+					checksum_ichi=16;
+				else
+					checksum_ichi=6;
 				for(i=tcp_header_start;i<tcp_header_end;i+=2) {
-					if( i%2 == 0 && (i != tcp_header_start+16)){
+					if( i%2 == 0 && (i != tcp_header_start+checksum_ichi)){
 						if ( (i+1)  == tcp_header_end ) {
 							tmp =  (skb->data[i] *256);
 						} else {
@@ -2082,17 +2087,19 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 						}
 						checksum += tmp;
 					}
-					if(i==tcp_header_start+16) {
+					if(i==tcp_header_start+checksum_ichi) {
 						tcp_checksum_cpu = ((skb->data[i] *256) + skb->data[i +1]);
 					}
 				}
-				tcp_checksum_calc  = checksum & 0x0000ffff;
-				tcp_checksum_calc += (checksum & 0xffff0000)>>16;
+				tcp_checksum_calc  = (checksum & 0x0000ffff) + ((checksum & 0xffff0000)>>16);
+				if ( tcp_checksum_calc > 0xffff )
+					tcp_checksum_calc =(tcp_checksum_calc & 0x0000ffff) + ((tcp_checksum_calc & 0xffff0000)>>16);
+
 				tcp_checksum_calc ^= 0xffff;
 				//printk(KERN_ERR "TCP: Checksum=0x%04x(calc:%04x)\n",tcp_crc, tcp_checksum_calc);
 				/* Checksum update */
-				skb->data[tcp_header_start+16] = (tcp_checksum_calc&0xff00)>>8;
-				skb->data[tcp_header_start+17] = (tcp_checksum_calc&0x00ff)>>0;
+				skb->data[tcp_header_start+checksum_ichi+0] = (tcp_checksum_calc&0xff00)>>8;
+				skb->data[tcp_header_start+checksum_ichi+1] = (tcp_checksum_calc&0x00ff)>>0;
 			}
 		}
 	}

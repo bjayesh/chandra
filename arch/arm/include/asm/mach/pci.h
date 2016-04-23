@@ -13,15 +13,9 @@
 
 #include <linux/ioport.h>
 
-#if 0   /* ohkuma debug */
-#define YAMANO_CHANGE
-#endif
 struct pci_sys_data;
 struct pci_ops;
 struct pci_bus;
-#ifdef YAMANO_CHANGE
-struct device;
-#endif
 
 struct hw_pci {
 #ifdef CONFIG_PCI_DOMAINS
@@ -41,10 +35,6 @@ struct hw_pci {
 					  resource_size_t start,
 					  resource_size_t size,
 					  resource_size_t align);
-#ifdef YAMANO_CHANGE
-	void		(*add_bus)(struct pci_bus *bus);
-	void		(*remove_bus)(struct pci_bus *bus);
-#endif
 };
 
 /*
@@ -57,11 +47,7 @@ struct pci_sys_data {
 	struct list_head node;
 	int		busnr;		/* primary bus number			*/
 	u64		mem_offset;	/* bus->cpu memory mapping offset	*/
-//#ifdef YAMANO_CHANGE
 	phys_addr_t	io_offset;	/* bus->cpu IO mapping offset		*/
-//#else
-//	unsigned long	io_offset;      /* bus->cpu IO mapping offset           */
-//#endif
 	struct pci_bus	*bus;		/* PCI bus				*/
 	struct list_head resources;	/* root bus resources (apertures)       */
 	struct resource io_res;
@@ -76,30 +62,13 @@ struct pci_sys_data {
 					  resource_size_t start,
 					  resource_size_t size,
 					  resource_size_t align);
-#ifdef YAMANO_CHANGE
-	void		(*add_bus)(struct pci_bus *bus);
-	void		(*remove_bus)(struct pci_bus *bus);
-#endif
 	void		*private_data;	/* platform controller private data	*/
 };
 
 /*
  * Call this with your hw_pci struct to initialise the PCI system.
  */
-#ifdef YAMANO_CHANGE
-void pci_common_init_dev(struct device *, struct hw_pci *);
-
-/*
- * Compatibility wrapper for older platforms that do not care about
- * passing the parent device.
- */
-static inline void pci_common_init(struct hw_pci *hw)
-{
-	pci_common_init_dev(NULL, hw);
-}
-#else
 void pci_common_init(struct hw_pci *);
-#endif
 
 /*
  * Setup early fixed I/O mapping.

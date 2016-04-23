@@ -171,7 +171,7 @@ static	struct	plat_stmmacenet_data	lm2_eth_config = {
 	.has_gmac	= 1,
 	.clk_csr	= 0,
 	.enh_desc       = 1,	/* add */
-	.interface	= PHY_INTERFACE_MODE_MII,
+	.interface	= PHY_INTERFACE_MODE_GMII,
 };
 
 static struct platform_device lm2_eth_device = {
