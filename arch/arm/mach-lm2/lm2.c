@@ -46,6 +46,11 @@
 
 #include "core.h"
 
+/* #ifdef CONFIG_TCG_ST33_SPI_OPTION */ 
+#include <linux/spi/tpm_stm_st33_spi.h> 
+#include <linux/spi/spi.h> 
+/* #endif */ /* CONFIG_TCG_ST33_SPI_OPTION */ 
+
 #if 1	/* WR Change */
 #define OS_PRODUCT_ID_BOMBORA    0x33
 #define OS_PRODUCT_ID_KAIMANA    0x34
@@ -359,6 +364,22 @@ static	struct platform_device lm2_pcie_device = {
 	.num_resources	= ARRAY_SIZE(lm2_pcie_resource),
 };
 
+/* #ifdef CONFIG_TCG_ST33_SPI_OPTION */ 
+static struct st33zp24_platform_data tpm_data = {
+    .io_serirq = 52,
+};
+
+static struct spi_board_info tpm_st33_spi_board_info[] = {
+        {
+                .modalias = TPM_ST33_SPI,
+                .max_speed_hz = 10000000,
+                .bus_num = 0,
+                .chip_select = 2,
+                .mode = SPI_MODE_0,
+                .platform_data = &tpm_data,
+        },
+};
+/* #endif*/ /* CONFIG_TCG_ST33_SPI_OPTION */
 
 static void __init lm2_init_early(void)
 {
@@ -574,6 +595,10 @@ static void __init lm2_dt_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
+	
+/* #ifdef CONFIG_TCG_ST33_SPI_OPTION */
+        spi_register_board_info(tpm_st33_spi_board_info, ARRAY_SIZE(tpm_st33_spi_board_info));
+/* #endif */ /* CONFIG_TCG_ST33_SPI_OPTION */
 
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
 	node = of_find_matching_node(NULL,lm2_pcie_match);

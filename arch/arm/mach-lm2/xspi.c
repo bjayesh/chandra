@@ -69,13 +69,13 @@ static	struct spi_board_info	lm2_spi_devices[] __initdata = {
 		.max_speed_hz	= 580000,
 		.mode		= SPI_MODE_0,
 	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-		.max_speed_hz	= 580000,
-		.mode		= SPI_MODE_0,
-	},
+//	{
+//		.modalias	= "spidev",
+//		.bus_num	= 0,
+//		.chip_select	= 2,
+//		.max_speed_hz	= 580000,
+//		.mode		= SPI_MODE_0,
+//	},
 };
 
 static	struct resource	lm2_xspi_resource[] = {
