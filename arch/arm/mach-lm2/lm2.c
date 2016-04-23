@@ -102,6 +102,7 @@ static struct map_desc lm2_io_desc[] __initdata = {
 /*
  * Use Irq
  */
+#if 0 // AR226922
 const unsigned char lm2_use_irq[] = {
 34,    // RTC
 40,    // Timer
@@ -129,6 +130,10 @@ const unsigned char lm2_use_irq[] = {
 133,   // mmc1
 };
 const unsigned int lm2_use_irq_size = sizeof(lm2_use_irq);
+#else
+unsigned char lm2_use_irq[256];
+unsigned int lm2_use_irq_size = 0;
+#endif // AR226922
 
 static int lm2_board_version = 0;
 

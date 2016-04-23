@@ -14,8 +14,8 @@
 #include "internals.h"
 
 #ifdef  CONFIG_ARCH_LM2         /* Linux IRQ Only */
-extern const unsigned char lm2_use_irq[];
-extern const const unsigned int lm2_use_irq_size;
+extern unsigned char lm2_use_irq[];
+extern unsigned int lm2_use_irq_size;
 #define LM2USEIRQ_SIZE  (lm2_use_irq_size)
 #endif  /* CONFIG_ARCH_LM2 */
 /**
@@ -30,10 +30,17 @@ void suspend_device_irqs(void)
 {
 	struct irq_desc *desc;
 	int irq;
+	int i = 0;
+
+	lm2_use_irq_size = 0;
 
 	for_each_irq_desc(irq, desc) {
 		unsigned long flags;
 
+		if (desc->action != NULL){
+			lm2_use_irq[i++] = irq;
+			lm2_use_irq_size = i;
+		}
 		raw_spin_lock_irqsave(&desc->lock, flags);
 		__disable_irq(desc, irq, true);
 		raw_spin_unlock_irqrestore(&desc->lock, flags);
