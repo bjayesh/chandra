@@ -26,9 +26,6 @@
  */
 #ifdef	SOC_QUATRO5500
 ENTRY(lm2_secondary_startup)
-#if 1 /* FX */
-	wfi
-#endif
         b out_of_vector
         ldr pc,=4
         ldr pc,=8
@@ -82,12 +79,20 @@ out_of_vector:
         mcr     p15, 0, r0, c1, c0, 1   @ set ACTLR
 
         bl      v7_invalidate_l1
-#if 0 /* FX */
-	wfi
-#endif
+#if 1
+	/*
+	 * we've been released from the holding pen: secondary_stack
+	 * should now contain the SVC stack for this core
+	 */
+	b	secondary_startup
 
+	.align
+1:	.long	.
+	.long	pen_release
+#else
         ldr     r1, 1f
         bx      r1
+#endif
 ENDPROC(lm2_secondary_startup)
 
         .align 2

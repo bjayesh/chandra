@@ -81,9 +81,6 @@ void __init smp_set_ops(struct smp_operations *ops)
 static unsigned long get_arch_pgd(pgd_t *pgd)
 {
 	phys_addr_t pgdir = virt_to_phys(pgd);
-#if 1	/* debug */
-	printk("### pgd=%p pgdir=%llx\n", pgd, pgdir);
-#endif
 	BUG_ON(pgdir & ARCH_PGD_MASK);
 	return pgdir >> ARCH_PGD_SHIFT;
 }
@@ -96,9 +93,6 @@ int __cpuinit __cpu_up(unsigned int cpu, struct task_struct *idle)
 	 * We need to tell the secondary core where to find
 	 * its stack and the page tables.
 	 */
-#if 1	/* debug */
-	printk("#### get_arch_pgdi(idmap_pgd)=%p idmap_pgd=%p\n", get_arch_pgd(idmap_pgd), idmap_pgd);
-#endif
 	secondary_data.stack = task_stack_page(idle) + THREAD_START_SP;
 	secondary_data.pgdir = get_arch_pgd(idmap_pgd);
 	secondary_data.swapper_pg_dir = get_arch_pgd(swapper_pg_dir);
