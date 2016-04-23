@@ -149,6 +149,11 @@ struct e1000_ps_page {
 	u64 dma; /* must be u64 - written to hw */
 };
 
+#if 1	/* ohkuma debug */
+#define	WR_E1000E_WORKAROUND
+#define	WR_E1000E_WORKAROUND2
+//#define WR_DEBUG
+#endif
 /* wrappers around a pointer to a socket buffer,
  * so a DMA handle can be stored along with the buffer
  */
@@ -164,7 +169,7 @@ struct e1000_buffer {
 			unsigned int segs;
 			unsigned int bytecount;
 			u16 mapped_as_page;
-#if 1	/* Workaround */
+#ifdef WR_E1000E_WORKAROUND	/* Workaround */
 			u16 end;
 #endif	/* Workaround */
 		};
