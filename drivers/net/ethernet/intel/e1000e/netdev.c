@@ -5218,6 +5218,10 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 
 	while (len) {
 		buffer_info = &tx_ring->buffer_info[i];
+#if 1	/* Workaround */
+		if ( max_per_txd > 512 )
+			max_per_txd = 512;
+#endif	/* Workaround */
 		size = min(len, max_per_txd);
 
 		buffer_info->length = size;
