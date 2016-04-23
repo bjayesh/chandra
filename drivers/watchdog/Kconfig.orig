@@ -408,12 +408,6 @@ config RETU_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called retu_wdt.
 
-config LM2_WATCHDOG
-	tristate "LM2 Watchdog timer"
-	depends on ARM
-	select WATCHDOG_CORE
-
-
 # AVR32 Architecture
 
 config AT32AP700X_WDT
