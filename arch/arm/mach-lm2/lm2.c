@@ -487,6 +487,20 @@ static void __init lm2_dt_init(void)
 	lm2_serial_resource[1].membase = virt_addr;
 	platform_device_register(&lm2_serial_device);
 	platform_device_register(&lm2_eth_device);
+#ifdef	CONFIG_SATA_AHCI_PLATFORM
+	lm2_sata_register();
+#endif	/* CONFIG_SATA_AHCI_PLATFORM */
+	lm2_usb_register();
+#ifdef	CONFIG_MMC_SDHCI_PLTFM
+        lm2_sdhci_init();
+#endif
+	platform_device_register(&lm2_gpio_device);
+	platform_device_register(&lm2_rtc_device);
+	platform_device_register(&lm2_i2c_device);
+	platform_device_register(&lm2_wdt_device);
+#ifdef	CONFIG_SPI_XSPI
+	lm2_xspi_register();
+#endif	/* CONFIG_SPI_XSPI */
 
 //	l2x0_of_init(0x00400000, 0xfe0fffff);
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
