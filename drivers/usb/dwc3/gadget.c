@@ -2864,9 +2864,10 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	struct dwc3			*dwc = _dwc;
 	int				i;
 	irqreturn_t			ret = IRQ_NONE;
-
+#if 1	/* ohkuma */
+#else
 	spin_lock(&dwc->lock);
-
+#endif	/* ohkuma */
 	for (i = 0; i < dwc->num_event_buffers; i++) {
 		irqreturn_t status;
 
@@ -2874,9 +2875,10 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 		if (status == IRQ_WAKE_THREAD)
 			ret = status;
 	}
-
+#if 1	/* ohkuma */
+#else
 	spin_unlock(&dwc->lock);
-
+#endif	/* ohkuma */
 	return ret;
 }
 
