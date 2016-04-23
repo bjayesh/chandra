@@ -1121,21 +1121,21 @@ static int do_pci_enable_device(struct pci_dev *dev, int bars)
 	int err;
 	u16 cmd;
 	u8 pin;
-printk(KERN_ERR "<<<< %s Entry\n",__FUNCTION__);
+//printk(KERN_ERR "<<<< %s Entry\n",__FUNCTION__);
 	err = pci_set_power_state(dev, PCI_D0);
 	if (err < 0 && err != -EIO){
-printk(KERN_ERR ">>>> %s EIO error Exit\n",__FUNCTION__);
+//printk(KERN_ERR ">>>> %s EIO error Exit\n",__FUNCTION__);
 		return err;
 	}
 	err = pcibios_enable_device(dev, bars);
 	if (err < 0){
-printk(KERN_ERR ">>>> %s pcibios error Exit\n",__FUNCTION__);
+//printk(KERN_ERR ">>>> %s pcibios error Exit\n",__FUNCTION__);
 		return err;
 	}
 	pci_fixup_device(pci_fixup_enable, dev);
 
 	if (dev->msi_enabled || dev->msix_enabled){
-printk(KERN_ERR ">>>> %s MSI Enable Exit\n",__FUNCTION__);
+//printk(KERN_ERR ">>>> %s MSI Enable Exit\n",__FUNCTION__);
 
 		return 0;
 	}
@@ -1146,7 +1146,7 @@ printk(KERN_ERR ">>>> %s MSI Enable Exit\n",__FUNCTION__);
 			pci_write_config_word(dev, PCI_COMMAND,
 					      cmd & ~PCI_COMMAND_INTX_DISABLE);
 	}
-printk(KERN_ERR ">>>> %s Exit\n",__FUNCTION__);
+//printk(KERN_ERR ">>>> %s Exit\n",__FUNCTION__);
 
 	return 0;
 }
@@ -2757,7 +2757,7 @@ int pci_request_regions_exclusive(struct pci_dev *pdev, const char *res_name)
 static void __pci_set_master(struct pci_dev *dev, bool enable)
 {
 	u16 old_cmd, cmd;
-printk(KERN_ERR "### >>> %s Entry\n",__FUNCTION__);
+//printk(KERN_ERR "### >>> %s Entry\n",__FUNCTION__);
 	pci_read_config_word(dev, PCI_COMMAND, &old_cmd);
 	if (enable)
 		cmd = old_cmd | PCI_COMMAND_MASTER;
@@ -2768,7 +2768,7 @@ printk(KERN_ERR "### >>> %s Entry\n",__FUNCTION__);
 	if (cmd != old_cmd) {
 		dev_dbg(&dev->dev, "%s bus mastering\n",
 			enable ? "enabling" : "disabling");
-printk(KERN_ERR "### >>> %s Master Set %x\n",__FUNCTION__,cmd);
+//printk(KERN_ERR "### >>> %s Master Set %x\n",__FUNCTION__,cmd);
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 	}
 	dev->is_busmaster = enable;

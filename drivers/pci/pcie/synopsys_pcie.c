@@ -30,7 +30,7 @@
 
 #undef	DEBUG_TRACE
 #undef	DEBUG_RW
-#define	DEBUG_CALLBACK
+#undef	DEBUG_CALLBACK
 
 #define	PCIE_PORT1	1
 #define	PCIE_PORT2	2
@@ -157,7 +157,7 @@ static int synopsys_pcie_setup(int nr, struct pci_sys_data *sys)
 {
 	struct pcie_port *pp;
 
-printk(KERN_ERR "# %s entry \n",__FUNCTION__);
+//printk(KERN_ERR "# %s entry \n",__FUNCTION__);
 	pp = sys_to_pcie(sys);
 
 #ifdef	DEBUG_CALLBACK
@@ -171,17 +171,17 @@ printk(KERN_ERR "# %s entry \n",__FUNCTION__);
 #endif
 		return 0;
 	}
-printk(KERN_ERR "sys->busnr :0x%x\n",sys->busnr);
-printk(KERN_ERR "sys->mem_offset :0x%llx\n",sys->mem_offset);
-printk(KERN_ERR "sys->io_offset :0x%llx\n",sys->io_offset);
+//printk(KERN_ERR "sys->busnr :0x%x\n",sys->busnr);
+//printk(KERN_ERR "sys->mem_offset :0x%llx\n",sys->mem_offset);
+//printk(KERN_ERR "sys->io_offset :0x%llx\n",sys->io_offset);
 /* yamano resource debug */
 //	sys->mem_offset = pp->mem.start - pp->config.mem_bus_addr;
 //	pci_add_resource_offset(&sys->resources, &pp->mem, sys->mem_offset);
 //	pci_add_resource_offset(&sys->resources, &pp->config[1].mem, sys->mem_offset);
 	sys->mem_offset = 0x404000000ULL - 0x10000000ULL;
 	sys->io_offset  = 0x410000000ULL - 0x10100000ULL;
-printk(KERN_ERR "print offset mem = 0x%llx\n",sys->mem_offset);
-printk(KERN_ERR "print offset io = 0x%llx\n",sys->io_offset);
+//printk(KERN_ERR "print offset mem = 0x%llx\n",sys->mem_offset);
+//printk(KERN_ERR "print offset io = 0x%llx\n",sys->io_offset);
 	if(request_resource(&iomem_resource,&pp->config[0].io)){
 		printk(KERN_ERR " iomem io resource reqest error \n");
 	}
@@ -345,7 +345,7 @@ static struct pci_bus *synopsys_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 
 	if (pp) {
 		pp->root_bus_nr = sys->busnr;
-dev_err(pp->dev, "%s resources=%x\n",__FUNCTION__,sys->resources);
+//dev_err(pp->dev, "%s resources=%x\n",__FUNCTION__,sys->resources);
 	
 		bus = pci_scan_root_bus(NULL, sys->busnr, &synopsys_pcie_ops, sys, &sys->resources);
 	} else {
@@ -540,31 +540,46 @@ static void synopsys_pcie_deassert_pipe_reset(struct pcie_port *pp, int which, i
 	synopsys_writel(pciewrap_base + PCIE_PHY_RST_CTRL, regVal);
 }
 
-static void synopsys_pcie_pipe_ok(struct pcie_port *pp, int which)
+static	int	synopsys_pcie_pipe_ok(struct pcie_port *pp, int which)
 {
-	u32 regVal;
+	u32	regVal;
 	void __iomem *pciewrap_base = pp->pciewrap_base;
+	int	timeout = 0;
 	
 	regVal  = synopsys_readl(pciewrap_base + PCIE_PHY_PIPE_STAT);
 	switch(which) {
 		case 1: while ((regVal &= PCIE_PHY_PIPE_STAT__PIPE0_PHYSTATUS__MASK) != 0)
 		        {
+				if(timeout > 50)	
+					return -1;
+				timeout++;
+				msleep(10);
 				regVal = synopsys_readl(pciewrap_base + PCIE_PHY_PIPE_STAT);
 		        }
 		        break;
 		case 2: while ((regVal &= PCIE_PHY_PIPE_STAT__PIPE1_PHYSTATUS__MASK) != 0)
 		        {
+				if(timeout > 50)	
+					return -1;
+				timeout++;
+				msleep(10);
 				regVal = synopsys_readl(pciewrap_base + PCIE_PHY_PIPE_STAT);
 		        }
 		        break;
 		case 3: while ((regVal &= PCIE_PHY_PIPE_STAT__PIPE2_PHYSTATUS__MASK) != 0)
 		        {
+				if(timeout > 50)	
+					return -1;
+				timeout++;
+				msleep(10);
 				regVal = synopsys_readl(pciewrap_base + PCIE_PHY_PIPE_STAT);
 		        }
 		default:
 			dev_err(pp->dev, "synopsys_pcie_pipe_ok: which is %d Error\n",which);
+			return	-1;
 			break;
 	}
+	return	0;
 }
 
 static void synopsys_pcie_deassert_gpex_reset(struct pcie_port *pp, int which, int assert)
@@ -951,7 +966,10 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 //	synopsys_pcie_deassert_pipe_reset(pp, PCIE_PORT3, 0);
 	
 	/*  PIPE Status Check */
-	synopsys_pcie_pipe_ok(pp, PCIE_PORT1);
+	if(synopsys_pcie_pipe_ok(pp, PCIE_PORT1) < 0){
+		printk( KERN_ERR "%s:PCIe Status error\n", __func__);
+		return	-1;
+	}
 //	synopsys_pcie_pipe_ok(pp, PCIE_PORT2);
 //	synopsys_pcie_pipe_ok(pp, PCIE_PORT3);
 	
@@ -1066,7 +1084,10 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 	synopsys_writel(resetgen_base + RSTGENSWRSTSTATIC10, val);
 
 	/* enable link */
-	synopsys_pcie_establish_link(pp);
+	if(synopsys_pcie_establish_link(pp) < 0 ){
+		printk( KERN_ERR "%s:PCIe Link Establish Error\n", __func__);
+		return	-1;
+	}
 
 	/* PCIE1 (RC) */
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_VENDORID);
@@ -1140,7 +1161,7 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 	wait_loop=0;
 	val = synopsys_readl(pciewrap_base + PCIE1_MISC_STAT);
 	while(val != PCIE1_MISC_STAT__GDA_PAB_DL_UP__MASK){
-		if(wait_loop > 100){
+		if(wait_loop > 50){
 			result = 1;
 			break;
 		}
@@ -1326,7 +1347,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->config[0].io.end   = 0x41000FFFFULL;
 	pp->config[0].io.flags = IORESOURCE_IO;
 	pp->config[0].io_size = resource_size(&pp->config[0].io);
-	printk(KERN_ERR "I/O size %x \n",pp->config[0].io_size);
+//	printk(KERN_ERR "I/O size %x \n",pp->config[0].io_size);
 //	pp->config[0].io_bus_addr	= 0x410000000ULL;
 	pp->mem.name	= "Memory";
 	pp->mem.start	= 0x404000000ULL;
@@ -1339,7 +1360,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	pp->config[0].mem.end  	= 0x4040fffffULL;
 	pp->config[0].mem.flags = IORESOURCE_MEM;
 	pp->config[0].mem_size = resource_size(&pp->config[0].mem);
-	printk(KERN_ERR "Memory size %x \n",pp->config[0].mem_size);
+//	printk(KERN_ERR "Memory size %x \n",pp->config[0].mem_size);
 //	pp->config[0].mem_bus_addr	= 0x400000000ULL;
 
 	pp->config[0].irq = LM2_IRQ_PCIE1;	/* device interrupt by port */
