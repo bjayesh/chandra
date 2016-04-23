@@ -341,8 +341,13 @@ void pcibios_fixup_bus(struct pci_bus *bus)
 		cmd |= features;
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 
+#ifdef	CONFIG_PLAT_WAIKIKI
+		pci_write_config_byte(dev, PCI_CACHE_LINE_SIZE,
+				      0);
+#else
 		pci_write_config_byte(dev, PCI_CACHE_LINE_SIZE,
 				      L1_CACHE_BYTES >> 2);
+#endif
 	}
 
 	/*

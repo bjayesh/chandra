@@ -24,6 +24,7 @@
 
 #undef	DEBUG_TRACE
 #undef	DEBUG_TRACE_IRQ
+#undef	DEBUG_TRACE_CFG
 #undef	DEBUG_RW1
 #undef	PCIE_IRQ_USE
 #undef	DMA_USE
@@ -224,8 +225,8 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 	void __iomem		*pcieconf_base;		/* Windows 0 cfg space */
 	u32			bdf_adr;
 	int	debugFlag = 0;
-#ifdef	DEBUG_TRACE1
-//	dev_err(pp->dev, "%s entry bus=%x DevFn=%x where=%x size=%d\n",__FUNCTION__, bus->number, devfn, where, size);
+#ifdef	DEBUG_TRACE_CFG
+	printk(KERN_ERR "####%s entry bus=%x DevFn=%x where=%x size=%d\n",__FUNCTION__, bus->number, devfn, where, size);
 #endif
 	if (!pp) {
 		BUG();
@@ -259,8 +260,8 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 		if(where == 8)
 			*val = 0x06040000;
 	}
-#ifdef	DEBUG_TRACE1
-	dev_err(pp->dev, "%s exit\n", __FUNCTION__);
+#ifdef	DEBUG_TRACE_CFG
+	printk(KERN_ERR "####%s val=%x\n",__FUNCTION__, *val);
 #endif
 	return PCIBIOS_SUCCESSFUL;
 }
@@ -282,8 +283,8 @@ static int synopsys_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 	void __iomem	*pcieconf_base;
 	u32		bdf_adr;
 
-#ifdef	DEBUG_TRACE1
-//	dev_err(pp->dev, "write devfn = %x where = %x size = %x val = %x\n", devfn, where, size, val);
+#ifdef	DEBUG_TRACE_CFG
+	printk(KERN_ERR "####%s entry bus=%x DevFn=%x where=%x size=%d val=%x\n",__FUNCTION__, bus->number, devfn, where, size,val);
 #endif
 	if (!pp) {
 		BUG();
@@ -311,8 +312,8 @@ static int synopsys_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 	else
 		synopsys_writel(pcieconf_base, val);
 //out:
-#ifdef	DEBUG_TRACE1
-//	dev_err(pp->dev, "%s exit\n",__FUNCTION__);
+#ifdef	DEBUG_TRACE_CFG
+	printk(KERN_ERR "####%s End\n",__FUNCTION__);
 #endif
 	return PCIBIOS_SUCCESSFUL;
 }

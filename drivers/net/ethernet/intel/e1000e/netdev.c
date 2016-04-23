@@ -54,11 +54,6 @@
 #include "e1000.h"
 
 #define DRV_EXTRAVERSION "-k"
-#ifdef	WR_E1000E_WORKAROUND
-static unsigned int skip_xmit    = 0;
-static unsigned int skip_xmit_cnt= 0;
-#define	SKIP_XMIT_VAL		30
-#endif
 
 #define DRV_VERSION "2.3.2" DRV_EXTRAVERSION
 char e1000e_driver_name[] = "e1000e";
@@ -5531,20 +5526,6 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 	 * head, otherwise try next time
 	 */
 #ifdef	WR_E1000E_WORKAROUND
-	if ( skip_xmit ) {
-		if ( skip_xmit_cnt != 0 ) {
-			if ( skip_xmit_cnt > skip_xmit )
-				skip_xmit_cnt=0;
-			else
-				skip_xmit_cnt++;
-			return NETDEV_TX_BUSY;
-		} else {
-			skip_xmit_cnt++;
-		}
-
-	} else {
-		skip_xmit_cnt=0;
-	}
 	if (e1000_maybe_stop_tx(tx_ring, count + 220))
 #else
 	if (e1000_maybe_stop_tx(tx_ring, count + 2))
@@ -5729,13 +5710,6 @@ static int e1000_change_mtu(struct net_device *netdev, int new_mtu)
 	if (netif_running(netdev))
 		e1000e_down(adapter);
 
-#ifdef	WR_E1000E_WORKAROUND
-	if ( netdev->mtu > 1500 ){
-		skip_xmit = SKIP_XMIT_VAL;
-	} else {
-		skip_xmit = 0;
-	}
-#endif	/* WR_E1000E_WORKAROUND */
 	/* NOTE: netdev_alloc_skb reserves 16 bytes, and typically NET_IP_ALIGN
 	 * means we reserve 2 more, this pushes us to allocate from the next
 	 * larger slab size.
