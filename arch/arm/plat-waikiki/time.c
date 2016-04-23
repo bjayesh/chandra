@@ -23,7 +23,7 @@
 #include <linux/time.h>
 #include <linux/irq.h>
 #include <asm/mach/time.h>
-
+#include <asm/sched_clock.h>
 /*
  * We would use TIMER0 and TIMER1 as clockevent and clocksource.
  * Timer0 and Timer1 both belong to same gpt block in cpu subbsystem. Further
@@ -65,6 +65,13 @@ static void clockevent_set_mode(enum clock_event_mode mode,
 static int clockevent_next_event(unsigned long evt,
 				 struct clock_event_device *clk_event_dev);
 
+static	unsigned int	ticks_per_jiffy;
+
+static	u32	lm2_read_sched_clock(void)
+{
+	return	readl(HTCNTR_L(clksrc_base));
+}
+
 /*
  * Clock source driver (kernel timer)
  */
@@ -80,6 +87,7 @@ void	lm2_clocksource_init(__iomem void *gpt_base)
 	/* 
  	 * of_clk_init and clocksource_of_init with flattend device tree
  	 */
+	ticks_per_jiffy = (SYSCLK + HZ/2) /HZ;
 
 	/* Timer stop (initialize) */
 	writel(HTCTLR_STOP,HTCTLR(clksrc_base));
@@ -93,9 +101,11 @@ void	lm2_clocksource_init(__iomem void *gpt_base)
 	/* rate culculate */
 	tick_rate = SYSCLK / PRESCALE;
 
-	/* register the clocksource */
+	/* register the clocksource tick_rate */
 	result = clocksource_mmio_init(HTCNTR_L(clksrc_base),"system_timer",tick_rate,
 		200, 32, clocksource_mmio_readl_up);
+
+	setup_sched_clock(lm2_read_sched_clock,32,tick_rate);
 
 //	if(result != 0){
 //		lm2_printk(0xfc000000,"clocksource error \n");
@@ -103,7 +113,7 @@ void	lm2_clocksource_init(__iomem void *gpt_base)
 }
 
 static struct clock_event_device clkevt = {
-	.name = "tmr0",
+	.name = "tmr4",
 	.features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
 	.set_mode = clockevent_set_mode,
 	.set_next_event = clockevent_next_event,
