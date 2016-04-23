@@ -1,0 +1,57 @@
+/*
+ * irqs.h
+ * Fuji Xerox Co., Ltd. Waikiki LM2 board
+ *	Copyright 2014-2015 Wind River Systems Inc.
+ * 	Koki.yamano@windriver.com
+ */
+#ifndef	LM2_IRQS_H
+#define	LM2_IRQS_H
+
+#define	LM2_GIC_DIST	0x04301000
+#define	LM2_GIC_CPU	0x04302000
+#define	LM2_GIC_VIC	0x04304000
+#define IRQ_LOCALTIMER		29
+#define IRQ_LOCALWDOG		30
+
+#define NR_IRQS	256
+
+#define	LM2_IRQ_BASE	32
+#define	LM2_IRQ_RTC		(LM2_IRQ_BASE + 2)
+
+#define	LM2_IRQ_TIMER_0		(LM2_IRQ_BASE + 4)
+#define	LM2_IRQ_TIMER_1		(LM2_IRQ_BASE + 5)
+#define	LM2_IRQ_TIMER_2		(LM2_IRQ_BASE + 6)
+#define	LM2_IRQ_TIMER_3		(LM2_IRQ_BASE + 7)
+#define	LM2_IRQ_TIMER_4		(LM2_IRQ_BASE + 8)
+#define	LM2_IRQ_TIMER_5		(LM2_IRQ_BASE + 9)
+#define	LM2_IRQ_TIMER_6		(LM2_IRQ_BASE + 10)
+
+#define	LM2_IRQ_GMACK_WAKE	(LM2_IRQ_BASE + 93)
+#define	LM2_IRQ_GMACK_STAT	(LM2_IRQ_BASE + 94)
+#define	LM2_IRQ_GMAC_A2P	(LM2_IRQ_BASE + 95)
+
+#define	LM2_IRQ_SATA_CTRL	(LM2_IRQ_BASE + 53)
+#define	LM2_IRQ_SATA_BUS	(LM2_IRQ_BASE + 54)
+
+#define	LM2_IRQ_USB3_DEV	(LM2_IRQ_BASE + 61)
+#define	LM2_IRQ_USB3_BUS	(LM2_IRQ_BASE + 62)
+
+#define	LM2_IRQ_PCIE_BUS	(LM2_IRQ_BASE + 63)
+#define	LM2_IRQ_PCIE1		(LM2_IRQ_BASE + 64)
+#define	LM2_IRQ_PCIE2		(LM2_IRQ_BASE + 65)
+#define	LM2_IRQ_PCIE3		(LM2_IRQ_BASE + 66)
+
+#define	LM2_IRQ_USB_HOST	(LM2_IRQ_BASE + 97)
+#define	LM2_IRQ_USB_TED		(LM2_IRQ_BASE + 98)
+
+#define	LM2_IRQ_SDIO_0_STAT	(LM2_IRQ_BASE + 99)
+#define	LM2_IRQ_SDIO_0_WAKE	(LM2_IRQ_BASE + 100)
+
+#define	LM2_IRQ_UART_0		(LM2_IRQ_BASE + 18)
+#define	LM2_IRQ_UART_1		(LM2_IRQ_BASE + 29)
+#define	LM2_IRQ_UART_2		(LM2_IRQ_BASE + 137)
+#define	LM2_IRQ_UART_3		(LM2_IRQ_BASE + 138)
+#define	LM2_IRQ_UART_4		(LM2_IRQ_BASE + 184)
+#define	LM2_IRQ_UART_5		(LM2_IRQ_BASE + 185)
+
+#endif	/* LM2_IRQS_H */
