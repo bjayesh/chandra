@@ -31,6 +31,12 @@
 #define GMAC_EXTCFG	0x801c
 
 #ifdef CONFIG_OF
+static  const struct of_device_id lm2_mac_addr[] ={
+        {
+                .name = "mac_addr",
+        },
+};
+
 static int stmmac_probe_config_dt(struct platform_device *pdev,
 				  struct plat_stmmacenet_data *plat,
 				  const char **mac)
@@ -79,6 +85,11 @@ static int stmmac_probe_config_dt(struct platform_device *pdev,
  */
 static int stmmac_pltfr_probe(struct platform_device *pdev)
 {
+#ifdef CONFIG_OF
+        struct device_node      *node;
+        const struct of_device_id       *of_id;
+        struct property *pp;
+#endif
 	int ret = 0;
 	struct resource *res;
 	struct device *dev = &pdev->dev;
@@ -125,6 +136,18 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 		pr_err("%s: main driver probe failed", __func__);
 		return -ENODEV;
 	}
+#ifdef CONFIG_OF
+        node = of_find_matching_node(NULL,lm2_mac_addr);
+        if(node){
+                int     i;
+                char    *ptr;
+                pp= of_find_property(node, "mac-address",NULL);
+                if(pp != NULL){
+                        mac=pp->value;  /* MAC Address from Panbug */
+                }
+                of_node_put(node);
+        }
+#endif
 
 	/* Get MAC address if available (DT) */
 	if (mac)
