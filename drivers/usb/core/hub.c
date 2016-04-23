@@ -1588,7 +1588,7 @@ static int hub_configure(struct usb_hub *hub,
 		hub->indicator [0] = INDICATOR_CYCLE;
 
 	for (i = 0; i < hdev->maxchild; i++) {
-dev_info(hub_dev, "usb_hub_creat_port_device\n");
+// dev_info(hub_dev, "usb_hub_creat_port_device\n");
 		ret = usb_hub_create_port_device(hub, i + 1);
 		if (ret < 0) {
 			dev_err(hub->intfdev,
@@ -1674,7 +1674,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	desc = intf->cur_altsetting;
 	hdev = interface_to_usbdev(intf);
 
-dev_info(&intf->dev, "hub_probe entry\n");
+// dev_info(&intf->dev, "hub_probe entry\n");
 	/*
 	 * Set default autosuspend delay as 0 to speedup bus suspend,
 	 * based on the below considerations:
@@ -1793,7 +1793,7 @@ descriptor_error:
 	if (id->driver_info & HUB_QUIRK_CHECK_PORT_AUTOSUSPEND)
 		hub->quirk_check_port_auto_suspend = 1;
 
-dev_info (&intf->dev, "hub_configure\n");
+// dev_info (&intf->dev, "hub_configure\n");
 	if (hub_configure(hub, endpoint) >= 0)
 		return 0;
 

@@ -56,7 +56,7 @@ static void xhci_common_hub_descriptor(struct xhci_hcd *xhci,
 	desc->bPwrOn2PwrGood = 10;	/* xhci section 5.4.9 says 20ms max */
 	desc->bHubContrCurrent = 0;
 
-dev_info(xhci->main_hcd->self.controller,"xhci_common_hub_descriptor %d\n",ports);/* yamano */
+// dev_info(xhci->main_hcd->self.controller,"xhci_common_hub_descriptor %d\n",ports);/* yamano */
 
 	desc->bNbrPorts = ports;
 	temp = 0;
@@ -83,8 +83,8 @@ static void xhci_usb2_hub_descriptor(struct usb_hcd *hcd, struct xhci_hcd *xhci,
 	u32 portsc;
 	unsigned int i;
 
-dev_info(xhci->main_hcd->self.controller,"xhci_usb2_hub_descriptor %d\n",
-			xhci->num_usb2_ports);/* yamano */
+// dev_info(xhci->main_hcd->self.controller,"xhci_usb2_hub_descriptor %d\n",
+//			xhci->num_usb2_ports);/* yamano */
 	ports = xhci->num_usb2_ports;
 
 	xhci_common_hub_descriptor(xhci, desc, ports);
@@ -137,8 +137,8 @@ static void xhci_usb3_hub_descriptor(struct usb_hcd *hcd, struct xhci_hcd *xhci,
 	u32 portsc;
 	unsigned int i;
 
-dev_info(xhci->main_hcd->self.controller,"xhci_usb3_hub_descriptor %d\n",
-			xhci->num_usb3_ports);/* yamano */
+// dev_info(xhci->main_hcd->self.controller,"xhci_usb3_hub_descriptor %d\n",
+//			xhci->num_usb3_ports);/* yamano */
 	ports = xhci->num_usb3_ports;
 	xhci_common_hub_descriptor(xhci, desc, ports);
 	desc->bDescriptorType = USB_DT_SS_HUB;
@@ -165,7 +165,7 @@ static void xhci_hub_descriptor(struct usb_hcd *hcd, struct xhci_hcd *xhci,
 		struct usb_hub_descriptor *desc)
 {
 
-dev_info(xhci->main_hcd->self.controller,"xhci_hub_descriptor\n");
+// dev_info(xhci->main_hcd->self.controller,"xhci_hub_descriptor\n");
 	if (hcd->speed == HCD_USB3)
 		xhci_usb3_hub_descriptor(hcd, xhci, desc);
 	else
@@ -695,19 +695,19 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 	u16 wake_mask = 0;
 	u16 timeout = 0;
 
-dev_info(xhci->main_hcd->self.controller,"xhci_hub_control\n");
+// dev_info(xhci->main_hcd->self.controller,"xhci_hub_control\n");
 	max_ports = xhci_get_ports(hcd, &port_array);
 	bus_state = &xhci->bus_state[hcd_index(hcd)];
 
 	spin_lock_irqsave(&xhci->lock, flags);
 	switch (typeReq) {
 	case GetHubStatus:
-dev_info(xhci->main_hcd->self.controller,"GetHubStatus\n");
+// dev_info(xhci->main_hcd->self.controller,"GetHubStatus\n");
 		/* No power source, over-current reported per port */
 		memset(buf, 0, 4);
 		break;
 	case GetHubDescriptor:
-dev_info(xhci->main_hcd->self.controller,"GetHubDecriptor\n");
+// dev_info(xhci->main_hcd->self.controller,"GetHubDecriptor\n");
 		/* Check to make sure userspace is asking for the USB 3.0 hub
 		 * descriptor for the USB 3.0 roothub.  If not, we stall the
 		 * endpoint, like external hubs do.
@@ -723,7 +723,7 @@ dev_info(xhci->main_hcd->self.controller,"GetHubDecriptor\n");
 				(struct usb_hub_descriptor *) buf);
 		break;
 	case DeviceRequest | USB_REQ_GET_DESCRIPTOR:
-dev_info(xhci->main_hcd->self.controller,"DeviceRequest\n");
+// dev_info(xhci->main_hcd->self.controller,"DeviceRequest\n");
 		if ((wValue & 0xff00) != (USB_DT_BOS << 8))
 			goto error;
 
@@ -745,7 +745,7 @@ dev_info(xhci->main_hcd->self.controller,"DeviceRequest\n");
 		spin_unlock_irqrestore(&xhci->lock, flags);
 		return USB_DT_BOS_SIZE + USB_DT_USB_SS_CAP_SIZE;
 	case GetPortStatus:
-dev_info(xhci->main_hcd->self.controller,"GetPortStatus\n");
+// dev_info(xhci->main_hcd->self.controller,"GetPortStatus\n");
 		if (!wIndex || wIndex > max_ports)
 			goto error;
 		wIndex--;
@@ -766,7 +766,7 @@ dev_info(xhci->main_hcd->self.controller,"GetPortStatus\n");
 		put_unaligned(cpu_to_le32(status), (__le32 *) buf);
 		break;
 	case SetPortFeature:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature\n");
 		if (wValue == USB_PORT_FEAT_LINK_STATE)
 			link_state = (wIndex & 0xff00) >> 3;
 		if (wValue == USB_PORT_FEAT_REMOTE_WAKE_MASK)
@@ -779,7 +779,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature\n");
 		wIndex--;
 		temp = xhci_readl(xhci, port_array[wIndex]);
 		if (temp == 0xffffffff) {
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature ENODEV Error\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature ENODEV Error\n");
 			retval = -ENODEV;
 			break;
 		}
@@ -787,7 +787,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature ENODEV Error\n");
 		/* FIXME: What new port features do we need to support? */
 		switch (wValue) {
 		case USB_PORT_FEAT_SUSPEND:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_SUSPEND\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_SUSPEND\n");
 			temp = xhci_readl(xhci, port_array[wIndex]);
 			if ((temp & PORT_PLS_MASK) != XDEV_U0) {
 				/* Resume the port to U0 first */
@@ -830,7 +830,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_SUSPEND\n");
 			bus_state->suspended_ports |= 1 << wIndex;
 			break;
 		case USB_PORT_FEAT_LINK_STATE:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_LINK_STATE\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_LINK_STATE\n");
 			temp = xhci_readl(xhci, port_array[wIndex]);
 
 			/* Disable port */
@@ -894,7 +894,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_LINK_STATE\n");
 				bus_state->suspended_ports |= 1 << wIndex;
 			break;
 		case USB_PORT_FEAT_POWER:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_POWER\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_POWER\n");
 			/*
 			 * Turn on ports, even if there isn't per-port switching.
 			 * HC will report connect events even before this is set.
@@ -903,7 +903,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_POWER\n");
 			 */
 			xhci_writel(xhci, temp | PORT_POWER,
 					port_array[wIndex]);
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature port[%d]=%x\n",wIndex,port_array[wIndex]);
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature port[%d]=%x\n",wIndex,port_array[wIndex]);
 
 			temp = xhci_readl(xhci, port_array[wIndex]);
 			xhci_err(xhci, "set port power, actual port %d status  = 0x%x\n", wIndex, temp);	/* yamano dbg -> err*/
@@ -917,7 +917,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature port[%d]=%x\n",wIndex,p
 			spin_lock_irqsave(&xhci->lock, flags);
 			break;
 		case USB_PORT_FEAT_RESET:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_RESET\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_RESET\n");
 			temp = (temp | PORT_RESET);
 			xhci_writel(xhci, temp, port_array[wIndex]);
 
@@ -925,7 +925,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_RESET\n");
 			xhci_dbg(xhci, "set port reset, actual port %d status  = 0x%x\n", wIndex, temp);
 			break;
 		case USB_PORT_FEAT_REMOTE_WAKE_MASK:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_REMOTE_WAKE_MASK\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_REMOTE_WAKE_MASK\n");
 			xhci_set_remote_wake_mask(xhci, port_array,
 					wIndex, wake_mask);
 			temp = xhci_readl(xhci, port_array[wIndex]);
@@ -934,14 +934,14 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_REMOTE_WAKE_MASK\n
 					wIndex, temp);
 			break;
 		case USB_PORT_FEAT_BH_PORT_RESET:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_BH_PORT_RESET\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_BH_PORT_RESET\n");
 			temp |= PORT_WR;
 			xhci_writel(xhci, temp, port_array[wIndex]);
 
 			temp = xhci_readl(xhci, port_array[wIndex]);
 			break;
 		case USB_PORT_FEAT_U1_TIMEOUT:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_U1_TIMEOUT\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_U1_TIMEOUT\n");
 			if (hcd->speed != HCD_USB3)
 				goto error;
 			temp = xhci_readl(xhci, port_array[wIndex] + PORTPMSC);
@@ -950,7 +950,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature FEAT_U1_TIMEOUT\n");
 			xhci_writel(xhci, temp, port_array[wIndex] + PORTPMSC);
 			break;
 		case USB_PORT_FEAT_U2_TIMEOUT:
-dev_info(xhci->main_hcd->self.controller,"SetPortFeature USB_PORT_FEAT_U2_TIMEOUT\n");
+// dev_info(xhci->main_hcd->self.controller,"SetPortFeature USB_PORT_FEAT_U2_TIMEOUT\n");
 			if (hcd->speed != HCD_USB3)
 				goto error;
 			temp = xhci_readl(xhci, port_array[wIndex] + PORTPMSC);
@@ -965,7 +965,7 @@ dev_info(xhci->main_hcd->self.controller,"SetPortFeature USB_PORT_FEAT_U2_TIMEOU
 		temp = xhci_readl(xhci, port_array[wIndex]);
 		break;
 	case ClearPortFeature:
-dev_info(xhci->main_hcd->self.controller,"ClearPortFeature\n");
+// dev_info(xhci->main_hcd->self.controller,"ClearPortFeature\n");
 		if (!wIndex || wIndex > max_ports)
 			goto error;
 		wIndex--;
@@ -1038,7 +1038,7 @@ dev_info(xhci->main_hcd->self.controller,"ClearPortFeature\n");
 		break;
 	default:
 error:
-dev_info(xhci->main_hcd->self.controller,"!!!!!!!!!!! xhci_hub_control error end !!!!!!!!\n");
+// dev_info(xhci->main_hcd->self.controller,"!!!!!!!!!!! xhci_hub_control error end !!!!!!!!\n");
 		/* "stall" on error */
 		retval = -EPIPE;
 	}

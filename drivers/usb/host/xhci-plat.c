@@ -42,7 +42,7 @@ static const struct hc_driver xhci_plat_xhci_driver = {
 	 * generic hardware linkage
 	 */
 	.irq =			xhci_irq,
-	.flags =		HCD_MEMORY | HCD_USB2 | HCD_SHARED,
+	.flags =		HCD_MEMORY | HCD_USB3 | HCD_SHARED,
 
 	/*
 	 * basic lifecycle operations
@@ -125,8 +125,8 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		goto release_mem_region;
 	}
 
-dev_info(&pdev->dev, "usb_add_hcd reg virt = %x\n",hcd->regs);
-dev_info(&pdev->dev, "usb_add_hcd\n");
+//dev_info(&pdev->dev, "usb_add_hcd reg virt = %x\n",hcd->regs);
+//dev_info(&pdev->dev, "usb_add_hcd\n");
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (ret)
 		goto unmap_registers;
@@ -147,12 +147,12 @@ dev_info(&pdev->dev, "usb_add_hcd\n");
 	 */
 	*((struct xhci_hcd **) xhci->shared_hcd->hcd_priv) = xhci;
 
-dev_info(&pdev->dev, "usb_add_hcd\n");
+// dev_info(&pdev->dev, "usb_add_hcd\n");
 	ret = usb_add_hcd(xhci->shared_hcd, irq, IRQF_SHARED);
 	if (ret)
 		goto put_usb3_hcd;
 
-dev_info(&pdev->dev, "==================== USB Normal End =========================\n");
+// dev_info(&pdev->dev, "==================== USB Normal End =========================\n");
 	return 0;
 
 put_usb3_hcd:
