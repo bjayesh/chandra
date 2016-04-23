@@ -958,9 +958,34 @@ static int genphy_config_init(struct phy_device *phydev)
 
 	return 0;
 }
+
+#define LM2_REGBAK_SIZE 10
+static unsigned short	reg_bak[LM2_REGBAK_SIZE];
+static unsigned int     reg_bak_chksum;
+extern unsigned int     chksum_info;
+
 int genphy_suspend(struct phy_device *phydev)
 {
+	int i;
 	int value;
+
+	reg_bak[0] = phy_read(phydev, MII_BMCR);	// bmcr
+	reg_bak[1] = phy_read(phydev, 31);		// pagsr
+	phy_write(phydev, 31, 0x0a42);			// ** Page 0xa42 **
+	reg_bak[2] = phy_read(phydev, 18);		// iner
+	phy_write(phydev, 31, 0x0a43);			// ** Page 0xa43 **
+	reg_bak[3] = phy_read(phydev, 24);
+	reg_bak[4] = phy_read(phydev, 25);
+	phy_write(phydev, 31, 0x0a43);			// ** Page 0xa46 **
+	reg_bak[5] = phy_read(phydev, 20);		// physcr
+	phy_write(phydev, 31, 0x0d04);			// ** Page 0xd04 **
+	reg_bak[6] = phy_read(phydev, 16);		// lcr
+	reg_bak[7] = phy_read(phydev, 17);		// eeelcr
+	phy_write(phydev, 31, 0x0d08);			// ** Page 0xd08 **
+	reg_bak[8] = phy_read(phydev, 21);		// miicr
+	phy_write(phydev, 31, 0x0d40);			// ** Page 0xd40 **
+	reg_bak[9] = phy_read(phydev, 22);		// intbcr
+	phy_write(phydev, 31, 0x000);			// ** Page 0x000 **
 
 	mutex_lock(&phydev->lock);
 
@@ -969,15 +994,51 @@ int genphy_suspend(struct phy_device *phydev)
 
 	mutex_unlock(&phydev->lock);
 
+	/* chksum gen */
+	reg_bak_chksum=0;
+        for(i=0; i<LM2_REGBAK_SIZE; i++)
+                reg_bak_chksum += reg_bak[i];
+
 	return 0;
 }
 EXPORT_SYMBOL(genphy_suspend);
 
 int genphy_resume(struct phy_device *phydev)
 {
+	int i;
 	int value;
+	unsigned int    tmp;
+
+	/* chksum chk */
+	tmp=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		tmp += reg_bak[i];
+	if ( tmp != reg_bak_chksum ){
+		chksum_info |= 0x20;
+	}
 
 	mutex_lock(&phydev->lock);
+	/* PHY Reset */
+	value = phy_read(phydev, MII_BMCR);
+	phy_write(phydev, MII_BMCR, (value |  BMCR_RESET));
+	phy_write(phydev, MII_BMCR, (value & ~BMCR_RESET));
+
+	phy_write(phydev, MII_BMCR, reg_bak[0]);
+	phy_write(phydev, 31, 0x0a42);
+	phy_write(phydev, 18, reg_bak[2]);
+	phy_write(phydev, 31, 0x0a43);
+	phy_write(phydev, 24, reg_bak[3]);
+	phy_write(phydev, 25, reg_bak[4]);
+	phy_write(phydev, 31, 0x0a43);
+	phy_write(phydev, 20, reg_bak[5]);
+	phy_write(phydev, 31, 0x0d04);
+	phy_write(phydev, 16, reg_bak[6]);
+	phy_write(phydev, 17, reg_bak[7]);
+	phy_write(phydev, 31, 0x0d08);
+	phy_write(phydev, 21, reg_bak[8]);
+	phy_write(phydev, 31, 0x0d40);
+	phy_write(phydev, 22, reg_bak[9]);
+	phy_write(phydev, 31, 0x0000);
 
 	value = phy_read(phydev, MII_BMCR);
 	phy_write(phydev, MII_BMCR, (value & ~BMCR_PDOWN));

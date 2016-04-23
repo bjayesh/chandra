@@ -694,3 +694,4 @@ __pv_offset:
 #endif
 
 #include "head-common.S"
+#include "deepsleep.S"

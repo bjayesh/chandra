@@ -105,6 +105,7 @@ struct xspi_dev {
 	u8			*tx_buf;
 	u8			*rx_buf;
 	int			stat;
+	struct clk		*clk;
 };
 
 static struct xspi_dev	*xspi_api_lib = NULL;
@@ -178,10 +179,11 @@ static	irqreturn_t	xspi_interrupt(int irq, void *dev_id)
 	struct xspi_dev		*dev = spi_master_get_devdata(master);
 	u32	stat;
 
+#ifdef	CONFIG_ARCH_LM2 
+	stat = 0xffffffff;
+#else	/* CONFIG_ARCH_LM2 */
 	stat = xspi_rd(dev, SPI_SPIINT);
-	if((stat & 0x00000003)== 0){	/* no interrupt */
-		goto	none;
-	}
+#endif	/* CONFIG_ARCH_LM2 */
 	if(stat & SPI_SPIINT_DONE){
 		dev->stat = 0;
 	}else{
@@ -190,8 +192,6 @@ static	irqreturn_t	xspi_interrupt(int irq, void *dev_id)
 	xspi_wr(dev, SPI_SPIINT, stat);
 	complete(&dev->done);
 	return	IRQ_HANDLED;
-none:
-	return	IRQ_NONE;
 }
 
 static	int	xspi_read_trans(struct xspi_dev *xspi, int adr, int offset)
@@ -481,14 +481,12 @@ static int xspi_probe(struct platform_device *pdev)
 		goto out_master_put;
 	}
 
-#if 0
 	/* Waikiki clock 300MHz */
 	xspi->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(xspi->clk))
 		xspi->clk = NULL;
 	else
 		clk_prepare_enable(xspi->clk);
-#endif
 #if 1
 	xspi->irq = platform_get_irq(pdev, 0);
 #else
@@ -499,11 +497,9 @@ static int xspi_probe(struct platform_device *pdev)
 		goto out_master_put;
 	}
 
-#if 0	/* yamano debug */
 	clk_prepare_enable(xspi->clk);
-#endif	/* yamano debug */
 
-	err = request_irq(xspi->irq, xspi_interrupt, IRQF_SHARED, "xspi", master);
+	err = request_irq(xspi->irq, xspi_interrupt, IRQF_DISABLED, "xspi", master);
 	if(err){
 		dev_err(&pdev->dev, "could not register IRQ\n");
 		goto out_master_put;
@@ -640,12 +636,32 @@ static struct of_device_id xspi_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, xspi_dt_ids);
 #endif
 
+#ifdef	CONFIG_CPU_PM
+static int xspi_suspend(struct device *dev)
+{
+        return 0;
+}
+
+static int xspi_resume(struct device *dev)
+{
+        return 0;
+}
+#endif	/* CONFIG_CPU_PM */
+
+static const struct dev_pm_ops xspi_pm_ops = {
+	.suspend        = xspi_suspend,
+	.resume         = xspi_resume,
+};
+
 static struct platform_driver xspi_driver = {
 	.driver = {
 		.name	= "mmio-xspi",
 		.owner	= THIS_MODULE,
 #ifdef	CONFIG_OF
 		.of_match_table = of_match_ptr(xspi_dt_ids),
+#endif
+#ifdef	CONFIG_CPU_PM
+		.pm     = &xspi_pm_ops,
 #endif
 	},
 	.probe	= xspi_probe,

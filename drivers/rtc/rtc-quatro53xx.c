@@ -559,6 +559,84 @@ static	int	__exit	lm2_rtc_remove(struct platform_device *pdev)
 	kfree(rtc);
 	return	0;
 }
+
+#ifdef  CONFIG_ARCH_LM2
+#define LM2_REGBAK_SIZE 10
+static unsigned int     reg_bak[LM2_REGBAK_SIZE];
+static unsigned int     reg_bak_chksum;
+extern unsigned int     chksum_info;
+void rtc_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+
+	for(i=adr; i<(adr+size); i++ ) {
+		reg_bak[i] = readl(base + offset);
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+
+void rtc_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+
+	for(i=adr; i<(adr+size); i++ ) {
+		writel( reg_bak[i], base + offset);
+		wmb();
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+
+static int lm2_rtc_suspend(struct device *dev)
+{
+//	struct lm2_rtc  *rtc = dev_get_drvdata(dev);
+	int i=0;
+	void __iomem *base;
+        base = ioremap_nocache(0x04030000, 0x100);
+        rtc_reg_save(base, &i, 0x010,  1);
+        rtc_reg_save(base, &i, 0x018,  1);
+        rtc_reg_save(base, &i, 0x01c,  1);
+        iounmap(base);
+
+        /* chksum gen */
+	reg_bak_chksum=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		reg_bak_chksum += reg_bak[i];
+
+        return 0;
+}
+
+static int lm2_rtc_resume(struct device *dev)
+{
+//	struct lm2_rtc  *rtc = dev_get_drvdata(dev);
+	int i=0;
+	void __iomem *base;
+	unsigned int    tmp;
+
+        /* chksum chk */
+	tmp=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		tmp += reg_bak[i];
+	if ( tmp != reg_bak_chksum ){
+		chksum_info |= 0x40;
+	}
+
+	i=0;
+        base = ioremap_nocache(0x04030000, 0x100);
+        rtc_reg_load(base, &i, 0x010,  1);
+        rtc_reg_load(base, &i, 0x018,  1);
+        rtc_reg_load(base, &i, 0x01c,  1);
+        iounmap(base);
+
+        return 0;
+}
+#endif	/* CONFIG_ARCH_LM2 */
+
+static SIMPLE_DEV_PM_OPS(lm2_rtc_pm_ops, lm2_rtc_suspend, lm2_rtc_resume);
+
 static	const struct platform_device_id lm2_rtc_id_table[] = {
 	{ "lm2-rtc",},
 	{},
@@ -568,6 +646,7 @@ static	struct	platform_driver lm2_rtc_driver = {
 	.driver = {
 		.name	= "lm2-rtc",
 		.owner	= THIS_MODULE,
+		.pm	= &lm2_rtc_pm_ops,
 	},
 	.id_table	= lm2_rtc_id_table,
 	.probe		= lm2_rtc_probe,

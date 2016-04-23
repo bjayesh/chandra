@@ -25,6 +25,8 @@
 #include "proc-v7-2level.S"
 #endif
 
+#define	FXCL_PCR2
+
 ENTRY(cpu_v7_proc_init)
 	mov	pc, lr
 ENDPROC(cpu_v7_proc_init)
@@ -376,12 +378,58 @@ __v7_setup:
 	mcrr	p15, 0, r5, r8, c2
 	isb
 #endif
+#ifdefFXCL_PCR2
+	ldr	r6, =(__deepsleep_mode)
+	/* __virt_to_phys */
+	sub     r6, r6, #-1073741824    @ -PAGE_OFFSET
+	add     r6, r6, #83886080       @ +PHYS_OFFSET
+	/* __virt_to_phys */
+	ldr	r10, [r6]
+	cmp	r10, #0
+	beq	initup
+	/*********************/
+	/* deepsleep up mode */
+	/*********************/
+	mrc     p15, 0, r10, c0, c0, 5           @ read MPIDR
+	and     r10, r10, #0xf
+	cmp	r10, #0
+	beq     core0
+	ldr     r6, =(resume_core1_info)
+	b	address_end
+core0:  /* core0 */
+	ldr     r6, =(resume_core0_info)
+address_end:
+	/* __virt_to_phys */
+	sub     r6, r6, #-1073741824    @ -PAGE_OFFSET
+	add     r6, r6, #83886080       @ +PHYS_OFFSET
+	/* __virt_to_phys */
+	ldr     r4, [r6, #0x0c]
+	mcr     p15, 0, r4, c2, c0, 2		@ TTBCR
+	isb
+	ldr     r5, [r6, #0x18]
+	ldr     r4, [r6, #0x1c]
+	mcrr	p15, 1, r4, r5, c2		@ TTBCR1
+	isb
+	mcrr	p15, 1, r4, r5, c2		@ TTBCR1
+	isb
+	ldr     r5, [r6, #0x10]
+	ldr     r4, [r6, #0x14]
+	mcrr	p15, 0, r4, r5, c2		@ TTBCR0
+	isb
+	mcrr	p15, 0, r4, r5, c2		@ TTBCR0
+	isb
+	b	ttb_end
+initup:
+	mov     r10, #0x08      /* yamano */
+#endif	/* FXCL_PCR2 */
 	v7_ttb_setup r10, r4, r8, r5		@ TTBCR, TTBRx setup
+#ifdef	FXCL_PCR2
+ttb_end:
+#endif  /* FXCL_PCR2 */
 	ldr	r5, =PRRR			@ PRRR
 	ldr	r6, =NMRR			@ NMRR
 	mcr	p15, 0, r5, c10, c2, 0		@ write PRRR
 	mcr	p15, 0, r6, c10, c2, 1		@ write NMRR
-#endif
 	dsb					@ Complete invalidations
 #ifndef CONFIG_ARM_THUMBEE
 	mrc	p15, 0, r0, c0, c1, 0		@ read ID_PFR0 for ThumbEE

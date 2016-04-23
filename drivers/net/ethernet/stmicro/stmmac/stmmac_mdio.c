@@ -167,14 +167,14 @@ int stmmac_mdio_register(struct net_device *ndev)
 	if (new_bus == NULL)
 		return -ENOMEM;
 
-#if 1	/* ohkuma IRQ=0 is poll */
+#ifdef	CONFIG_ARCH_LM2	/* IRQ=0 is poll */
 	irqlist = mdio_bus_data->irqs;
-#else
+#else	/* CONFIG_ARCH_LM2 */
 	if (mdio_bus_data->irqs)
 		irqlist = mdio_bus_data->irqs;
 	else
 		irqlist = priv->mii_irq;
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 
 	new_bus->name = "stmmac";
 	new_bus->read = &stmmac_mdio_read;

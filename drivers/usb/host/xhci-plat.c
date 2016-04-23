@@ -190,12 +190,139 @@ static int xhci_plat_remove(struct platform_device *dev)
 	return 0;
 }
 
+#ifdef	CONFIG_ARCH_LM2
+#define LM2_REGBAK_SIZE 160
+static unsigned int     reg_bak[LM2_REGBAK_SIZE];
+static unsigned int     reg_bak_chksum;
+extern unsigned int     chksum_info;
+
+void xhci_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+{
+        int i;
+        int adr = *bak_adr;
+
+        for(i=adr; i<(adr+size); i++ ) {
+                reg_bak[i] = readl(base + offset);
+                offset +=4;
+        }
+        *bak_adr = i;
+}
+
+void xhci_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+{
+        int i;
+        int adr = *bak_adr;
+
+        for(i=adr; i<(adr+size); i++ ) {
+                writel( reg_bak[i], base + offset);
+                wmb();
+                offset +=4;
+        }
+        *bak_adr = i;
+}
+
+static int xhci_host_suspend(struct platform_device *pdev)
+{
+	struct usb_hcd  *hcd = platform_get_drvdata(pdev);
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	int i=0;
+	void __iomem *base;
+	base = ioremap_nocache(0x04600000, 0x500);
+	xhci_reg_save(base, &i, 0x020, 15);
+	xhci_reg_save(base, &i, 0x420,  4);
+	iounmap(base);
+
+	base = ioremap_nocache(0x0460c000, 0x700);
+	xhci_reg_save(base, &i, 0x100, 36);
+	xhci_reg_save(base, &i, 0x200,  2);
+	xhci_reg_save(base, &i, 0x2c0,  1);
+	xhci_reg_save(base, &i, 0x300,  5);
+	xhci_reg_save(base, &i, 0x380,  4);
+	xhci_reg_save(base, &i, 0x400,  4);
+	xhci_reg_save(base, &i, 0x618,  4);
+	xhci_reg_save(base, &i, 0x630,  1);
+	iounmap(base);
+
+	/* usb2.0 phy */
+	base = ioremap_nocache(0x04408000, 0x500);
+	xhci_reg_save(base, &i, 0x000, 17);
+	xhci_reg_save(base, &i, 0x100,  8);
+	xhci_reg_save(base, &i, 0x130, 15);
+	xhci_reg_save(base, &i, 0x170,  7);
+	xhci_reg_save(base, &i, 0x1a0, 15);
+	xhci_reg_save(base, &i, 0x200,  5);
+	xhci_reg_save(base, &i, 0x280, 10);
+	xhci_reg_save(base, &i, 0x400,  1);
+	iounmap(base);
+
+        /* chksum gen */
+        reg_bak_chksum=0;
+        for(i=0; i<LM2_REGBAK_SIZE; i++)
+                reg_bak_chksum += reg_bak[i];
+
+	i = xhci_suspend(xhci);
+        return i;
+}
+
+static int xhci_host_resume(struct platform_device *pdev)
+{
+	struct usb_hcd  *hcd = platform_get_drvdata(pdev);
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	int i;
+	void __iomem *base;
+	unsigned int    tmp;
+        /* chksum chk */
+        tmp=0;
+        for(i=0; i<LM2_REGBAK_SIZE; i++)
+                tmp += reg_bak[i];
+        if ( tmp != reg_bak_chksum ){
+                chksum_info |= 0x100;
+        }
+	i=0;
+	base = ioremap_nocache(0x04600000, 0x500);
+	xhci_reg_load(base, &i, 0x020, 15);
+	xhci_reg_load(base, &i, 0x420,  4);
+	iounmap(base);
+
+	base = ioremap_nocache(0x0460c000, 0x700);
+	xhci_reg_load(base, &i, 0x100, 36);
+	xhci_reg_load(base, &i, 0x200,  2);
+	xhci_reg_load(base, &i, 0x2c0,  1);
+	xhci_reg_load(base, &i, 0x300,  5);
+	xhci_reg_load(base, &i, 0x380,  4);
+	xhci_reg_load(base, &i, 0x400,  4);
+	xhci_reg_load(base, &i, 0x618,  4);
+	xhci_reg_load(base, &i, 0x630,  1);
+	iounmap(base);
+
+	/* usb2.0 phy */
+	base = ioremap_nocache(0x04408000, 0x500);
+	xhci_reg_load(base, &i, 0x000, 17);
+	xhci_reg_load(base, &i, 0x100,  8);
+	xhci_reg_load(base, &i, 0x130, 15);
+	xhci_reg_load(base, &i, 0x170,  7);
+	xhci_reg_load(base, &i, 0x1a0, 15);
+	xhci_reg_load(base, &i, 0x200,  5);
+	xhci_reg_load(base, &i, 0x280, 10);
+	xhci_reg_load(base, &i, 0x400,  1);
+	iounmap(base);
+
+	i = xhci_resume(xhci, false);
+        return i;
+}
+
+#endif	/* CONFIG_ARCH_LM2 */
+
 static struct platform_driver usb_xhci_driver = {
 	.probe	= xhci_plat_probe,
 	.remove	= xhci_plat_remove,
 	.driver	= {
 		.name = "xhci-hcd",
 	},
+#ifdef	CONFIG_ARCH_LM2
+	.suspend        = xhci_host_suspend,
+	.resume         = xhci_host_resume,
+#endif	/* CONFIG_ARCH_LM2 */
 };
 MODULE_ALIAS("platform:xhci-hcd");
 

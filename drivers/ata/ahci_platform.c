@@ -130,8 +130,7 @@ static int ahci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-//	hpriv->clk = clk_get(dev, NULL);
-	hpriv->clk = 100000000;
+	hpriv->clk = clk_get(dev, NULL);
 	if (IS_ERR(hpriv->clk)) {
 		dev_err(dev, "can't get clock\n");
 	} else {

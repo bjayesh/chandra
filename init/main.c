@@ -858,7 +858,10 @@ static int __ref kernel_init(void *unused)
 	kernel_init_freeable();
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
+#ifdef	CONFIG_ARCH_LM2
+#else	/* CONFIG_ARCH_LM2 */
 	free_initmem();
+#endif	/* CONFIG_ARCH_LM2 */
 	mark_rodata_ro();
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();

@@ -13,6 +13,11 @@
 
 #include "internals.h"
 
+#ifdef  CONFIG_ARCH_LM2         /* Linux IRQ Only */
+extern const unsigned char lm2_use_irq[];
+extern const const unsigned int lm2_use_irq_size;
+#define LM2USEIRQ_SIZE  (lm2_use_irq_size)
+#endif  /* CONFIG_ARCH_LM2 */
 /**
  * suspend_device_irqs - disable all currently enabled interrupt lines
  *
@@ -44,6 +49,9 @@ static void resume_irqs(bool want_early)
 {
 	struct irq_desc *desc;
 	int irq;
+#ifdef  CONFIG_ARCH_LM2
+	int j, chk_flag;
+#endif	/* CONFIG_ARCH_LM2 */
 
 	for_each_irq_desc(irq, desc) {
 		unsigned long flags;
@@ -53,6 +61,17 @@ static void resume_irqs(bool want_early)
 		if (!is_early && want_early)
 			continue;
 
+#ifdef  CONFIG_ARCH_LM2
+		chk_flag=0;
+		for(j=0; j<LM2USEIRQ_SIZE; j++) {
+			if ( irq == lm2_use_irq[j] ) {
+				chk_flag=1;
+				break;
+			}
+		}
+		if ( chk_flag == 0 )
+			continue;
+#endif	/* CONFIG_ARCH_LM2 */
 		raw_spin_lock_irqsave(&desc->lock, flags);
 		__enable_irq(desc, irq, true);
 		raw_spin_unlock_irqrestore(&desc->lock, flags);

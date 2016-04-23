@@ -54,8 +54,7 @@
 #define CTLR_START		0x00000002
 #define CTLR_CONTINOUS		0x00000004
 
-
-extern	lm2_printk(unsigned long base, const char *str);
+extern unsigned int chksum_info;
 
 static	void __iomem *clksrc_base;
 static	void __iomem *clkevt_base;
@@ -71,6 +70,42 @@ static	u32	lm2_read_sched_clock(void)
 {
 	return	readl(HTCNTR_L(clksrc_base));
 }
+
+#ifdef CONFIG_PM
+static unsigned long   lm2_event_cnt;
+static unsigned long   lm2_event_ctl;
+static unsigned long   lm2_event_chksum;
+
+static void lm2_event_suspend(struct clock_event_device *clk_event_dev)
+{
+	lm2_event_cnt = readl(COUNT(clkevt_base));
+	lm2_event_ctl = readl(CTLR(clkevt_base));
+
+	/* Timer stop (initialize) */
+	writel(HTCTLR_STOP,HTCTLR(clksrc_base));
+
+	/* chksum add */
+	lm2_event_chksum = lm2_event_cnt + lm2_event_ctl;
+}
+
+static void lm2_event_resume(struct clock_event_device *clk_event_dev)
+{
+	/* chksum chk */
+	if ( lm2_event_chksum != (lm2_event_cnt + lm2_event_ctl) ) {
+		chksum_info |= 0x4;
+	}
+
+	/* Timer stop (initialize) */
+	writel(HTCTLR_STOP,HTCTLR(clksrc_base));
+	/* prescale setting */
+	writel(PRESCALE-1,PRESCL(clksrc_base));
+	/* Start Timer */
+	writel(HTCTLR_START,HTCTLR(clksrc_base));
+
+	writel(lm2_event_cnt, LOAD(clkevt_base));
+	writel(lm2_event_ctl, CTLR(clkevt_base));
+}
+#endif
 
 /*
  * Clock source driver (kernel timer)
@@ -106,10 +141,6 @@ void	lm2_clocksource_init(__iomem void *gpt_base)
 		200, 32, clocksource_mmio_readl_up);
 
 	setup_sched_clock(lm2_read_sched_clock,32,tick_rate);
-
-//	if(result != 0){
-//		lm2_printk(0xfc000000,"clocksource error \n");
-//	}
 }
 
 static struct clock_event_device clkevt = {
@@ -118,39 +149,39 @@ static struct clock_event_device clkevt = {
 	.set_mode = clockevent_set_mode,
 	.set_next_event = clockevent_next_event,
 	.shift = 0,	/* to be computed */
+#ifdef CONFIG_PM
+	.suspend = lm2_event_suspend,
+	.resume  = lm2_event_resume,
+#endif
 };
 
 static void clockevent_set_mode(enum clock_event_mode mode,
 				struct clock_event_device *clk_event_dev)
 {
-	u32	period;
 	u32	val;
-
-	/* stop the timer */
-	val = readl(CTLR(clkevt_base));
-	val &= ~CTLR_START;
-	writel(val, CTLR(clkevt_base));
-
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
+		val = readl(CTLR(clkevt_base));
+		val &= ~CTLR_START;
+		writel(val, CTLR(clkevt_base));
 		writel((SYSCLK/DIVISOR), LOAD(clkevt_base));
 		val = readl( CTLR(clkevt_base));
-/*		val |= CTLR_START | CTLR_CONTINOUS | CTLR_LOAD;*/
 		val = CTLR_START | CTLR_LOAD;
 		writel(val, CTLR(clkevt_base));
-
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
-//		val = readl(CTLR(clkevt_base));
-//		val &= ~CTLR_CONTINOUS;
+		val = readl(CTLR(clkevt_base));
+		val &= ~CTLR_START;
+		writel(val, CTLR(clkevt_base));
 		val = CTLR_START | CTLR_LOAD; 
 		writel(val, CTLR(clkevt_base));
-
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
+		val = readl(CTLR(clkevt_base));
+		val &= ~CTLR_START;
+		writel(val, CTLR(clkevt_base));
 	case CLOCK_EVT_MODE_RESUME:
-
 		break;
 	default:
 		pr_err("Invalid mode requested\n");
@@ -162,16 +193,11 @@ static int clockevent_next_event(unsigned long cycles,
 				 struct clock_event_device *clk_event_dev)
 {
 	u32	val;
-	char	buf[128];
 
 	val = readl(CTLR(clkevt_base));
 
 	if (val & CTLR_START)
 		writew(val & ~CTLR_START, CTLR(clkevt_base));
-#if 0	/* yamano debug */
-sprintf(buf,"clockevent_next_event cycle=%x\n",cycles);
-lm2_printk(0xfc000000,buf);
-#endif	/* yamano debug */
 	writel(cycles, LOAD(clkevt_base));
 
 	val = CTLR_LOAD;
@@ -189,25 +215,11 @@ static	u32	int_cnt=0;
 
 static irqreturn_t lm2_timer_interrupt(int irq, void *dev_id)
 {
-	unsigned long	val;
-
 	struct clock_event_device *evt = &clkevt;
 
 	evt->event_handler(evt);
-#if 0	/* yamano debug */
-if(int_cnt >1000){
-	lm2_printk(0xfc000000,".");
-	int_cnt =0;
-}else{
-	int_cnt++;
-}
-#endif	/* yamano debug */
-#if 0
-	val = readl(CTLR(clkevt_base));
-#endif	/* yamano debug */
-	val = CTLR_LOAD|CTLR_START;
-//	val = CTLR_START;
-	writel(val,CTLR(clkevt_base));
+	writel(CTLR_LOAD|CTLR_START,CTLR(clkevt_base));
+
 	return IRQ_HANDLED;
 }
 

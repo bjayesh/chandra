@@ -3764,7 +3764,6 @@ int sata_link_hardreset(struct ata_link *link, const unsigned long *timing,
 	int rc;
 
 	DPRINTK("ENTER\n");
-//printk("##### %s enter \n",__FUNCTION__);
 	if (online)
 		*online = false;
 
@@ -3778,7 +3777,6 @@ int sata_link_hardreset(struct ata_link *link, const unsigned long *timing,
 			goto out;
 
 		scontrol = (scontrol & 0x0f0) | 0x304;
-//printk("##### %s set needed spd scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
 		if ((rc = sata_scr_write(link, SCR_CONTROL, scontrol)))
 			goto out;
 
@@ -3791,7 +3789,6 @@ int sata_link_hardreset(struct ata_link *link, const unsigned long *timing,
 
 //	scontrol = (scontrol & 0x0f0) | 0x301;
 	scontrol = (scontrol & 0x0f0) | 0x321;
-//printk("##### %s scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
 
 	if ((rc = sata_scr_write_flush(link, SCR_CONTROL, scontrol)))
 		goto out;
@@ -5653,12 +5650,10 @@ int sata_link_init_spd(struct ata_link *link)
 {
 	u8 spd;
 	int rc;
-//printk("#### %s entry\n",__FUNCTION__);	/* yamano */
 	rc = sata_scr_read(link, SCR_CONTROL, &link->saved_scontrol);
 	if (rc)
 		return rc;
 
-//printk("#### %s spd %x get\n",__FUNCTION__,link->saved_scontrol);
 	spd = (link->saved_scontrol >> 4) & 0xf;
 //	spd = 3;	/* 6Gbps */
 	if (spd)
@@ -6118,14 +6113,11 @@ int ata_port_probe(struct ata_port *ap)
 {
 	int rc = 0;
 
-//printk("##### %s entry \n",__FUNCTION__);	/* yamano */
 	if (ap->ops->error_handler) {
-//printk("##### %s port \n",__FUNCTION__);	/* yamano */
 		__ata_port_probe(ap);
 		ata_port_wait_eh(ap);
 	} else {
 		DPRINTK("ata%u: bus probe begin\n", ap->print_id);
-//printk("##### %s bus probe \n",__FUNCTION__);	/* yamano */
 		rc = ata_bus_probe(ap);
 		DPRINTK("ata%u: bus probe end\n", ap->print_id);
 	}
@@ -6136,7 +6128,6 @@ int ata_port_probe(struct ata_port *ap)
 static void async_port_probe(void *data, async_cookie_t cookie)
 {
 	struct ata_port *ap = data;
-//printk("##### %s entry \n",__FUNCTION__);	/* yamano */
 	/*
 	 * If we're not allowed to scan this host in parallel,
 	 * we need to wait until all previous scans have completed
@@ -6146,11 +6137,9 @@ static void async_port_probe(void *data, async_cookie_t cookie)
 	 */
 	if (!(ap->host->flags & ATA_HOST_PARALLEL_SCAN) && ap->port_no != 0)
 		async_synchronize_cookie(cookie);
-//printk("##### %s call ata_port_probe\n",__FUNCTION__);	/* yamano */
 
 	(void)ata_port_probe(ap);
 
-//printk("##### %s ata_port_probe exit \n",__FUNCTION__);	/* yamano */
 	/* in order to keep device order, we need to synchronize at this point */
 	async_synchronize_cookie(cookie);
 

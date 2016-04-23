@@ -19,8 +19,9 @@
 
 #include <asm/cacheflush.h>
 #include <asm/smp_plat.h>
-//#include <asm/hardware/gic.h>
 
+
+static int init_flag=0;
 /*
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
@@ -58,8 +59,6 @@ void __cpuinit waikiki_secondary_init(unsigned int cpu)
 	/*
 	 * Synchronise with the boot thread.
 	 */
-	spin_lock(&boot_lock);
-	spin_unlock(&boot_lock);
 }
 
 int __cpuinit waikiki_boot_secondary(unsigned int cpu, struct task_struct *idle)
@@ -86,11 +85,16 @@ int __cpuinit waikiki_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 * the boot monitor to read the system wide flags register,
 	 * and branch to the address found there.
 	 */
-	cpu1_addr = ioremap(0x043B0000,0x32);
-	writel(0x3ff, cpu1_addr + 0x24);
-	iounmap(cpu1_addr);
+	if ( init_flag == 0 ) {
+		cpu1_addr = ioremap(0x043B0000,0x32);
+		writel(0x3ff, cpu1_addr + 0x24);
+		iounmap(cpu1_addr);
+		init_flag++;
+	} else {
+		arch_send_wakeup_ipi_mask(cpumask_of(cpu));
+	}
 
-	timeout = jiffies + (6 * HZ);
+	timeout = jiffies + (10 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 		if (pen_release == -1)

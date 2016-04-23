@@ -358,6 +358,80 @@ static int lm2_i2c_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef  CONFIG_ARCH_LM2
+#define LM2_REGBAK_SIZE 12
+static unsigned int     reg_bak[LM2_REGBAK_SIZE];
+static unsigned int     reg_bak_chksum;
+extern unsigned int     chksum_info;
+void i2c_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+	for(i=adr; i<(adr+size); i++ ) {
+		reg_bak[i] = readl(base + offset);
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+void i2c_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+	
+	for(i=adr; i<(adr+size); i++ ) {
+		writel( reg_bak[i], base + offset);
+		wmb();
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+static int lm2_i2c_suspend(struct platform_device *pdev)
+{
+	int i=0;
+	void __iomem *base;
+
+        base = ioremap_nocache(0x041F0000, 0x200);	/* misc:000-0ff eerrom:100-1ff*/
+        i2c_reg_save(base, &i, 0x040,  3);
+        i2c_reg_save(base, &i, 0x100,  1);
+        i2c_reg_save(base, &i, 0x104,  2);
+        i2c_reg_save(base, &i, 0x118,  4);
+        i2c_reg_save(base, &i, 0x140,  1);
+        i2c_reg_save(base, &i, 0x14c,  1);
+        iounmap(base);
+
+        /* chksum gen */
+	reg_bak_chksum=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		reg_bak_chksum += reg_bak[i];
+
+	return 0;
+}
+
+static int lm2_i2c_resume(struct platform_device *pdev)
+{
+	int i;
+	void __iomem *base;
+	unsigned int    tmp;
+
+	/* chksum chk */
+	tmp=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		tmp += reg_bak[i];
+	if ( tmp != reg_bak_chksum ){
+		chksum_info |= 0x400;
+	}
+	i=0;
+        base = ioremap_nocache(0x041F0000, 0x200);	/* misc:000-0ff eerrom:100-1ff*/
+        i2c_reg_load(base, &i, 0x040,  3);
+        i2c_reg_load(base, &i, 0x100,  1);
+        i2c_reg_load(base, &i, 0x104,  2);
+        i2c_reg_load(base, &i, 0x118,  4);
+        i2c_reg_load(base, &i, 0x140,  1);
+        i2c_reg_load(base, &i, 0x14c,  1);
+        iounmap(base);
+
+}
+#endif  /* CONFIG_ARCH_LM2 */
 
 static struct platform_driver lm2_i2c_drv = {
 	.driver	= {
@@ -366,6 +440,10 @@ static struct platform_driver lm2_i2c_drv = {
 	},
 	.probe		= lm2_i2c_probe,
 	.remove		= lm2_i2c_remove,
+#ifdef  CONFIG_ARCH_LM2
+	.suspend        = lm2_i2c_suspend,
+	.resume         = lm2_i2c_resume,
+#endif  /* CONFIG_ARCH_LM2 */
 };
 
 /* module_platform_driver(lm2_i2c_drv); */

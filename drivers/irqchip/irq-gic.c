@@ -42,6 +42,7 @@
 #include <linux/irqchip/chained_irq.h>
 #include <linux/irqchip/arm-gic.h>
 #include <linux/printk.h>
+#include <asm/cacheflush.h>
 
 #include <asm/cputype.h>
 #include <asm/irq.h>
@@ -49,6 +50,15 @@
 #include <asm/smp_plat.h>
 
 #include "irqchip.h"
+
+#ifdef CONFIG_ARCH_LM2         /* Linux IRQ Only */
+#define      LM2_PM_DEBUG
+//#define      LM2_INIT_CHK
+extern const unsigned char lm2_use_irq[];
+extern const const unsigned int lm2_use_irq_size;
+#define        LM2USEIRQ_SIZE  (lm2_use_irq_size)
+extern unsigned int chksum_info;
+#endif /* CONFIG_ARCH_LM2 */
 
 union gic_base {
 	void __iomem *common_base;
@@ -71,6 +81,10 @@ struct gic_chip_data {
 	void __iomem *(*get_base)(union gic_base *);
 #endif
 };
+
+#ifdef	CONFIG_ARCH_LM2	/* chksum */
+u32	lm2_gic_chksum;
+#endif	/* CONFIG_ARCH_LM2 */
 
 static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 
@@ -259,7 +273,7 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	if (cpu >= NR_GIC_CPU_IF || cpu >= nr_cpu_ids)
 		return -EINVAL;
 
-#ifdef	CONFIG_ARCH_LM2
+#ifdef CONFIG_ARCH_LM2 /* Linux IRQ Only */
 #else	/* CONFIG_ARCH_LM2 */
 	raw_spin_lock(&irq_controller_lock);
 	mask = 0xff << shift;
@@ -272,6 +286,29 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	return IRQ_SET_MASK_OK;
 }
 #endif
+
+#ifdef CONFIG_ARCH_LM2
+void irq_to_a7(unsigned int irq)
+{
+	unsigned int offset;
+	unsigned int shift;
+	u32     val;
+	struct gic_chip_data *gic = &gic_data[0];
+	void __iomem *base = gic_data_dist_base(gic);
+
+	offset = irq / 4;
+	shift  = irq % 4;
+	raw_spin_lock(&irq_controller_lock);
+	val  = readl_relaxed(base + GIC_DIST_TARGET + offset * 4) & ~(0xff << (( irq % 4 ) * 8));
+	val |= 0x01 << (( irq % 4 ) * 8);
+	writel_relaxed(val,  base + GIC_DIST_TARGET + offset * 4);
+	raw_spin_unlock(&irq_controller_lock);
+#ifdef  LM2_PM_DEBUG
+printk(KERN_ERR "LM2_PM: irq=%03d offset=0x%x shift=%d val=0x%08x\n",irq, (GIC_DIST_TARGET+offset*4), shift,val);
+#endif
+}
+EXPORT_SYMBOL(irq_to_a7);
+#endif	/* CONFIG_ARCH_LM2 */
 
 #ifdef CONFIG_PM
 static int gic_set_wake(struct irq_data *d, unsigned int on)
@@ -508,6 +545,16 @@ static void gic_dist_save(unsigned int gic_nr)
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++)
 		gic_data[gic_nr].saved_spi_enable[i] =
 			readl_relaxed(dist_base + GIC_DIST_ENABLE_SET + i * 4);
+
+#ifdef  CONFIG_ARCH_LM2	/* chksum add */
+	lm2_gic_chksum=0;
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++)
+		lm2_gic_chksum += gic_data[gic_nr].saved_spi_conf[i];
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		lm2_gic_chksum += gic_data[gic_nr].saved_spi_target[i];
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++)
+		lm2_gic_chksum += gic_data[gic_nr].saved_spi_enable[i];
+#endif	/* CONFIG_ARCH_LM2 */
 }
 
 /*
@@ -522,6 +569,10 @@ static void gic_dist_restore(unsigned int gic_nr)
 	unsigned int gic_irqs;
 	unsigned int i;
 	void __iomem *dist_base;
+#ifdef  CONFIG_ARCH_LM2        /* Linux IRQ Only */
+	unsigned int    j, chk_flag, reg_val, set_val;
+	unsigned int	chksum=0;
+#endif /* CONFIG_ARCH_LM2 */
 
 	if (gic_nr >= MAX_GIC_NR)
 		BUG();
@@ -532,23 +583,113 @@ static void gic_dist_restore(unsigned int gic_nr)
 	if (!dist_base)
 		return;
 
+#ifdef  CONFIG_ARCH_LM2	/* chksum chk */
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++)
+		chksum += gic_data[gic_nr].saved_spi_conf[i];
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		chksum += gic_data[gic_nr].saved_spi_target[i];
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++)
+		chksum += gic_data[gic_nr].saved_spi_enable[i];
+
+	/* chksum chk */
+	if ( lm2_gic_chksum != chksum ) {
+		chksum_info |= 0x8;
+	}
+#endif	/* CONFIG_ARCH_LM2 */
+
 	writel_relaxed(0, dist_base + GIC_DIST_CTRL);
 
+#ifdef	CONFIG_ARCH_LM2	/* Linux IRQ Only */
+	for (i = 0; i < gic_irqs; i++) {
+		chk_flag=0;
+		for(j=0; j<LM2USEIRQ_SIZE; j++) {
+			if ( i == lm2_use_irq[j] ){
+				chk_flag = 1;
+				break;
+			}
+		}
+		if ( chk_flag == 1 ) {
+			reg_val  = readl_relaxed(dist_base + GIC_DIST_CONFIG + i / 16 * 4);
+			reg_val &= ~(0x3   << (( i % 16 ) * 2));
+			set_val  = gic_data[gic_nr].saved_spi_conf[i/16] & (0x3 << (( i % 16 ) * 2));
+			reg_val |= set_val;
+			writel_relaxed(reg_val, dist_base + GIC_DIST_CONFIG + i / 16 * 4);
+		}
+	}
+#else	/* CONFIG_ARCH_LM2 */
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++)
 		writel_relaxed(gic_data[gic_nr].saved_spi_conf[i],
 			dist_base + GIC_DIST_CONFIG + i * 4);
+#endif /* CONFIG_ARCH_LM2 */
 
+#ifdef	CONFIG_ARCH_LM2	/* Linux IRQ Only */
+	for (i = 0; i < gic_irqs; i++) {
+		chk_flag=0;
+		for(j=0; j<LM2USEIRQ_SIZE; j++) {
+			if ( i == lm2_use_irq[j] ){
+				chk_flag = 1;
+				break;
+			}
+		}
+		if ( chk_flag == 1 ) {
+			reg_val  = readl_relaxed(dist_base + GIC_DIST_PRI + i / 4 * 4);
+			reg_val &= ~(0xff   << (( i % 4 ) * 8));
+			set_val  = 0xa0a0a0a0 & (0xff << (( i % 4 ) * 8));
+			reg_val |= set_val;
+			writel_relaxed(reg_val, dist_base + GIC_DIST_PRI + i / 4 * 4);
+		}
+	}
+#else	/* CONFIG_ARCH_LM2 */
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		writel_relaxed(0xa0a0a0a0,
 			dist_base + GIC_DIST_PRI + i * 4);
+#endif	/* CONFIG_ARCH_LM2 */
 
+#ifdef	CONFIG_ARCH_LM2	/* Linux IRQ Only */
+	for (i = 0; i < gic_irqs; i++) {
+		chk_flag=0;
+		for(j=0; j<LM2USEIRQ_SIZE; j++) {
+			if ( i == lm2_use_irq[j] ){
+				chk_flag = 1;
+				break;
+			}
+		}
+		if ( chk_flag == 1 ) {
+			reg_val  = readl_relaxed(dist_base + GIC_DIST_TARGET + i / 4 * 4);
+			reg_val &= ~(0xff   << (( i % 4 ) * 8));
+			set_val  = gic_data[gic_nr].saved_spi_target[i/4] & (0xff << (( i % 4 ) * 8));
+			reg_val |= set_val;
+			writel_relaxed(reg_val, dist_base + GIC_DIST_TARGET + i / 4 * 4);
+		}
+	}
+#else	/* CONFIG_ARCH_LM2 */
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		writel_relaxed(gic_data[gic_nr].saved_spi_target[i],
 			dist_base + GIC_DIST_TARGET + i * 4);
+#endif	/* CONFIG_ARCH_LM2 */
 
+#ifdef	CONFIG_ARCH_LM2	/* Linux IRQ Only */
+	for (i = 0; i < gic_irqs; i++) {
+		chk_flag=0;
+		for(j=0; j<LM2USEIRQ_SIZE; j++) {
+			if ( i == lm2_use_irq[j] ){
+				chk_flag = 1;
+				break;
+			}
+		}
+		if ( chk_flag == 1 ) {
+			reg_val  = readl_relaxed(dist_base + GIC_DIST_ENABLE_SET + i / 32 * 4);
+			reg_val &= ~(0x01   << ( i % 32 ) );
+			set_val  = gic_data[gic_nr].saved_spi_enable[i/32] & (0x01 << ( i % 32 ));
+			reg_val |= set_val;
+			writel_relaxed(reg_val, dist_base + GIC_DIST_ENABLE_SET + i / 32 * 4);
+		}
+	}
+#else	/* CONFIG_ARCH_LM2 */
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++)
 		writel_relaxed(gic_data[gic_nr].saved_spi_enable[i],
 			dist_base + GIC_DIST_ENABLE_SET + i * 4);
+#endif	/* CONFIG_ARCH_LM2 */
 
 	writel_relaxed(1, dist_base + GIC_DIST_CTRL);
 }
@@ -594,6 +735,13 @@ static void gic_cpu_restore(unsigned int gic_nr)
 
 	if (!dist_base || !cpu_base)
 		return;
+
+#ifdef	CONFIG_ARCH_LM2
+	writel_relaxed(0xffff0000, dist_base + GIC_DIST_ENABLE_CLEAR);
+	writel_relaxed(0x0000ffff, dist_base + GIC_DIST_ENABLE_SET);
+	for (i = 0; i < 32; i += 4)
+		writel_relaxed(0xa0a0a0a0, dist_base + GIC_DIST_PRI + i * 4 / 4);
+#endif /* CONFIG_ARCH_LM2 */
 
 	ptr = __this_cpu_ptr(gic_data[gic_nr].saved_ppi_enable);
 	for (i = 0; i < DIV_ROUND_UP(32, 32); i++)
@@ -688,6 +836,30 @@ void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
 }
 #endif
+
+#ifdef	CONFIG_ARCH_LM2
+void a7_softirq(unsigned int irq)
+{
+	int bitmask=0x01;       // A7
+	unsigned long flags;
+#ifdef LM2_PM_DEBUG
+printk(KERN_ERR "=> %s: irq=%d(w-data=0x%08x)\n",__func__,irq, (bitmask << 16 | irq));
+#endif
+	raw_spin_lock_irqsave(&irq_controller_lock, flags);
+
+	/*
+	 * Ensure that stores to Normal memory are visible to the
+	 * other CPUs before issuing the IPI.
+	 */
+	dsb();
+
+	/* this always happens on GIC0 */
+	writel_relaxed(bitmask << 16 | irq, gic_data_dist_base(&gic_data[0]) + GIC_DIST_SOFTINT);
+
+	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
+}
+EXPORT_SYMBOL(a7_softirq);
+#endif	/* CONFIG_ARCH_LM2 */
 
 #ifdef CONFIG_BL_SWITCHER
 /*

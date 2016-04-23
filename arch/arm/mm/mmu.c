@@ -653,9 +653,6 @@ static void __init *early_alloc_aligned(unsigned long sz, unsigned long align)
 
 static void __init *early_alloc(unsigned long sz)
 {
-#if 1   /* ohkuma */
-printk(KERN_WARNING "## early_alloc : sz=0x%x \n", sz);
-#endif
 //if(yamadebug == 0)
 //putstr(UART_BASE,"early_alloc\n");
 //else
@@ -665,9 +662,6 @@ printk(KERN_WARNING "## early_alloc : sz=0x%x \n", sz);
 
 static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
 {
-#if 1   /* ohkuma */
-printk(KERN_WARNING "## early_pte_alloc : addr=0x%x prot=0x%x \n", addr, prot);
-#endif
 //if(yamadebug == 1)
 //putstr(UART_BASE2,"early_pte_alloc\n");
 	if (pmd_none(*pmd)) {
@@ -869,9 +863,6 @@ static void __init create_mapping(struct map_desc *md)
 	addr = md->virtual & PAGE_MASK;
 	phys = __pfn_to_phys(md->pfn);
 	length = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
-#if 1	/* ohkuma */
-printk(KERN_WARNING "## create_mapping : phys=0x%llx virt=0x%x\n", phys, md->virtual);
-#endif
 	if (type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK)) {
 		printk(KERN_WARNING "BUG: map for 0x%08llx at 0x%08lx can not "
 		       "be mapped using pages, ignoring.\n",
@@ -1068,11 +1059,6 @@ void __init sanity_check_meminfo(void)
 	int i, j, highmem = 0;
 	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;
 	char	buf[256];	/* yamano debug */
-#if 1   /* ohkuma */
-printk(KERN_WARNING "## sanity_check_meminfo : vmalloc_limit=0x%llx arm_lowmem_limit=0x%llx\n", vmalloc_limit, arm_lowmem_limit);
-printk(KERN_WARNING "## sanity_check_meminfo : meminfo.nr_banks=%d\n", meminfo.nr_banks);
-#endif
-
 //putstr(UART_BASE, "sanity\n");
 //sprintf(buf, "%llx vmlimit\n", vmalloc_limit);
 //putstr(UART_BASE, buf);
@@ -1364,10 +1350,6 @@ putstr(UART_BASE,buf);
 static void __init kmap_init(void)
 {
 #ifdef CONFIG_HIGHMEM
-#if 1	/* ohkuma */
-printk(KERN_WARNING "## kmap_init : PKMAP_BASE=0x%x FIXADDR_START=0x%x \n", PKMAP_BASE, FIXADDR_START);
-printk(KERN_WARNING "## kmap_init : _PAGE_KERNEL_TABLE=0x%x\n", _PAGE_KERNEL_TABLE);
-#endif
 	pkmap_page_table = early_pte_alloc(pmd_off_k(PKMAP_BASE),
 		PKMAP_BASE, _PAGE_KERNEL_TABLE);
 

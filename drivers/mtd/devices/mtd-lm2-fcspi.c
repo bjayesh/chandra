@@ -807,13 +807,11 @@ static int fcspi_remove(struct platform_device *pdev)
 
 static int fcspi_suspend(struct device *dev)
 {
-	printk(KERN_INFO "%s\n", __func__);
 	return 0;
 }
 
 static int fcspi_resume(struct device *dev)
 {
-	printk(KERN_INFO "%s\n", __func__);
 	return 0;
 }
 

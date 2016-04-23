@@ -637,9 +637,6 @@ void __init mem_init(void)
 	extern u32 dtcm_end;
 	extern u32 itcm_end;
 #endif
-#if 1   /* ohkuma */
-printk(KERN_WARNING "## mem_init : \n");
-#endif
 
 	max_mapnr   = pfn_to_page(max_pfn + PHYS_PFN_OFFSET) - mem_map;
 

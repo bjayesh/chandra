@@ -237,18 +237,131 @@ int sdhci_pltfm_unregister(struct platform_device *pdev)
 EXPORT_SYMBOL_GPL(sdhci_pltfm_unregister);
 
 #ifdef CONFIG_PM
+#ifdef  CONFIG_ARCH_LM2
+#define LM2_REGBAK_SIZE 10
+static unsigned int     reg_bak[LM2_REGBAK_SIZE];
+static unsigned int     reg_bak_chksum;
+extern unsigned int     chksum_info;
+void sdhci_reg_get(void __iomem *base, int *bak_adr, int offset, int size)
+{
+        int i;
+        int adr = *bak_adr;
+
+        for(i=adr; i<(adr+size); i++ ) {
+                reg_bak[i] = readl(base + offset);
+                offset +=4;
+        }
+        *bak_adr = i;
+}
+
+void sdhci_reg_set(void __iomem *base, int *bak_adr, int offset, int size)
+{
+        int i;
+        int adr = *bak_adr;
+
+        for(i=adr; i<(adr+size); i++ ) {
+                writel( reg_bak[i], base + offset);
+                wmb();
+                offset +=4;
+        }
+        *bak_adr = i;
+}
+void sdhci_reg_save(void) {
+        int i=0;
+        void __iomem *base;
+
+        base = ioremap_nocache(0x04050000 + 0x280, 0x10);
+        sdhci_reg_get(base, &i, 0x008,  1);			// GPF-SYS(0x288:SDIOPWRCTRL)
+        iounmap(base);
+
+        base = ioremap_nocache(0x04090000, 0x30);
+        sdhci_reg_get(base, &i, 0x024,  1);			// OVL-SYS(0x24:SYS_OVLCTL6)
+        sdhci_reg_get(base, &i, 0x028,  1);			// OVL-SYS(0x28:SYS_OVLCTL7)
+        sdhci_reg_get(base, &i, 0x02c,  1);			// OVL-SYS(0x24:SYS_OVLCTL8)
+        iounmap(base);
+
+        base = ioremap_nocache(0x04440000 + 0x08, 0x4);
+        sdhci_reg_get(base, &i, 0x000,  1);			// SDIO0 HRS2
+        iounmap(base);
+
+        base = ioremap_nocache(0x04050000 + 0x280, 0x10);
+        sdhci_reg_get(base, &i, 0x000,  1);			// GPF-SYS(0x280:SDIO0_EXTCTL)
+        iounmap(base);
+
+        base = ioremap_nocache(0x04050000 + 0x1b4, 0x10);
+        sdhci_reg_get(base, &i, 0x000,  1);			// GPF-SYS(0x1B4:SDIO0ADBCTL) 
+        iounmap(base);
+
+        /* chksum gen */
+        reg_bak_chksum=0;
+        for(i=0; i<LM2_REGBAK_SIZE; i++)
+                reg_bak_chksum += reg_bak[i];
+}
+void sdhci_reg_load(void) {
+        int i=0;
+        void __iomem *base;
+        unsigned int    tmp;
+
+        /* chksum chk */
+        tmp=0;
+        for(i=0; i<LM2_REGBAK_SIZE; i++)
+                tmp += reg_bak[i];
+        if ( tmp != reg_bak_chksum ){
+                chksum_info |= 0x1000;
+        }
+
+        i=0;
+        base = ioremap_nocache(0x04050000 + 0x280, 0x10);
+        sdhci_reg_set(base, &i, 0x008,  1);			// GPF-SYS(0x288:SDIOPWRCTRL)
+        iounmap(base);
+
+        base = ioremap_nocache(0x04090000, 0x30);
+        sdhci_reg_set(base, &i, 0x024,  1);			// OVL-SYS(0x24:SYS_OVLCTL6)
+        sdhci_reg_set(base, &i, 0x028,  1);			// OVL-SYS(0x28:SYS_OVLCTL7)
+        sdhci_reg_set(base, &i, 0x02c,  1);			// OVL-SYS(0x24:SYS_OVLCTL8)
+        iounmap(base);
+
+        base = ioremap_nocache(0x04440000 + 0x08, 0x4);
+        sdhci_reg_set(base, &i, 0x000,  1);			// SDIO0 HRS2
+        iounmap(base);
+
+        base = ioremap_nocache(0x04050000 + 0x280, 0x10);
+        sdhci_reg_set(base, &i, 0x000,  1);			// GPF-SYS(0x280:SDIO0_EXTCTL)
+        iounmap(base);
+
+        base = ioremap_nocache(0x04050000 + 0x1b4, 0x10);
+        sdhci_reg_set(base, &i, 0x000,  1);			// GPF-SYS(0x1B4:SDIO0ADBCTL) 
+        iounmap(base);
+}
+#endif	/* CONFIG_ARCH_LM2 */
 static int sdhci_pltfm_suspend(struct device *dev)
 {
+#ifdef	CONFIG_ARCH_LM2
+	int res;
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	res = sdhci_suspend_host(host);
+	sdhci_reg_save();
+	return res;
+#else	/* CONFIG_ARCH_LM2 */
 	struct sdhci_host *host = dev_get_drvdata(dev);
 
 	return sdhci_suspend_host(host);
+#endif	/* CONFIG_ARCH_LM2 */
 }
 
 static int sdhci_pltfm_resume(struct device *dev)
 {
+#ifdef	CONFIG_ARCH_LM2
+	int res;
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	sdhci_reg_load();
+	res = sdhci_resume_host(host);
+	return res;
+#else	/* CONFIG_ARCH_LM2 */
 	struct sdhci_host *host = dev_get_drvdata(dev);
 
 	return sdhci_resume_host(host);
+#endif	/* CONFIG_ARCH_LM2 */
 }
 
 const struct dev_pm_ops sdhci_pltfm_pmops = {

@@ -856,60 +856,12 @@ void __init setup_arch(char **cmdline_p)
 	/* populate cmd_line too for later use, preserving boot_command_line */
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;
-#if 0	/* ohkuma */
-sprintf(buf,"##1 meminfo.nr_banks=%d\n",meminfo.nr_banks);
-putstr(UART_BASE, buf);
-sprintf(buf,"##1 meminfo.bank[0].start=0x%llx\n",meminfo.bank[0].start);
-putstr(UART_BASE, buf);
-sprintf(buf,"##1 meminfo.bank[0].size =0x%lx\n" ,meminfo.bank[0].size);
-putstr(UART_BASE, buf);
-#endif
 	parse_early_param();
 
-#if 1	/* ohkuma */
-sprintf(buf,"##2 meminfo.nr_banks=%d\n",meminfo.nr_banks);
-putstr(UART_BASE, buf);
-sprintf(buf,"##2 meminfo.bank[0].highmem =%d\n",meminfo.bank[0].highmem);
-putstr(UART_BASE, buf);
-sprintf(buf,"##2 meminfo.bank[0].start=0x%llx\n",meminfo.bank[0].start);
-putstr(UART_BASE, buf);
-sprintf(buf,"##2 meminfo.bank[0].size =0x%lx\n" ,meminfo.bank[0].size);
-putstr(UART_BASE, buf);
-if (meminfo.nr_banks >1 ) {
-sprintf(buf,"##2 meminfo.bank[1].highmem =%d\n",meminfo.bank[1].highmem);
-putstr(UART_BASE, buf);
-sprintf(buf,"##2 meminfo.bank[1].start=0x%llx\n",meminfo.bank[1].start);
-putstr(UART_BASE, buf);
-sprintf(buf,"##2 meminfo.bank[1].size =0x%lx\n" ,meminfo.bank[1].size);
-putstr(UART_BASE, buf);
-}
-#endif
-//putstr(UART_BASE,"parse_early_param\n");
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
 	sanity_check_meminfo();
-#if 1	/* ohkuma */
-sprintf(buf,"##3 meminfo.nr_banks=%d\n",meminfo.nr_banks);
-putstr(UART_BASE, buf);
-sprintf(buf,"##3 meminfo.bank[0].highmem =%d\n",meminfo.bank[0].highmem);
-putstr(UART_BASE, buf);
-sprintf(buf,"##3 meminfo.bank[0].start=0x%llx\n",meminfo.bank[0].start);
-putstr(UART_BASE, buf);
-sprintf(buf,"##3 meminfo.bank[0].size =0x%lx\n" ,meminfo.bank[0].size);
-putstr(UART_BASE, buf);
-if (meminfo.nr_banks >1 ) {
-sprintf(buf,"##3 meminfo.bank[1].highmem =%d\n",meminfo.bank[1].highmem);
-putstr(UART_BASE, buf);
-sprintf(buf,"##3 meminfo.bank[1].start=0x%llx\n",meminfo.bank[1].start);
-putstr(UART_BASE, buf);
-sprintf(buf,"##3 meminfo.bank[1].size =0x%lx\n" ,meminfo.bank[1].size);
-putstr(UART_BASE, buf);
-}
-#endif
-//putstr(UART_BASE,"sanity_check_meminfo_OK\n");
 	arm_memblock_init(&meminfo, mdesc);
-//putstr(UART_BASE,"arm_memblock_init\n");
 	paging_init(mdesc);	/* reset debug I/O memory page  yamano */
-//putstr(UART_BASE2,"paging_init\n");
 	request_standard_resources(mdesc);
 	if (mdesc->restart)
 		arm_pm_restart = mdesc->restart;

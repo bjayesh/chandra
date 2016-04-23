@@ -51,8 +51,6 @@
 #include "stmmac_ptp.h"
 #include "stmmac.h"
 
-#define	OHKU_TEST
-
 #undef STMMAC_DEBUG
 /*#define STMMAC_DEBUG*/
 #ifdef STMMAC_DEBUG
@@ -149,6 +147,16 @@ static void stmmac_exit_fs(void);
 #endif
 
 #define STMMAC_COAL_TIMER(x) (jiffies + usecs_to_jiffies(x))
+
+#ifdef	CONFIG_ARCH_LM2
+//#define	LM2_PM_DEBUG
+struct reg_access_t {
+        unsigned short  offset;
+        unsigned int    variable;
+};
+#define REG_SET_VARIABLES (SIOCDEVPRIVATE + 0)
+#define REG_GET_VARIABLES (SIOCDEVPRIVATE + 1)
+#endif	/* CONFIG_ARCH_LM2 */
 
 /**
  * stmmac_verify_args - verify the driver parameters.
@@ -419,6 +427,34 @@ static void stmmac_get_rx_hwtstamp(struct stmmac_priv *priv,
 	shhwtstamp->hwtstamp = ns_to_ktime(ns);
 }
 
+#ifdef  CONFIG_ARCH_LM2
+static int stmmac_reg_access(struct net_device *dev, struct ifreq *ifr, int flag)
+{
+	struct	reg_access_t	reg_access;
+	void    __iomem		*remap;
+
+	if (copy_from_user(&reg_access, ifr->ifr_data, sizeof(struct reg_access_t)))
+		return -EFAULT;
+
+	if ( reg_access.offset > 0x801c )
+		return -EFAULT;
+
+	remap = ioremap_nocache((0x04410000 + reg_access.offset), 4);
+	
+	if ( flag == 0 ) {
+		/* write */
+		writel(reg_access.variable, remap);
+	} else {
+		/* read */
+		reg_access.variable = readl(remap);
+		if (copy_to_user(ifr->ifr_data, &reg_access, sizeof(struct reg_access_t) ) != 0)
+			return -EFAULT;
+	}
+	iounmap(remap);
+
+	return 0;
+}
+#endif	/* CONFIG_ARCH_LM2 */
 /**
  *  stmmac_hwtstamp_ioctl - control hardware timestamping.
  *  @dev: device pointer.
@@ -971,9 +1007,9 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 				  int i)
 {
 	struct sk_buff *skb;
-#ifdef	OHKU_TEST
+#ifdef	CONFIG_ARCH_LM2
 	dma_addr_t	tmp;
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 
 	skb = __netdev_alloc_skb(priv->dev, priv->dma_buf_sz + NET_IP_ALIGN,
 				 GFP_KERNEL);
@@ -987,13 +1023,13 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 						priv->dma_buf_sz,
 						DMA_FROM_DEVICE);
 
-#ifdef  OHKU_TEST
+#ifdef  CONFIG_ARCH_LM2
 	tmp = priv->rx_skbuff_dma[i];
 	/* 64 ->32 */
 	p->des2 = tmp&0xffffffff;
-#else
+#else	/* CONFIG_ARCH_LM2 */
 	p->des2 = priv->rx_skbuff_dma[i];
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 
 	if ((priv->mode == STMMAC_RING_MODE) &&
 	    (priv->dma_buf_sz == BUF_SIZE_16KiB))
@@ -1579,6 +1615,9 @@ static int stmmac_open(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int ret;
+#ifdef LM2_PM_DEBUG
+printk(KERN_ERR "== %s\n",__func__);
+#endif
 
 	clk_prepare_enable(priv->stmmac_clk);
 
@@ -1727,6 +1766,10 @@ open_error:
 static int stmmac_release(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
+        int ret;
+#ifdef LM2_PM_DEBUG
+printk(KERN_ERR "== %s\n",__func__);
+#endif
 
 	if (priv->eee_enabled)
 		del_timer_sync(&priv->eee_ctrl_timer);
@@ -1790,9 +1833,9 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	int nfrags = skb_shinfo(skb)->nr_frags;
 	struct dma_desc *desc, *first;
 	unsigned int nopaged_len = skb_headlen(skb);
-#ifdef  OHKU_TEST
+#ifdef  CONFIG_ARCH_LM2
         dma_addr_t      tmp;
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 
 	if (unlikely(stmmac_tx_avail(priv) < nfrags + 1)) {
 		if (!netif_queue_stopped(dev)) {
@@ -1852,22 +1895,19 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 							   csum_insertion);
 	}
 	if (likely(!is_jumbo)) {
-#ifdef  OHKU_TEST
+#ifdef  CONFIG_ARCH_LM2
 		tmp = dma_map_single(priv->device, skb->data, nopaged_len, DMA_TO_DEVICE);
 		desc->des2 = tmp&0xffffffff;
 		priv->tx_skbuff_dma[entry] = tmp;
-#else
+		/* GMAC_EXTCFG Set. */
+		if ( tmp >=0x100000000 ) {
+			writel(0x18, priv->ioaddr + 0x801c);
+		}
+#else	/* CONFIG_ARCH_LM2 */
 		desc->des2 = dma_map_single(priv->device, skb->data,
 					    nopaged_len, DMA_TO_DEVICE);
 		priv->tx_skbuff_dma[entry] = desc->des2;
-#endif
-#if 1	/* ohkuma GMAC_EXTCFG Set. */
-		if ( sizeof(dma_addr_t) == 8 ) {
-			if ( priv->tx_skbuff_dma[entry] >=0x100000000 ) {
-				writel((priv->tx_skbuff_dma[entry])>>32, priv->ioaddr + 0x041C);
-			}
-		} 
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 		priv->hw->desc->prepare_tx_desc(desc, 1, nopaged_len,
 						csum_insertion, priv->mode);
 	} else
@@ -1884,15 +1924,15 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 			desc = priv->dma_tx + entry;
 
 		TX_DBG("\t[entry %d] segment len: %d\n", entry, len);
-#ifdef  OHKU_TEST
+#ifdef  CONFIG_ARCH_LM2
 		tmp = skb_frag_dma_map(priv->device, frag, 0, len, DMA_TO_DEVICE);
 		desc->des2 = tmp&0xffffffff;
 		priv->tx_skbuff_dma[entry] = tmp;
-#else
+#else	/* CONFIG_ARCH_LM2 */
 		desc->des2 = skb_frag_dma_map(priv->device, frag, 0, len,
 					      DMA_TO_DEVICE);
 		priv->tx_skbuff_dma[entry] = desc->des2;
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 		priv->tx_skbuff[entry] = NULL;
 		priv->hw->desc->prepare_tx_desc(desc, 0, len, csum_insertion,
 						priv->mode);
@@ -1997,11 +2037,11 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv)
 			    dma_map_single(priv->device, skb->data, bfsize,
 					   DMA_FROM_DEVICE);
 
-#ifdef  OHKU_TEST
+#ifdef  CONFIG_ARCH_LM2
 			p->des2 = priv->rx_skbuff_dma[entry]&0xffffffff;
-#else
+#else	/* CONFIG_ARCH_LM2 */
 			p->des2 = priv->rx_skbuff_dma[entry];
-#endif
+#endif	/* CONFIG_ARCH_LM2 */
 
 			priv->hw->ring->refill_desc3(priv, p);
 
@@ -2360,6 +2400,14 @@ static int stmmac_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	case SIOCSHWTSTAMP:
 		ret = stmmac_hwtstamp_ioctl(dev, rq);
 		break;
+#ifdef  CONFIG_ARCH_LM2
+	case REG_GET_VARIABLES:
+		ret = stmmac_reg_access(dev, rq, 1);
+		break;
+	case REG_SET_VARIABLES:
+		ret = stmmac_reg_access(dev, rq, 0);
+		break;
+#endif	/* CONFIG_ARCH_LM2 */
 	default:
 		break;
 	}
@@ -2740,14 +2788,11 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 		goto error_netdev_register;
 	}
 
-#if 1	/* ohkuma clk_get() no used */
-#else
 	priv->stmmac_clk = clk_get(priv->device, STMMAC_RESOURCE_NAME);
 	if (IS_ERR(priv->stmmac_clk)) {
 		pr_warn("%s: warning: cannot get CSR clock\n", __func__);
 		goto error_clk_get;
 	}
-#endif
 
 	/* If a specific clk_csr value is passed from the platform
 	 * this means that the CSR Clock Range selection cannot be
@@ -2755,13 +2800,10 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 	 * set the MDC clock dynamically according to the csr actual
 	 * clock input.
 	 */
-#if 1   /* ohkuma clk_get() no used */
-#else
 	if (!priv->plat->clk_csr)
 		stmmac_clk_csr_set(priv);
 	else
 		priv->clk_csr = priv->plat->clk_csr;
-#endif
 
 	stmmac_check_pcs_mode(priv);
 
@@ -2817,6 +2859,110 @@ int stmmac_dvr_remove(struct net_device *ndev)
 }
 
 #ifdef CONFIG_PM
+
+#ifdef	CONFIG_ARCH_LM2
+#define	LM2_OHKU_OK
+
+#define	LM2_REGBAK_SIZE	100
+static unsigned int	reg_bak[LM2_REGBAK_SIZE];
+					// 0x0000 - 0x003C backup
+					// 0x0100 - 0x0110
+					// 0x0200 - 0x0284
+					// 0x1000 - 0x1024
+					// 0x8000 - 0x801c
+static unsigned int	reg_bak_chksum;
+static unsigned int	lm2_wdt;
+extern unsigned int	chksum_info;
+
+void gmac_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+{
+        int i;
+        int adr = *bak_adr;
+
+        for(i=adr; i<(adr+size); i++ ) {
+                reg_bak[i] = readl(base + offset);
+                offset +=4;
+        }
+        *bak_adr = i;
+}
+
+void gmac_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+{
+        int i;
+        int adr = *bak_adr;
+
+        for(i=adr; i<(adr+size); i++ ) {
+		writel( reg_bak[i], base + offset);
+		wmb();
+                offset +=4;
+        }
+        *bak_adr = i;
+}
+
+void stmac_reg_save(void) {
+	int i=0;
+	void __iomem *base;
+	
+	base = ioremap_nocache(0x04410000, 0x300);
+	gmac_reg_save(base, &i, 0x000, 16);
+	gmac_reg_save(base, &i, 0x100,  5);
+	gmac_reg_save(base, &i, 0x200, 57);
+	iounmap(base);
+
+	base = ioremap_nocache(0x04411000, 0x100);
+	gmac_reg_save(base, &i, 0x000, 10);
+	iounmap(base);
+
+	base = ioremap_nocache(0x04418000, 0x20);
+	gmac_reg_save(base, &i, 0x000,  5);
+	gmac_reg_save(base, &i, 0x01c,  1);
+	iounmap(base);
+
+	/* chksum gen */
+	reg_bak_chksum=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		reg_bak_chksum += reg_bak[i];
+}
+
+void stmac_reg_load(void) {
+	int i=0;
+	void __iomem *base;
+	unsigned int	tmp;
+
+	/* chksum chk */
+	tmp=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		tmp += reg_bak[i];
+	if ( tmp != reg_bak_chksum ){
+		chksum_info |= 0x10;
+	}
+
+	i=0;
+	base = ioremap_nocache(0x04410000, 0x300);
+	gmac_reg_load(base, &i, 0x000, 16);
+	gmac_reg_load(base, &i, 0x100,  5);
+	gmac_reg_load(base, &i, 0x200, 57);
+	iounmap(base);
+
+	base = ioremap_nocache(0x04411000, 0x30);
+#ifdef	LM2_OHKU_OK
+	gmac_reg_load(base, &i, 0x000,  3);
+	i++;
+	i++;
+	gmac_reg_load(base, &i, 0x014,  5);
+#else
+	lm2_wdt        = reg_bak[i + 9];
+	i += 10;
+#endif
+	iounmap(base);
+
+	base = ioremap_nocache(0x04418000, 0x20);
+	gmac_reg_load(base, &i, 0x000,  5);
+	gmac_reg_load(base, &i, 0x01c,  1);
+	iounmap(base);
+}
+#endif	/* CONFIG_ARCH_LM2 */
+
 int stmmac_suspend(struct net_device *ndev)
 {
 	struct stmmac_priv *priv = netdev_priv(ndev);
@@ -2825,22 +2971,34 @@ int stmmac_suspend(struct net_device *ndev)
 	if (!ndev || !netif_running(ndev))
 		return 0;
 
-	if (priv->phydev)
+#ifdef  LM2_PM_DEBUG
+printk(KERN_ERR "== %s:\n",__func__);
+#endif
+	if (priv->eee_enabled)
+		del_timer_sync(&priv->eee_ctrl_timer);
+
+	if (priv->phydev){
 		phy_stop(priv->phydev);
+		phy_disconnect(priv->phydev);
+		priv->phydev = NULL;
+	}
 
 	spin_lock_irqsave(&priv->lock, flags);
 
-	netif_device_detach(ndev);
 	netif_stop_queue(ndev);
-
 	napi_disable(&priv->napi);
+	del_timer_sync(&priv->txtimer);
 
 	/* Stop TX/RX DMA */
 	priv->hw->dma->stop_tx(priv->ioaddr);
 	priv->hw->dma->stop_rx(priv->ioaddr);
 
 	stmmac_clear_descriptors(priv);
+	free_dma_desc_resources(priv);
 
+	stmmac_set_mac(priv->ioaddr, false);
+
+	netif_carrier_off(ndev);
 	/* Enable Power down mode by programming the PMT regs */
 	if (device_may_wakeup(priv->device))
 		priv->hw->mac->pmt(priv->ioaddr, priv->wolopts);
@@ -2850,6 +3008,11 @@ int stmmac_suspend(struct net_device *ndev)
 		clk_disable_unprepare(priv->stmmac_clk);
 	}
 	spin_unlock_irqrestore(&priv->lock, flags);
+
+	stmmac_release_ptp(priv);
+#ifdef  CONFIG_ARCH_LM2
+	stmac_reg_save();
+#endif	/* CONFIG_ARCH_LM2 */
 	return 0;
 }
 
@@ -2857,12 +3020,24 @@ int stmmac_resume(struct net_device *ndev)
 {
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	unsigned long flags;
+	int	rtn;
 
 	if (!netif_running(ndev))
 		return 0;
 
-	spin_lock_irqsave(&priv->lock, flags);
+#ifdef  LM2_PM_DEBUG
+printk(KERN_ERR "== %s:\n",__func__);
+#endif
+#ifdef  CONFIG_ARCH_LM2
+        stmac_reg_load();
+#endif  /* CONFIG_ARCH_LM2 */
 
+	rtn = stmmac_init_phy(ndev);
+	if (rtn) {
+		pr_err("%s: Cannot attach to PHY (error: %d)\n",__func__, rtn);
+	}
+
+	spin_lock_irqsave(&priv->lock, flags);
 	/* Power Down bit, into the PM register, is cleared
 	 * automatically as soon as a magic packet or a Wake-up frame
 	 * is received. Anyway, it's better to manually clear
@@ -2875,18 +3050,48 @@ int stmmac_resume(struct net_device *ndev)
 		/* enable the clk prevously disabled */
 		clk_prepare_enable(priv->stmmac_clk);
 
-	netif_device_attach(ndev);
+//	netif_device_attach(ndev);
 
-	/* Enable the MAC and DMA */
+{
+	int i;
+	unsigned int txsize = priv->dma_tx_size;
+	unsigned int rxsize = priv->dma_rx_size;
+
+	init_dma_desc_rings(ndev);
+
+	/* DMA initialization and SW reset */
+	rtn = stmmac_init_dma_engine(priv);
+        if (rtn < 0) {
+                pr_err("%s: DMA initialization failed\n", __func__);
+        }
+	priv->hw->mac->set_umac_addr(priv->ioaddr, ndev->dev_addr, 0);
+	if (priv->plat->bus_setup)
+		priv->plat->bus_setup(priv->ioaddr);
+	priv->hw->mac->core_init(priv->ioaddr);
 	stmmac_set_mac(priv->ioaddr, true);
+	stmmac_dma_operation_mode(priv);
+}
+	/* Enable the MAC and DMA */
+	stmmac_mmc_setup(priv);
 	priv->hw->dma->start_tx(priv->ioaddr);
 	priv->hw->dma->start_rx(priv->ioaddr);
 
-	napi_enable(&priv->napi);
+	priv->tx_lpi_timer = STMMAC_DEFAULT_TWT_LS;
+	priv->eee_enabled = stmmac_eee_init(priv);
+	stmmac_init_tx_coalesce(priv);
 
+	if ((priv->use_riwt) && (priv->hw->dma->rx_watchdog)) {
+		priv->rx_riwt = MAX_DMA_RIWT;
+		priv->hw->dma->rx_watchdog(priv->ioaddr, MAX_DMA_RIWT);
+	}
+	if (priv->pcs && priv->hw->mac->ctrl_ane)
+		priv->hw->mac->ctrl_ane(priv->ioaddr, 0);
+
+	napi_enable(&priv->napi);
 	netif_start_queue(ndev);
 
 	spin_unlock_irqrestore(&priv->lock, flags);
+	rtn = stmmac_init_ptp(priv);
 
 	if (priv->phydev)
 		phy_start(priv->phydev);

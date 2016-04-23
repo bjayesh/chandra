@@ -933,6 +933,146 @@ static void dwc3_complete(struct device *dev)
 	spin_unlock_irqrestore(&dwc->lock, flags);
 }
 
+#ifdef  CONFIG_ARCH_LM2
+#define LM2_REGBAK_SIZE 500
+static unsigned int	reg_bak[LM2_REGBAK_SIZE];
+static unsigned int	reg_bak_chksum;
+extern unsigned int	chksum_info;
+
+void usb_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+
+	for(i=adr; i<(adr+size); i++ ) {
+		reg_bak[i] = readl(base + offset);
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+void usb_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+
+	for(i=adr; i<(adr+size); i++ ) {
+		writel( reg_bak[i], base + offset);
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+
+void dw3_reg_save(void) {
+	int i=0;
+	void __iomem *base;
+
+	/********/
+	/* USB3 */
+	/********/
+	/* 0x0450c000 - 0x0450ca00 */
+	base = ioremap(0x0450c000, 0xa00);
+	usb_reg_save(base, &i, 0x100, 36);
+	usb_reg_save(base, &i, 0x200,  1);
+	usb_reg_save(base, &i, 0x2c0,  1);
+	usb_reg_save(base, &i, 0x300, 12);
+	usb_reg_save(base, &i, 0x380,  3);
+	usb_reg_save(base, &i, 0x400,  4);
+	usb_reg_save(base, &i, 0x610,  5);
+	usb_reg_save(base, &i, 0x630,  1);
+	usb_reg_save(base, &i, 0x700,  6);
+	usb_reg_save(base, &i, 0x720,  1);
+	usb_reg_save(base, &i, 0x800,128);
+	iounmap(base);
+
+	/************/
+	/* USB3 PHY */
+	/************/
+	/* 0x04400000 - 0x04400500 */
+	base = ioremap(0x04400000, 0x500);
+	usb_reg_save(base, &i, 0x000,  1);
+	usb_reg_save(base, &i, 0x02c, 13);
+	usb_reg_save(base, &i, 0x100, 18);
+	usb_reg_save(base, &i, 0x150,  6);
+	usb_reg_save(base, &i, 0x170,  5);
+	usb_reg_save(base, &i, 0x1b0,  4);
+	usb_reg_save(base, &i, 0x200,  7);
+	usb_reg_save(base, &i, 0x220,  2);
+	usb_reg_save(base, &i, 0x230,  3);
+	usb_reg_save(base, &i, 0x240,  3);
+	usb_reg_save(base, &i, 0x270, 14);
+	usb_reg_save(base, &i, 0x310,  8);
+	usb_reg_save(base, &i, 0x340,  7);
+	usb_reg_save(base, &i, 0x370,  1);
+	usb_reg_save(base, &i, 0x378,  7);
+	usb_reg_save(base, &i, 0x400,  1);
+	iounmap(base);
+
+	/* chksum gen */
+	reg_bak_chksum=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		reg_bak_chksum += reg_bak[i];
+
+}
+EXPORT_SYMBOL(dw3_reg_save);
+
+void dw3_reg_load(void) {
+	int i=0;
+	void __iomem *base;
+	unsigned int    tmp;
+
+	/* chksum chk */
+	tmp=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		tmp += reg_bak[i];
+	if ( tmp != reg_bak_chksum ){
+        	chksum_info |= 0x200;
+	}
+	i=0;
+
+	/********/
+	/* USB3 */
+	/********/
+	/* 0x0450c000 - 0x0450ca00 */
+	base = ioremap(0x0450c000, 0xa00);
+	usb_reg_load(base, &i, 0x100, 36);
+	usb_reg_load(base, &i, 0x200,  1);
+	usb_reg_load(base, &i, 0x2c0,  1);
+	usb_reg_load(base, &i, 0x300, 12);
+	usb_reg_load(base, &i, 0x380,  3);
+	usb_reg_load(base, &i, 0x400,  4);
+	usb_reg_load(base, &i, 0x610,  5);
+	usb_reg_load(base, &i, 0x630,  1);
+	usb_reg_load(base, &i, 0x700,  6);
+	usb_reg_load(base, &i, 0x720,  1);
+	usb_reg_load(base, &i, 0x800,128);
+	iounmap(base);
+
+	/************/
+	/* USB3 PHY */
+	/************/
+	/* 0x04400000 - 0x04400500 */
+	base = ioremap(0x04400000, 0x500);
+	usb_reg_load(base, &i, 0x000,  1);
+	usb_reg_load(base, &i, 0x02c, 13);
+	usb_reg_load(base, &i, 0x100, 18);
+	usb_reg_load(base, &i, 0x150,  6);
+	usb_reg_load(base, &i, 0x170,  5);
+	usb_reg_load(base, &i, 0x1b0,  4);
+	usb_reg_load(base, &i, 0x200,  7);
+	usb_reg_load(base, &i, 0x220,  2);
+	usb_reg_load(base, &i, 0x230,  3);
+	usb_reg_load(base, &i, 0x240,  3);
+	usb_reg_load(base, &i, 0x270, 14);
+	usb_reg_load(base, &i, 0x310,  8);
+	usb_reg_load(base, &i, 0x340,  7);
+	usb_reg_load(base, &i, 0x370,  1);
+	usb_reg_load(base, &i, 0x378,  7);
+	usb_reg_load(base, &i, 0x400,  1);
+	iounmap(base);
+}
+EXPORT_SYMBOL(dw3_reg_load);
+#endif /* CONFIG_ARCH_LM2 */
+
 static int dwc3_suspend(struct device *dev)
 {
 	struct dwc3	*dwc = dev_get_drvdata(dev);

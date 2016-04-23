@@ -198,6 +198,9 @@ void machine_shutdown(void)
 	disable_nonboot_cpus();
 }
 
+#ifdef  CONFIG_ARCH_LM2
+extern void a7_softirq(unsigned int); 
+#endif	/* CONFIG_ARCH_LM2 */
 /*
  * Halting simply requires that the secondary CPUs stop performing any
  * activity (executing tasks, handling interrupts). smp_send_stop()
@@ -206,6 +209,9 @@ void machine_shutdown(void)
 void machine_halt(void)
 {
 	smp_send_stop();
+#ifdef	CONFIG_ARCH_LM2
+	a7_softirq(6);  // shutdown IPI
+#endif	/* CONFIG_ARCH_LM2 */
 
 	local_irq_disable();
 	while (1);

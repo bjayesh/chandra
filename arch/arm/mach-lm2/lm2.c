@@ -47,6 +47,9 @@
 
 extern	void	lm2_clocksource_init(void __iomem *gpt);
 extern	void	lm2_clockevent_init(int irq, void __iomem *gpt);
+extern void    lm2_init_clock(void);
+extern void    lm2_cipui_tim_init(void);
+#define        NEW_PANBUG
 /*
  * LM2 early_debug
  */
@@ -110,6 +113,35 @@ static struct map_desc lm2_io_desc[] __initdata = {
 	},
 #endif
 };
+
+/*
+ * Use Irq
+ */
+const unsigned char lm2_use_irq[] = {
+34,    // RTC
+40,    // Timer
+#ifndef        NEW_PANBUG
+50,    // UART0
+#endif
+53,    // fcspi
+56,    // xspi
+59,    // quatro-gpdma
+61,    // UART1
+64,    // lm2-timalm.0, lm2-i2c
+85,    // ahci
+93,    // dwc3
+95,    // pci
+96,    // pci
+97,    // pci
+98,    // pci
+125,   // GMAC (WakeUp)
+126,   // GMAC
+129,   // USB
+130,   // USB
+131,   // mmc0
+133,   // mmc1
+};
+const unsigned int lm2_use_irq_size = sizeof(lm2_use_irq);
 
 /*
  * system timer initial
@@ -209,7 +241,7 @@ static	struct	plat_stmmacenet_data	lm2_eth_config = {
 	.mdio_bus_data	= &phy_private_data,
 	.has_gmac	= 1,
 	.clk_csr	= 0,
-	.enh_desc       = 1,	/* ohkuma add */
+	.enh_desc       = 1,	/* add */
 };
 
 static struct platform_device lm2_eth_device = {
@@ -412,10 +444,13 @@ static void __init lm2_init(void)
 {
 	void __iomem *virt_addr;
 
+	lm2_init_clock();
 	virt_addr = ioremap(LM2_UART_1_BASE,0x32);
 	lm2_serial_resource[0].membase = virt_addr;
+#ifndef NEW_PANBUG
 	virt_addr = ioremap(LM2_UART_0_BASE,0x32);
 	lm2_serial_resource[1].membase = virt_addr;
+#endif /* NEW_PANBUG */
 	platform_device_register(&lm2_serial_device);
 	platform_device_register(&lm2_eth_device);
 #ifdef	CONFIG_SATA_AHCI_PLATFORM
@@ -437,6 +472,7 @@ static void __init lm2_init(void)
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
 	platform_device_register(&lm2_pcie_device);
+	lm2_cipui_tim_init();
 }
 
 MACHINE_START(LM2, "FujiXerox Waikiki")
@@ -534,11 +570,14 @@ static void __init lm2_dt_init(void)
 {
         void __iomem *virt_addr;
 
+	lm2_init_clock();
 	/* Serial DTB ok */
 	virt_addr = ioremap(LM2_UART_1_BASE,0x32);
 	lm2_serial_resource[0].membase = virt_addr;
+#ifndef NEW_PANBUG
 	virt_addr = ioremap(LM2_UART_0_BASE,0x32);
 	lm2_serial_resource[1].membase = virt_addr;
+#endif /* NEW_PANBUG */
 	platform_device_register(&lm2_serial_device);
 	platform_device_register(&lm2_eth_device);
 #ifdef	CONFIG_SATA_AHCI_PLATFORM
@@ -562,6 +601,7 @@ static void __init lm2_dt_init(void)
 
 //	l2x0_of_init(0x00400000, 0xfe0fffff);
 	of_platform_populate(NULL, lm2_dt_bus_match, NULL, NULL);
+	lm2_cipui_tim_init();
 }
 
 /*

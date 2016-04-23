@@ -1411,6 +1411,199 @@ static	const struct platform_device_id pcie_id_table[]={
 
 MODULE_DEVICE_TABLE( platform, pcie_id_table);
 
+#ifdef	CONFIG_ARCH_LM2
+#define LM2_REGBAK_SIZE 280
+static unsigned int	reg_bak[LM2_REGBAK_SIZE];
+static unsigned int	reg_bak_chksum;
+extern unsigned int	chksum_info;
+void pcie_reg_save(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+
+	for(i=adr; i<(adr+size); i++ ) {
+		reg_bak[i] = readl(base + offset);
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+
+void pcie_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
+{
+	int i;
+	int adr = *bak_adr;
+
+	for(i=adr; i<(adr+size); i++ ) {
+		writel( reg_bak[i], base + offset);
+		wmb();
+		offset +=4;
+	}
+	*bak_adr = i;
+}
+
+void lm2_pcie_suspend(void)
+{
+	int i=0;
+	void __iomem *base;
+	/* reset gen (  1)*/
+	base = ioremap_nocache(0x04010000, 0x120);
+	pcie_reg_save(base, &i, 0x104,  1);
+	iounmap(base);
+
+	/* warp ( 31)*/
+	base = ioremap_nocache(0x04a70000, 0x140);
+	pcie_reg_save(base, &i, 0x00c,  8);
+	pcie_reg_save(base, &i, 0x03c,  2);
+	pcie_reg_save(base, &i, 0x05c,  8);
+	pcie_reg_save(base, &i, 0x100, 13);
+	iounmap(base);
+
+	/* port 1 (219)*/
+	base = ioremap_nocache(0x04a40000, 0x1000);
+	pcie_reg_save(base, &i, 0x000, 15);
+	pcie_reg_save(base, &i, 0x044, 11);
+	pcie_reg_save(base, &i, 0x07c,  1);
+	pcie_reg_save(base, &i, 0x088,  4);
+	pcie_reg_save(base, &i, 0x100, 21);
+	pcie_reg_save(base, &i, 0x400, 10);
+	pcie_reg_save(base, &i, 0x434,  4);
+	pcie_reg_save(base, &i, 0x450,  3);
+	pcie_reg_save(base, &i, 0x468,  6);
+	pcie_reg_save(base, &i, 0x488,  1);
+	pcie_reg_save(base, &i, 0x490,  1);
+	pcie_reg_save(base, &i, 0x4ac,  2);
+	pcie_reg_save(base, &i, 0x4b8,  2);
+	pcie_reg_save(base, &i, 0x4c8, 17);
+	pcie_reg_save(base, &i, 0x510,  3);
+	pcie_reg_save(base, &i, 0x53c,  1);
+	pcie_reg_save(base, &i, 0x544,  1);
+	pcie_reg_save(base, &i, 0x54c,  1);
+	pcie_reg_save(base, &i, 0x55c,  1);
+	pcie_reg_save(base, &i, 0x594,  2);
+	pcie_reg_save(base, &i, 0x5f0,  2);
+	pcie_reg_save(base, &i, 0x620,  5);
+	pcie_reg_save(base, &i, 0x640,  1);
+	pcie_reg_save(base, &i, 0x6fc,  1);
+	pcie_reg_save(base, &i, 0x800,  4);
+	pcie_reg_save(base, &i, 0x814,  1);
+	pcie_reg_save(base, &i, 0x81c,  1);
+	pcie_reg_save(base, &i, 0x820,  1);
+	pcie_reg_save(base, &i, 0x844,  2);
+	pcie_reg_save(base, &i, 0x8e4,  3);
+	pcie_reg_save(base, &i, 0x984,  1);
+	pcie_reg_save(base, &i, 0x990,  1);
+	pcie_reg_save(base, &i, 0x9a0,  4);
+	pcie_reg_save(base, &i, 0xa40,  4);
+	pcie_reg_save(base, &i, 0xae0,  8);
+	pcie_reg_save(base, &i, 0xb24,  2);
+	pcie_reg_save(base, &i, 0xb64,  2);
+	pcie_reg_save(base, &i, 0xba4,  3);
+	pcie_reg_save(base, &i, 0xbc4,  1);
+	pcie_reg_save(base, &i, 0xbcc,  1);
+	pcie_reg_save(base, &i, 0xbd8,  6);
+	pcie_reg_save(base, &i, 0xbf4,  4);
+	pcie_reg_save(base, &i, 0xc64,  6);
+	pcie_reg_save(base, &i, 0xc84,  3);
+	pcie_reg_save(base, &i, 0xca4, 19);
+	pcie_reg_save(base, &i, 0xea0, 16);
+	pcie_reg_save(base, &i, 0xf00,  4);
+	pcie_reg_save(base, &i, 0xf40,  3);
+	pcie_reg_save(base, &i, 0xf80,  3);
+	iounmap(base);
+
+	/* chksum gen */
+	reg_bak_chksum=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		reg_bak_chksum += reg_bak[i];
+
+}
+EXPORT_SYMBOL(lm2_pcie_suspend);
+
+void lm2_pcie_resume(struct device *dev)
+{
+	int i=0;
+	void __iomem *base;
+	unsigned int    tmp;
+	/* chksum chk */
+	tmp=0;
+	for(i=0; i<LM2_REGBAK_SIZE; i++)
+		tmp += reg_bak[i];
+	if ( tmp != reg_bak_chksum ){
+		chksum_info |= 0x80;
+	}
+
+	i=0;
+	/* reset gen (  1)*/
+	base = ioremap_nocache(0x04010000, 0x120);
+	pcie_reg_load(base, &i, 0x104,  1);
+	iounmap(base);
+
+	/* warp ( 31)*/
+	base = ioremap_nocache(0x04a70000, 0x140);
+	pcie_reg_load(base, &i, 0x00c,  8);
+	pcie_reg_load(base, &i, 0x03c,  2);
+	pcie_reg_load(base, &i, 0x05c,  8);
+	pcie_reg_load(base, &i, 0x100, 13);
+	iounmap(base);
+
+	/* port 1 (219)*/
+	base = ioremap_nocache(0x04a40000, 0x1000);
+	pcie_reg_load(base, &i, 0x000, 15);
+	pcie_reg_load(base, &i, 0x044, 11);
+	pcie_reg_load(base, &i, 0x07c,  1);
+	pcie_reg_load(base, &i, 0x088,  4);
+	pcie_reg_load(base, &i, 0x100, 21);
+	pcie_reg_load(base, &i, 0x400, 10);
+	pcie_reg_load(base, &i, 0x434,  4);
+	pcie_reg_load(base, &i, 0x450,  3);
+	pcie_reg_load(base, &i, 0x468,  6);
+	pcie_reg_load(base, &i, 0x488,  1);
+	pcie_reg_load(base, &i, 0x490,  1);
+	pcie_reg_load(base, &i, 0x4ac,  2);
+	pcie_reg_load(base, &i, 0x4b8,  2);
+	pcie_reg_load(base, &i, 0x4c8, 17);
+	pcie_reg_load(base, &i, 0x510,  3);
+	pcie_reg_load(base, &i, 0x53c,  1);
+	pcie_reg_load(base, &i, 0x544,  1);
+	pcie_reg_load(base, &i, 0x54c,  1);
+	pcie_reg_load(base, &i, 0x55c,  1);
+	pcie_reg_load(base, &i, 0x594,  2);
+	pcie_reg_load(base, &i, 0x5f0,  2);
+	pcie_reg_load(base, &i, 0x620,  5);
+	pcie_reg_load(base, &i, 0x640,  1);
+	pcie_reg_load(base, &i, 0x6fc,  1);
+	pcie_reg_load(base, &i, 0x800,  4);
+	pcie_reg_load(base, &i, 0x814,  1);
+	pcie_reg_load(base, &i, 0x81c,  1);
+	pcie_reg_load(base, &i, 0x820,  1);
+	pcie_reg_load(base, &i, 0x844,  2);
+	pcie_reg_load(base, &i, 0x8e4,  3);
+	pcie_reg_load(base, &i, 0x984,  1);
+	pcie_reg_load(base, &i, 0x990,  1);
+	pcie_reg_load(base, &i, 0x9a0,  4);
+	pcie_reg_load(base, &i, 0xa40,  4);
+	pcie_reg_load(base, &i, 0xae0,  8);
+	pcie_reg_load(base, &i, 0xb24,  2);
+	pcie_reg_load(base, &i, 0xb64,  2);
+	pcie_reg_load(base, &i, 0xba4,  3);
+	pcie_reg_load(base, &i, 0xbc4,  1);
+	pcie_reg_load(base, &i, 0xbcc,  1);
+	pcie_reg_load(base, &i, 0xbd8,  6);
+	pcie_reg_load(base, &i, 0xbf4,  4);
+	pcie_reg_load(base, &i, 0xc64,  6);
+	pcie_reg_load(base, &i, 0xc84,  3);
+	pcie_reg_load(base, &i, 0xca4, 19);
+	pcie_reg_load(base, &i, 0xea0, 16);
+	pcie_reg_load(base, &i, 0xf00,  4);
+	pcie_reg_load(base, &i, 0xf40,  3);
+	pcie_reg_load(base, &i, 0xf80,  3);
+	iounmap(base);
+
+}
+EXPORT_SYMBOL(lm2_pcie_resume);
+
+#endif	/* CONFIG_ARCH_LM2 */
+
 static struct platform_driver synopsys_pcie_driver = {
 	.remove		= __exit_p(synopsys_pcie_remove),
 	.probe		= synopsys_pcie_probe,

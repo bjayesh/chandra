@@ -212,7 +212,7 @@ static DECLARE_COMPLETION(cpu_died);
  */
 void __cpuinit __cpu_die(unsigned int cpu)
 {
-	if (!wait_for_completion_timeout(&cpu_died, msecs_to_jiffies(5000))) {
+	if (!wait_for_completion_timeout(&cpu_died, msecs_to_jiffies(10000))) {
 		pr_err("CPU%u: cpu didn't die\n", cpu);
 		return;
 	}
