@@ -1750,7 +1750,7 @@ s32 e1000e_phy_has_link_generic(struct e1000_hw *hw, u32 iterations,
 {
 	s32 ret_val = 0;
 	u16 i, phy_status;
-
+printk(KERN_ERR " $$$ <<< %s Entry iterations %d usec = %d\n",__FUNCTION__,iterations,usec_interval);
 	for (i = 0; i < iterations; i++) {
 		/* Some PHYs require the MII_BMSR register to be read
 		 * twice due to the link bit being sticky.  No harm doing
@@ -1779,6 +1779,7 @@ s32 e1000e_phy_has_link_generic(struct e1000_hw *hw, u32 iterations,
 	}
 
 	*success = (i < iterations);
+printk(KERN_ERR " $$$ >>>  %s Exit phy status = %x\n",__FUNCTION__,phy_status);
 
 	return ret_val;
 }
@@ -1907,47 +1908,55 @@ s32 e1000e_get_phy_info_m88(struct e1000_hw *hw)
 	s32  ret_val;
 	u16 phy_data;
 	bool link;
-
+printk(KERN_ERR " $$$ <<< %s Entry \n",__FUNCTION__);
 	if (phy->media_type != e1000_media_type_copper) {
+printk(KERN_ERR " $$$ >>> %s media type Exit \n",__FUNCTION__);
 		e_dbg("Phy info is only valid for copper media\n");
 		return -E1000_ERR_CONFIG;
 	}
 
 	ret_val = e1000e_phy_has_link_generic(hw, 1, 0, &link);
-	if (ret_val)
+	if (ret_val){
+printk(KERN_ERR " $$$ >>> %s link generic Exit \n",__FUNCTION__);
 		return ret_val;
-
+}
 	if (!link) {
+printk(KERN_ERR " $$$ >>> %s No link up Exit \n",__FUNCTION__);
 		e_dbg("Phy info is only valid if link is up\n");
 		return -E1000_ERR_CONFIG;
 	}
 
 	ret_val = e1e_rphy(hw, M88E1000_PHY_SPEC_CTRL, &phy_data);
-	if (ret_val)
+	if (ret_val){
+printk(KERN_ERR " $$$ >>> %s M88E1000 PHY CTRL Exit \n",__FUNCTION__);
 		return ret_val;
-
+}
 	phy->polarity_correction = !!(phy_data &
 				      M88E1000_PSCR_POLARITY_REVERSAL);
 
 	ret_val = e1000_check_polarity_m88(hw);
-	if (ret_val)
+	if (ret_val){
+printk(KERN_ERR " $$$ >>> %s check_poly Exit \n",__FUNCTION__);
 		return ret_val;
-
+}
 	ret_val = e1e_rphy(hw, M88E1000_PHY_SPEC_STATUS, &phy_data);
-	if (ret_val)
+	if (ret_val){
+printk(KERN_ERR " $$$ >>> %s M88E1000_PHY STATUS Exit \n",__FUNCTION__);
 		return ret_val;
-
+}
 	phy->is_mdix = !!(phy_data & M88E1000_PSSR_MDIX);
 
 	if ((phy_data & M88E1000_PSSR_SPEED) == M88E1000_PSSR_1000MBS) {
 		ret_val = hw->phy.ops.get_cable_length(hw);
-		if (ret_val)
+		if (ret_val){
+printk(KERN_ERR " $$$ >>> %s get_cable_length Exit \n",__FUNCTION__);
 			return ret_val;
-
+}
 		ret_val = e1e_rphy(hw, MII_STAT1000, &phy_data);
-		if (ret_val)
+		if (ret_val){
+printk(KERN_ERR " $$$ >>> %s ele_rphy Exit \n",__FUNCTION__);
 			return ret_val;
-
+}
 		phy->local_rx = (phy_data & LPA_1000LOCALRXOK)
 		    ? e1000_1000t_rx_status_ok : e1000_1000t_rx_status_not_ok;
 
@@ -1959,6 +1968,7 @@ s32 e1000e_get_phy_info_m88(struct e1000_hw *hw)
 		phy->local_rx = e1000_1000t_rx_status_undefined;
 		phy->remote_rx = e1000_1000t_rx_status_undefined;
 	}
+printk(KERN_ERR " $$$ >>> %s Exit \n",__FUNCTION__);
 
 	return ret_val;
 }

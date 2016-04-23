@@ -1121,18 +1121,24 @@ static int do_pci_enable_device(struct pci_dev *dev, int bars)
 	int err;
 	u16 cmd;
 	u8 pin;
-
+printk(KERN_ERR "<<<< %s Entry\n",__FUNCTION__);
 	err = pci_set_power_state(dev, PCI_D0);
-	if (err < 0 && err != -EIO)
+	if (err < 0 && err != -EIO){
+printk(KERN_ERR ">>>> %s EIO error Exit\n",__FUNCTION__);
 		return err;
+	}
 	err = pcibios_enable_device(dev, bars);
-	if (err < 0)
+	if (err < 0){
+printk(KERN_ERR ">>>> %s pcibios error Exit\n",__FUNCTION__);
 		return err;
+	}
 	pci_fixup_device(pci_fixup_enable, dev);
 
-	if (dev->msi_enabled || dev->msix_enabled)
-		return 0;
+	if (dev->msi_enabled || dev->msix_enabled){
+printk(KERN_ERR ">>>> %s MSI Enable Exit\n",__FUNCTION__);
 
+		return 0;
+	}
 	pci_read_config_byte(dev, PCI_INTERRUPT_PIN, &pin);
 	if (pin) {
 		pci_read_config_word(dev, PCI_COMMAND, &cmd);
@@ -1140,6 +1146,7 @@ static int do_pci_enable_device(struct pci_dev *dev, int bars)
 			pci_write_config_word(dev, PCI_COMMAND,
 					      cmd & ~PCI_COMMAND_INTX_DISABLE);
 	}
+printk(KERN_ERR ">>>> %s Exit\n",__FUNCTION__);
 
 	return 0;
 }

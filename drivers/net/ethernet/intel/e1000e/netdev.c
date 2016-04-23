@@ -6499,6 +6499,7 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	u16 eeprom_data = 0;
 	u16 eeprom_apme_mask = E1000_EEPROM_APME;
 
+printk(KERN_ERR "###>>> %s Entry\n",__FUNCTION__);
 	if (ei->flags2 & FLAG2_DISABLE_ASPM_L0S)
 		aspm_disable_flag = PCIE_LINK_STATE_L0S;
 	if (ei->flags2 & FLAG2_DISABLE_ASPM_L1)
@@ -6569,9 +6570,9 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	mmio_start = pci_resource_start(pdev, 0);
 	mmio_len = pci_resource_len(pdev, 0);
-
 	err = -EIO;
 	adapter->hw.hw_addr = ioremap(mmio_start, mmio_len);
+printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x vart : 0x%xn",mmio_start,mmio_len,i*adapter->hw.hw_addr);
 	if (!adapter->hw.hw_addr)
 		goto err_ioremap;
 
@@ -6794,7 +6795,7 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	if (pci_dev_run_wake(pdev))
 		pm_runtime_put_noidle(&pdev->dev);
-
+printk(KERN_ERR "###<<< %s Exit\n",__FUNCTION__);
 	return 0;
 
 err_register:

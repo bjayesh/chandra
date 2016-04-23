@@ -338,7 +338,7 @@ int pci_enable_resources(struct pci_dev *dev, int mask)
 
 	pci_read_config_word(dev, PCI_COMMAND, &cmd);
 	old_cmd = cmd;
-
+printk(KERN_ERR "<<<< %s Entry\n",__FUNCTION__);
 	for (i = 0; i < PCI_NUM_RESOURCES; i++) {
 		if (!(mask & (1 << i)))
 			continue;
@@ -354,6 +354,7 @@ int pci_enable_resources(struct pci_dev *dev, int mask)
 		if (!r->parent) {
 			dev_err(&dev->dev, "device not available "
 				"(can't reserve %pR)\n", r);
+printk(KERN_ERR ">>>> %s Error Exit\n",__FUNCTION__);
 			return -EINVAL;
 		}
 
@@ -368,5 +369,6 @@ int pci_enable_resources(struct pci_dev *dev, int mask)
 			 old_cmd, cmd);
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 	}
+printk(KERN_ERR ">>>> %s Exit\n",__FUNCTION__);
 	return 0;
 }

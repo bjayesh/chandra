@@ -140,6 +140,7 @@ static	struct	plat_serial8250_port	lm2_serial_resource[]={
 		.iotype		= UPIO_MEM,
 		.flags		= UPF_SKIP_TEST,
 	},
+#if 0
 	{
 //		.membase	= LM2_UART_0_BASE,
 		.mapbase	= LM2_UART_0_BASE,
@@ -149,6 +150,7 @@ static	struct	plat_serial8250_port	lm2_serial_resource[]={
 		.iotype		= UPIO_MEM,
 		.flags		= UPF_SKIP_TEST,
 	},
+#endif	/* yamano serial remove for AMP vxWorks used */
 	{},
 };
 static struct platform_device lm2_serial_device = {
@@ -334,8 +336,8 @@ static struct resource lm2_pcie_resource[]={
 //               .start  = LM2_IRQ_PCIE_BUS,
 //               .end    = LM2_IRQ_PCIE_BUS,
                .flags  = IORESOURCE_IRQ,
-               .start  = LM2_IRQ_PCIE1,
-               .end    = LM2_IRQ_PCIE1,
+               .start  = LM2_IRQ_PCIE1-1,
+               .end    = LM2_IRQ_PCIE1-1,
        },
 };
 

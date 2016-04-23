@@ -660,17 +660,18 @@ static void pci_bridge_check_ranges(struct pci_bus *bus)
 	u32 pmem;
 	struct pci_dev *bridge = bus->self;
 	struct resource *b_res;
-
+printk(KERN_ERR "<<<< %s Entry \n",__FUNCTION__);
 	b_res = &bridge->resource[PCI_BRIDGE_RESOURCES];
 	b_res[1].flags |= IORESOURCE_MEM;
-
+#if 0	/* yamanodesbug */
 	pci_read_config_word(bridge, PCI_IO_BASE, &io);
 	if (!io) {
 		pci_write_config_word(bridge, PCI_IO_BASE, 0xf0f0);
 		pci_read_config_word(bridge, PCI_IO_BASE, &io);
  		pci_write_config_word(bridge, PCI_IO_BASE, 0x0);
- 	}
- 	if (io)
+ 	} 	/* yamano debug li,jie advice I/O fail */
+// 	if (io)
+#endif
 		b_res[0].flags |= IORESOURCE_IO;
 	/*  DECchip 21050 pass 2 errata: the bridge may miss an address
 	    disconnect boundary by one PCI data phase.
@@ -706,6 +707,7 @@ static void pci_bridge_check_ranges(struct pci_bus *bus)
 		pci_write_config_dword(bridge, PCI_PREF_BASE_UPPER32,
 				       mem_base_hi);
 	}
+printk(KERN_ERR ">>>> %s Exit \n",__FUNCTION__);
 }
 
 /* Helper function for sizing routines: find first available

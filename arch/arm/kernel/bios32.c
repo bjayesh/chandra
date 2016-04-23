@@ -638,7 +638,7 @@ int pcibios_enable_device(struct pci_dev *dev, int mask)
 	u16 cmd, old_cmd;
 	int idx;
 	struct resource *r;
-
+printk(KERN_ERR "<<<<< %s Entry\n",__FUNCTION__);
 	pci_read_config_word(dev, PCI_COMMAND, &cmd);
 	old_cmd = cmd;
 	for (idx = 0; idx < 6; idx++) {
@@ -663,12 +663,13 @@ int pcibios_enable_device(struct pci_dev *dev, int mask)
 	 */
 	if ((dev->class >> 16) == PCI_BASE_CLASS_BRIDGE)
 		cmd |= PCI_COMMAND_IO | PCI_COMMAND_MEMORY;
-
+	cmd |= PCI_COMMAND_IO;	/* yamano for intel cardfor intel card */
 	if (cmd != old_cmd) {
 		printk("PCI: enabling device %s (%04x -> %04x)\n",
 		       pci_name(dev), old_cmd, cmd);
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 	}
+printk(KERN_ERR ">>>>> %s Exit\n",__FUNCTION__);
 	return 0;
 }
 
