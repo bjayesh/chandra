@@ -1042,6 +1042,12 @@ config RTC_DRV_GENERIC
 	  RTC abstraction. If you do not know what you are doing, you should
 	  just say Y.
 
+config RTC_DRV_QUATRO53XX
+	tristate "Quatro53xx"
+	depends on ARM
+	help
+         If you say Y here you will get access to the real time clock.
+
 config RTC_DRV_PXA
        tristate "PXA27x/PXA3xx"
        depends on ARCH_PXA
