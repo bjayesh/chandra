@@ -350,6 +350,7 @@ void lm2_timer_do_work(struct work_struct *work)
 	//printk("lm2_timer_do_work done\n");
 }
 
+/* Issue No.10 added Voltage check function */
 static	int	lm2_voltage_status(struct device *dev, unsigned long value, int flag)
 {
 	struct lm2_rtc	*rtc = dev_get_drvdata(dev);
@@ -358,6 +359,8 @@ static	int	lm2_voltage_status(struct device *dev, unsigned long value, int flag)
 	unsigned int	reg;
 
 	mutex_lock(&rtc->lock);
+
+	rtc_connect(rtc->rtc_base);	/* Issue No.10 */
 	if(flag){
 		result = readb(rtc->rtc_base + RTCCTL_CTL);
 		result |= RTC_IN; 
@@ -370,6 +373,7 @@ static	int	lm2_voltage_status(struct device *dev, unsigned long value, int flag)
 			reg = 0;
 		put_user(reg, (int *)value);
 	}
+	rtc_disconnect(rtc->rtc_base);	/* Issue No.10 */
 	mutex_unlock(&rtc->lock);
 	return	0;
 }
