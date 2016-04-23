@@ -70,7 +70,9 @@ static int erase_write (struct mtd_info *mtd, unsigned long pos,
 	wait_queue_head_t wait_q;
 	size_t retlen;
 	int ret;
-
+	int	i;	/* yamano */
+	char	*yamabuf;
+//printk( KERN_ERR "%s entry\n", __func__);
 	/*
 	 * First, let's erase the flash block.
 	 */
@@ -101,8 +103,13 @@ static int erase_write (struct mtd_info *mtd, unsigned long pos,
 	/*
 	 * Next, write the data to flash.
 	 */
-
-	ret = mtd_write(mtd, pos, len, &retlen, buf);
+//for(i=0 ;i<len;i++){printk("%c",buf[i]);}
+	yamabuf=kzalloc(len,GFP_KERNEL);
+	if(yamabuf == NULL){printk("yamabuf error\n");return -EIO;}
+	for(i=0;i<len;i++){yamabuf[i] = buf[i];}
+//	ret = mtd_write(mtd, pos, len, &retlen, buf);
+	ret = mtd_write(mtd, pos, len, &retlen, yamabuf);
+	kfree(yamabuf);
 	if (ret)
 		return ret;
 	if (retlen != len)
@@ -123,6 +130,9 @@ static int write_cached_data (struct mtdblk_dev *mtdblk)
 			"at 0x%lx, size 0x%x\n", mtd->name,
 			mtdblk->cache_offset, mtdblk->cache_size);
 
+//	printk(KERN_ERR "mtdblock: writing cached data for \"%s\" "
+//			"at 0x%lx, size 0x%x\n", mtd->name,
+//			mtdblk->cache_offset, mtdblk->cache_size);
 	ret = erase_write (mtd, mtdblk->cache_offset,
 			   mtdblk->cache_size, mtdblk->cache_data);
 	if (ret)
@@ -151,6 +161,9 @@ static int do_cached_write (struct mtdblk_dev *mtdblk, unsigned long pos,
 	pr_debug("mtdblock: write on \"%s\" at 0x%lx, size 0x%x\n",
 		mtd->name, pos, len);
 
+//	printk(KERN_ERR "mtdblock: write on \"%s\" at 0x%lx, size 0x%x sec 0x%x\n",
+//		mtd->name, pos, len, sect_size);
+//for(retlen = 0;retlen < len;retlen++){printk("%c",buf[retlen]);}
 	if (!sect_size)
 		return mtd_write(mtd, pos, len, &retlen, buf);
 
@@ -267,6 +280,7 @@ static int mtdblock_writesect(struct mtd_blktrans_dev *dev,
 			      unsigned long block, char *buf)
 {
 	struct mtdblk_dev *mtdblk = container_of(dev, struct mtdblk_dev, mbd);
+//printk(KERN_ERR "%s mtdblock_writesect\n",__func__);
 	if (unlikely(!mtdblk->cache_data && mtdblk->cache_size)) {
 		mtdblk->cache_data = vmalloc(mtdblk->mbd.mtd->erasesize);
 		if (!mtdblk->cache_data)
@@ -284,6 +298,7 @@ static int mtdblock_open(struct mtd_blktrans_dev *mbd)
 	struct mtdblk_dev *mtdblk = container_of(mbd, struct mtdblk_dev, mbd);
 
 	pr_debug("mtdblock_open\n");
+//printk(KERN_ERR "%s mtdblock_open\n",__func__);
 
 	mutex_lock(&mtdblks_lock);
 	if (mtdblk->count) {

@@ -30,6 +30,7 @@
 #define DRIVER_NAME "fcspi"
 /*#define DEBUG_FCSPI*/
 /*#define DEBUG_FCSPI_WRITE*/
+/*#define DEBUG_FCSPI_ERASE*/
 
 #define UBUFFSIZE PAGE_SIZE
 
@@ -219,7 +220,7 @@ static int erase_region(struct fcspi *ctl, u32 offset, int type)
 {
 	struct fcspi_ctl_regs *regs = ctl->regs;
 
-#ifdef DEBUG_FCSPI_WRITE
+#ifdef DEBUG_FCSPI_ERASE
 	printk("%s: offset %08x type %d\n", __func__, offset, type);
 #endif
 
@@ -241,7 +242,7 @@ static int fcspi_erase_work(struct fcspi_message *msg)
 	addr = msg->flash_offset;
 	len = msg->len;
 
-#ifdef DEBUG_FCSPI_WRITE
+#ifdef DEBUG_FCSPI_ERASE
 	printk("%s: addr %08x len %08x\n", 
 	       __func__, addr, len);
 #endif
@@ -277,6 +278,7 @@ static int fcspi_write_work(struct fcspi_message *msg)
 	struct device *dev = &ctl->pdev->dev;
 	dma_addr_t tx_dma;
 	unsigned long	tx_dma_36;
+	int	i;	/* yamano */
 
 #ifdef DEBUG_FCSPI_WRITE
 	printk("%s: to %llx len %d buf %p\n", __func__, 
@@ -290,7 +292,10 @@ static int fcspi_write_work(struct fcspi_message *msg)
 
 		adj2 = (4 - (aligned_len & 3)) & 3;
 		aligned_len += adj2;
-        
+
+#ifdef DEBUG_FCSPI_WRITE
+printk(" Address alignment adjust\n");
+#endif
 		while (msg->len) {
 			int copylen;
 			int this_len;
@@ -344,10 +349,14 @@ static int fcspi_write_work(struct fcspi_message *msg)
 		return -EIO;
 
 #ifdef DEBUG_FCSPI_WRITE
-	printk("    tx_dma %08x\n", __func__, tx_dma);
+	printk(" %s   tx_dma %llx\n", __func__, tx_dma);
 #endif
-	tx_dma_36 = tx_dma >> 4;	/* 36bit addressing */
+	tx_dma_36 = (unsigned long)((unsigned long long)(tx_dma) >> 4);	/* 36bit addressing */
 //		dev_err(dev, "dma_map_single Tx %lx\n",tx_dma_36);
+#ifdef DEBUG_FCSPI_WRITE
+	printk(" %s   tx_dma_36 %lx\n", __func__, tx_dma_36);
+#endif
+//for(i=0;i<msg->len;i++){printk("%c",msg->buf[i]);}	/* yamano */
 	writel(tx_dma_36, &regs->fcspi_dma_saddr);
 	writel(msg->flash_offset, &regs->fcspi_dma_faddr);
 	writel(msg->len, &regs->fcspi_dma_len);
@@ -430,7 +439,7 @@ static int fcspi_read_work(struct fcspi_message *msg)
 	if (wait_for_ready(ctl))
 		return -EIO;
 
-	rx_dma_36 = rx_dma >> 4;
+	rx_dma_36 = (unsigned long )(rx_dma >> 4);
 //		dev_err(dev, "dma_map_single shift rx %lx\n",rx_dma_36);
 	writel(msg->flash_offset, &regs->fcspi_dma_faddr);
 	writel(rx_dma_36, &regs->fcspi_dma_saddr);
@@ -534,7 +543,7 @@ static int fcspi_erase(struct mtd_info *mtd, struct erase_info *instr)
 	int    result;
 	uint32_t rem;
 
-#ifdef DEBUG_FCSPI
+#ifdef DEBUG_FCSPI_ERASE
 	printk("%s: %llx len %lld \n", 
 	       __func__, (long long)instr->addr, (long long)instr->len);
 #endif
@@ -758,8 +767,8 @@ static int __init fcspi_probe(struct platform_device *pdev)
 	mtd->dev.parent = &pdev->dev;
 	mtd->size = info->size;
 	mtd->erasesize = info->erase_size;
-	if (mtd->erasesize < 16 * 1024)
-		mtd->erasesize = 16 * 1024;
+//	if (mtd->erasesize < 16 * 1024)
+//		mtd->erasesize = 16 * 1024;
 
 	spin_lock_init(&ctl->lock);
 
