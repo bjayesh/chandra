@@ -368,6 +368,9 @@ static void __init lm2_init(void)
 #ifdef	CONFIG_SPI_XSPI
 	lm2_xspi_register();
 #endif	/* CONFIG_SPI_XSPI */
+#ifdef	CONFIG_LM2_GPDMA
+	lm2_dma_register();
+#endif
 
 }
 

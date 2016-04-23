@@ -597,7 +597,6 @@ static ssize_t uio_write(struct file *filep, const char __user *buf,
 static int uio_find_mem_index(struct vm_area_struct *vma)
 {
 	struct uio_device *idev = vma->vm_private_data;
-
 	if (vma->vm_pgoff < MAX_UIO_MAPS) {
 		if (idev->info->mem[vma->vm_pgoff].size == 0)
 			return -1;
@@ -672,6 +671,10 @@ static int uio_mmap_physical(struct vm_area_struct *vma)
 		return -EINVAL;
 	mem = idev->info->mem + mi;
 
+#if 1	/* ohkuma (kernel 3.18.1 patch) */
+	if (mem->addr & ~PAGE_MASK)
+		return -ENODEV;
+#endif
 	if (vma->vm_end - vma->vm_start > mem->size)
 		return -EINVAL;
 
@@ -711,7 +714,11 @@ static int uio_mmap(struct file *filep, struct vm_area_struct *vma)
 	if (mi < 0)
 		return -EINVAL;
 
+#if 1	/* ohkuma (kernel 3.18.1 patch) */
+	requested_pages = vma_pages(vma);
+#else
 	requested_pages = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
+#endif
 	actual_pages = ((idev->info->mem[mi].addr & ~PAGE_MASK)
 			+ idev->info->mem[mi].size + PAGE_SIZE -1) >> PAGE_SHIFT;
 	if (requested_pages > actual_pages)

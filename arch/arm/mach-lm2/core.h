@@ -32,4 +32,7 @@ extern	int	lm2_sdhci_init(void);
 #ifdef	CONFIG_SPI_XSPI
 extern	int	lm2_xspi_register(void);
 #endif	/* CONFIG_SPI_XSPI */
+#ifdef	CONFIG_LM2_GPDMA
+extern	int	lm2_dma_register(void);
+#endif
 #endif

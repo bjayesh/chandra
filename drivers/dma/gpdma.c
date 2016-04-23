@@ -97,6 +97,8 @@ struct gpdma_quatro {
 #define GPD_DST	(0x00000014)
 #define GPD_SZE	(0x00000018)
 #define GPD_CST	(0x0000001c)
+#define GPD_SRCE	(0x00000020)
+#define GPD_DSTE	(0x00000024)
 
 static inline int gpdmaRead32(struct gpdma_quatro* dma, u32 reg, volatile unsigned* val)
 {
@@ -467,6 +469,7 @@ static int __init quatro_gpdma_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "out of memory\n");
 		return -ENOMEM;
 	}
+#if 0	/* ohkuma Change */
 	cdev_init(&dma->cdev, &quatro_gpdma_ops);
 	dman = MKDEV(QGPDMA_MAJOR, ndmas);
 	ret = cdev_add(&dma->cdev, dman, 1);
@@ -474,6 +477,21 @@ static int __init quatro_gpdma_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "could not create char dev %d\n", ndmas);
 		goto out_err;
 	}
+#else
+	dman = MKDEV(QGPDMA_MAJOR, ndmas);
+	ret = register_chrdev_region(dman, 1, "gpdma");
+	if (ret) {
+		dev_dbg(&pdev->dev, "could not create char dev %d\n", ndmas);
+		goto out_err;
+	}
+	cdev_init(&dma->cdev, &quatro_gpdma_ops);
+	dma->cdev.owner = THIS_MODULE;
+	ret = cdev_add(&dma->cdev, dman, 1);
+	if (ret) {
+		dev_dbg(&pdev->dev, "could not create char dev %d\n", ndmas);
+		goto out_err;
+	}
+#endif
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!regs) {
 		dev_dbg(&pdev->dev, "no mmio reg resource defined\n");
@@ -490,15 +508,20 @@ static int __init quatro_gpdma_probe(struct platform_device *pdev)
 		goto out_ioerr;
 	}
 
+#ifndef	CONFIG_UIO_DMEM_GENIRQ
 	dma->irq = platform_get_irq(pdev, 0);
 	if (dma->irq < 0) {
 		dev_dbg(&pdev->dev, "could not get irq\n");
 		ret = -ENXIO;
 		goto out_ioerr;
 	}
+#else
+	dma->irq = 0;
+#endif
 	spin_lock_init(&dma->lock);
 	init_waitqueue_head(&dma->mbq);
 
+#ifndef	CONFIG_UIO_DMEM_GENIRQ
 	ret = request_irq(dma->irq, quatro_gpdma_interrupt,
 		IRQF_DISABLED, "gpdma", dma);
 	if (ret) {
@@ -506,6 +529,7 @@ static int __init quatro_gpdma_probe(struct platform_device *pdev)
 		dma->irq = -1;
 		goto out_ioerr;
 	}
+#endif
 	platform_set_drvdata(pdev, dma);
 	printk("QGPDMA %d - mapped at %p, irq %d\n", ndmas, dma->regs, dma->irq);
 	ndmas++;

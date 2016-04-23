@@ -27,6 +27,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/platform_device.h>
 
 #define DRIVER_NAME "uio_dmem_genirq"
 #define DMEM_MAP_ERROR (~0)
@@ -146,7 +147,7 @@ static int uio_dmem_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
 
 static int uio_dmem_genirq_probe(struct platform_device *pdev)
 {
-	struct uio_dmem_genirq_pdata *pdata = pdev->dev.platform_data;
+	struct uio_dmem_genirq_pdata *pdata = dev_get_platdata(&pdev->dev);
 	struct uio_info *uioinfo = &pdata->uioinfo;
 	struct uio_dmem_genirq_platdata *priv;
 	struct uio_mem *uiomem;
@@ -192,7 +193,11 @@ static int uio_dmem_genirq_probe(struct platform_device *pdev)
 		goto bad0;
 	}
 
+#if 0
 	dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
+#else
+	dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(64));
+#endif
 
 	priv->uioinfo = uioinfo;
 	spin_lock_init(&priv->lock);
@@ -204,7 +209,7 @@ static int uio_dmem_genirq_probe(struct platform_device *pdev)
 		ret = platform_get_irq(pdev, 0);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "failed to get IRQ\n");
-			goto bad0;
+			goto bad1;
 		}
 		uioinfo->irq = ret;
 	}
@@ -347,11 +352,14 @@ static struct platform_driver uio_dmem_genirq = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
 		.pm = &uio_dmem_genirq_dev_pm_ops,
+#ifdef CONFIG_OF	/* ohkuma */
 		.of_match_table = uio_of_genirq_match,
+#endif
 	},
 };
 
 module_platform_driver(uio_dmem_genirq);
+
 
 MODULE_AUTHOR("Damian Hobson-Garcia");
 MODULE_DESCRIPTION("Userspace I/O platform driver with dynamic memory.");
