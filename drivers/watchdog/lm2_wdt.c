@@ -303,7 +303,7 @@ static int lm2_wdt_probe(struct platform_device *pdev)
 	lm2_wdt->max_timeout	= WDT_MAX_TIMER;
 	wdev->running = 0;
 	lm2_wdt_free = 0;
-	lm2_ninesec = msecs_to_jiffies(10000 * 9);
+	lm2_ninesec = msecs_to_jiffies(1000 * 9);
 
 	watchdog_set_drvdata(lm2_wdt, wdev);
 
