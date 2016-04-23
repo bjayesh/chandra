@@ -269,8 +269,9 @@ out:
 static void dwc3_ep0_stall_and_restart(struct dwc3 *dwc)
 {
 	struct dwc3_ep		*dep;
-
-//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
+#if 0
+printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
+#endif
 	/* reinitialize physical ep1 */
 	dep = dwc->eps[1];
 	dep->flags = DWC3_EP_ENABLED;
@@ -285,7 +286,9 @@ static void dwc3_ep0_stall_and_restart(struct dwc3 *dwc)
 		struct dwc3_request	*req;
 
 		req = next_request(&dep->request_list);
-//printk(KERN_ERR "# EP0 # %s call giveback\n",__func__);
+#if 0
+printk(KERN_ERR "# EP0 # %s call giveback\n",__func__);
+#endif
 		dwc3_gadget_giveback(dep, req, -ECONNRESET);
 	}
 

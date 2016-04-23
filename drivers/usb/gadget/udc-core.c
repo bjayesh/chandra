@@ -140,6 +140,9 @@ EXPORT_SYMBOL_GPL(usb_gadget_set_state);
 static inline int usb_gadget_udc_start(struct usb_gadget *gadget,
 		struct usb_gadget_driver *driver)
 {
+#if 0
+printk(KERN_ERR "$$ %s Entry \n",__func__);
+#endif
 	return gadget->ops->udc_start(gadget, driver);
 }
 
@@ -158,6 +161,9 @@ static inline int usb_gadget_udc_start(struct usb_gadget *gadget,
 static inline void usb_gadget_udc_stop(struct usb_gadget *gadget,
 		struct usb_gadget_driver *driver)
 {
+#if 0
+printk( KERN_ERR "$$ %s Entry\n",__func__);
+#endif
 	gadget->ops->udc_stop(gadget, driver);
 }
 
@@ -278,6 +284,9 @@ EXPORT_SYMBOL_GPL(usb_add_gadget_udc);
 
 static void usb_gadget_remove_driver(struct usb_udc *udc)
 {
+#if 0
+printk(KERN_ERR "$$ %s Entry remove driver \n",__func__);
+#endif
 	dev_dbg(&udc->dev, "unregistering UDC driver [%s]\n",
 			udc->gadget->name);
 
@@ -303,7 +312,9 @@ static void usb_gadget_remove_driver(struct usb_udc *udc)
 void usb_del_gadget_udc(struct usb_gadget *gadget)
 {
 	struct usb_udc		*udc = NULL;
-
+#if 0
+printk(KERN_ERR "$$ %s Entry \n",__func__);
+#endif
 	mutex_lock(&udc_lock);
 	list_for_each_entry(udc, &udc_list, list)
 		if (udc->gadget == gadget)
@@ -338,7 +349,9 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
 
 	dev_dbg(&udc->dev, "registering UDC driver [%s]\n",
 			driver->function);
-
+#if 0
+printk(KERN_ERR "$$ %s Entry \n",__func__);
+#endif
 	udc->driver = driver;
 	udc->dev.driver = &driver->driver;
 	udc->gadget->dev.driver = &driver->driver;
@@ -368,7 +381,9 @@ int udc_attach_driver(const char *name, struct usb_gadget_driver *driver)
 {
 	struct usb_udc *udc = NULL;
 	int ret = -ENODEV;
-
+#if 0
+printk(KERN_ERR "$$ %s Entry \n",__func__);
+#endif
 	mutex_lock(&udc_lock);
 	list_for_each_entry(udc, &udc_list, list) {
 		ret = strcmp(name, dev_name(&udc->dev));
@@ -395,6 +410,9 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 	struct usb_udc		*udc = NULL;
 	int			ret;
 
+#if 0
+printk(KERN_ERR "$$ %s Entry \n",__func__);
+#endif
 	if (!driver || !driver->bind || !driver->setup)
 		return -EINVAL;
 
@@ -422,7 +440,9 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	if (!driver || !driver->unbind)
 		return -EINVAL;
-
+#if 0
+printk(KERN_ERR "$ %s entry \n",__func__);
+#endif
 	mutex_lock(&udc_lock);
 	list_for_each_entry(udc, &udc_list, list)
 		if (udc->driver == driver) {

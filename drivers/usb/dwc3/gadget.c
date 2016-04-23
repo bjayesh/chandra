@@ -141,7 +141,9 @@ void phy_fixed_equalization(u32 value)   // Andy test: test fixed equalization
         phy_cr_write(0x1006, reg);
 
         reg = phy_cr_read(0x1006);
+#if 0
         printk("PHY control register 0x1006 is modified as 0x%08X\n", reg);   // Andy test
+#endif
 }
 
 static void phy_dp_pull_up(u8 on, u8 weak)
@@ -848,7 +850,9 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 	u32			reg;
 
 	dwc3_remove_requests(dwc, dep);
-
+#if 0
+printk(KERN_ERR "## %s entry\n",__func__);
+#endif
 	/* make sure HW endpoint isn't stalled */
 	if (dep->flags & DWC3_EP_STALL)
 		__dwc3_gadget_ep_set_halt(dep, 0, false);
@@ -943,7 +947,9 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 	struct dwc3			*dwc;
 	unsigned long			flags;
 	int				ret;
-
+#if 0
+printk(KERN_ERR "## %s entry\n",__func__);
+#endif
 	if (!ep) {
 		pr_debug("dwc3: invalid parameters\n");
 		return -EINVAL;
@@ -965,7 +971,9 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_disable(dep);
 	spin_unlock_irqrestore(&dwc->lock, flags);
-
+#if 0
+printk(KERN_ERR "## %s exit\n",__func__);
+#endif
 	return ret;
 }
 
@@ -975,7 +983,9 @@ static struct usb_request *dwc3_gadget_ep_alloc_request(struct usb_ep *ep,
 	struct dwc3_request		*req;
 	struct dwc3_ep			*dep = to_dwc3_ep(ep);
 	struct dwc3			*dwc = dep->dwc;
-
+#if 0
+printk(KERN_ERR "#%s entry number = %d\n",__func__, dep->number);
+#endif
 	req = kzalloc(sizeof(*req), gfp_flags);
 	if (!req) {
 		dev_err(dwc->dev, "not enough memory\n");
@@ -992,7 +1002,9 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 		struct usb_request *request)
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
-
+#if 0
+printk(KERN_ERR "#%s entry number = %d\n",__func__, req->epnum);
+#endif
 	kfree(req);
 }
 
@@ -1517,7 +1529,9 @@ int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value, int protocol)
 		else
 			dep->flags |= DWC3_EP_STALL;
 	} else {
-//printk(KERN_ERR "## %s Entry not value\n",__func__);
+#if 0
+printk(KERN_ERR "## %s Entry not value\n",__func__);
+#endif
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_CLEARSTALL, &params);
 		if (ret)
@@ -1540,6 +1554,7 @@ static int dwc3_gadget_ep_set_halt(struct usb_ep *ep, int value)
 
 	int				ret;
 
+printk(KERN_ERR "## %s Entry\n",__func__);
 	spin_lock_irqsave(&dwc->lock, flags);
 
 	if (usb_endpoint_xfer_isoc(dep->endpoint.desc)) {
@@ -1717,6 +1732,9 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 #if	0	/*<HN>*/
 	dev_vdbg(dwc->dev, "%s <HN>\n",__FUNCTION__);
 #endif
+#if 0
+	printk( KERN_ERR "## %s entry is_on = %d\n",__func__,is_on);
+#endif
 	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	if (is_on) {
 		if (dwc->revision <= DWC3_REVISION_187A) {
@@ -1732,6 +1750,9 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 			reg |= DWC3_DCTL_KEEP_CONNECT;
 
 		dwc->pullups_connected = true;
+#if WORKAROUDN_55XXA0_DP_ISSUE
+		phy_dp_pull_up(1, 1);
+#endif
 	} else {
 		reg &= ~DWC3_DCTL_RUN_STOP;
 
@@ -1739,6 +1760,9 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 			reg &= ~DWC3_DCTL_KEEP_CONNECT;
 
 		dwc->pullups_connected = false;
+#if WORKAROUDN_55XXA0_DP_ISSUE
+		phy_dp_pull_up(0, 1);
+#endif
 	}
 
 	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
@@ -1765,8 +1789,11 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 
 #if WORKAROUDN_55XXA0_DP_ISSUE
 	/* 55XX A0 D+ workaround */
-//printk(KERN_ERR "%s phy_dp_pull_up 1,1 exit\n",__FUNCTION__);			
-	phy_dp_pull_up(1, 1);
+//printk(KERN_ERR "%s phy_dp_pull_up 1,1 exit\n",__FUNCTION__);
+//	phy_dp_pull_up(1, 1);
+#endif
+#if 0
+	printk(KERN_ERR "## %s Normal exit\n",__func__);
 #endif
 	return 0;
 }
@@ -1778,7 +1805,9 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	int			ret;
 
 	is_on = !!is_on;
-
+#if 0
+printk( KERN_ERR "## %s entry\n",__func__);
+#endif
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = dwc3_gadget_run_stop(dwc, is_on, false);
 	spin_unlock_irqrestore(&dwc->lock, flags);
@@ -2388,6 +2417,9 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 
 static void dwc3_disconnect_gadget(struct dwc3 *dwc)
 {
+#if 0
+printk(KERN_ERR "## %s entry \n",__func__);
+#endif
 	if (dwc->gadget_driver && dwc->gadget_driver->disconnect) {
 		spin_unlock(&dwc->lock);
 		dwc->gadget_driver->disconnect(&dwc->gadget);
@@ -3035,7 +3067,9 @@ static void dwc3_process_event_entry(struct dwc3 *dwc,
 	/* REVISIT what to do with Carkit and I2C events ? */
 	default:
 		dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event->raw);
+#if 0
 		printk(KERN_ERR "UNKNOWN IRQ type %d\n", event->raw);
+#endif
 	}
 }
 
