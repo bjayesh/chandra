@@ -47,12 +47,11 @@ static int stmmac_jumbo_frm(void *p, struct sk_buff *skb, int csum)
 		desc= priv->dma_tx + entry;
 
 	if (priv->plat->enh_desc)
-		bmax = BUF_SIZE_4KiB + BUF_SIZE_2KiB;
+		bmax = JUMBO_FLAME_LEN;
 	else
 		bmax = BUF_SIZE_2KiB;
 
 	len = nopaged_len - bmax;
-	if (nopaged_len > bmax) {
 		tmp = dma_map_single(priv->device, skb->data, bmax, DMA_TO_DEVICE);
 		if (dma_mapping_error(priv->device, tmp))
 			return -1;
@@ -78,20 +77,7 @@ static int stmmac_jumbo_frm(void *p, struct sk_buff *skb, int csum)
 		desc->des2 = tmp&0xffffffff;
 		priv->tx_skbuff_dma[entry].buf = tmp;
 		priv->hw->desc->prepare_tx_desc(desc, 0, len, csum, STMMAC_RING_MODE);
-		priv->hw->desc->set_tx_owner(desc);
 		wmb();
-	} else {
-		tmp = dma_map_single(priv->device, skb->data,
-					    nopaged_len, DMA_TO_DEVICE);
-		if (dma_mapping_error(priv->device, tmp))
-			return -1;
-		desc->des2 = tmp&0xffffffff;
-		priv->tx_skbuff_dma[entry].buf = tmp;
-		desc->des3 = desc->des2 + BUF_SIZE_4KiB;
-		priv->hw->desc->prepare_tx_desc(desc, 1, nopaged_len, csum,
-						STMMAC_RING_MODE);
-		wmb();
-	}
 
 	return entry;
 }
@@ -100,7 +86,7 @@ static unsigned int stmmac_is_jumbo_frm(int len, int enh_desc)
 {
 	unsigned int ret = 0;
 
-	if (len >= BUF_SIZE_4KiB)
+	if (len >= JUMBO_FLAME_LEN)
 		ret = 1;
 
 	return ret;
@@ -111,8 +97,8 @@ static void stmmac_refill_desc3(void *priv_ptr, struct dma_desc *p)
 	struct stmmac_priv *priv = (struct stmmac_priv *)priv_ptr;
 
 		/* Fill DES3 in case of RING mode */
-		if (priv->dma_buf_sz >= BUF_SIZE_8KiB)
-			p->des3 = p->des2 + BUF_SIZE_8KiB;
+		if (priv->dma_buf_sz >= BUF_SIZE_16KiB)
+			p->des3 = p->des2 + BUF_SIZE_4KiB + BUF_SIZE_2KiB;
 }
 
 /* In ring mode we need to fill the desc3 because it is used as buffer */

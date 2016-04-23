@@ -43,17 +43,10 @@ static void dwmac1000_core_init(void __iomem *ioaddr, int mtu)
 {
 	u32 value = readl(ioaddr + GMAC_CONTROL);
 	value |= GMAC_CORE_INIT;
-#if 1	/* No34 */
 	if (mtu > 1500) {
 		value |= GMAC_CONTROL_2K;
 		value |= GMAC_CONTROL_JE;
 	}
-#else	/* No32 */
-	if (mtu > 1500)
-		value |= GMAC_CONTROL_2K;
-	if (mtu > 2000)
-		value |= GMAC_CONTROL_JE;
-#endif	/* No32 */
 
 	writel(value, ioaddr + GMAC_CONTROL);
 
@@ -290,18 +283,6 @@ static int dwmac1000_irq_status(void __iomem *ioaddr,
 				x->pcs_speed = SPEED_10;
 
 			x->pcs_link = 1;
-#if 1	/* No32 */
-#else	/* No32 */
-#ifdef  CONFIG_ARCH_LM2		/* lm2 workaround */
-			if ( x->pcs_speed == SPEED_1000 ) {
-				writel(0x00000800,ioaddr + GMAC_TCPD);  /* GMACTCPD */
-				writel(0x00000000,ioaddr + GMAC_RCPD);  /* GMACRCPD */
-			} else {
-				writel(0x00003f00,ioaddr + GMAC_TCPD);  /* GMACTCPD */
-				writel(0x00003f00,ioaddr + GMAC_RCPD);  /* GMACRCPD */
-			}
-#endif	/* CONFIG_ARCH_LM2 */	/* lm2 workaround */
-#endif	/* No32 */
 			pr_debug("Link is Up - %d/%s\n", (int)x->pcs_speed,
 				 x->pcs_duplex ? "Full" : "Half");
 		} else {

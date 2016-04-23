@@ -224,15 +224,15 @@ static void stmmac_clk_csr_set(struct stmmac_priv *priv)
 }
 
 #if defined(STMMAC_XMIT_DEBUG) || defined(STMMAC_RX_DEBUG)
-static void print_pkt(unsigned char *buf, int len)
+#define	PRINT_OFFSET	0
+static void print_pkt(char *moji, unsigned char *buf, int len)
 {
 	int j;
 	unsigned char	tmp[64];
 	int		tmp_len=0;
-	if ( len > 0 ) {
-		printk(KERN_ERR "** frm_len=%d byte, bufaddr=0x%p **\n", len, buf);
-		len -= ETH_HLEN;
-		for (j = 0; j < len; j++) {
+	if ( len > 0  && len > PRINT_OFFSET ) {
+		printk(KERN_ERR "** %s frm_len=%d byte, bufaddr=0x%p **\n", moji, len, buf);
+		for (j = PRINT_OFFSET; j < len; j++) {
 			if ((j % 16) == 0) {
 				if ( j != 0 )
 					printk(KERN_ERR "%s\n",tmp);
@@ -246,6 +246,22 @@ static void print_pkt(unsigned char *buf, int len)
 		}
 		printk(KERN_ERR "%s\n",tmp);
 	}
+}
+static void print_txdesc(char *moji, struct dma_desc *p)
+{
+	printk(KERN_ERR "== Tx %s ==\n", moji);
+	printk(KERN_ERR "own                    = %d\n", p->des01.etx.own);
+	printk(KERN_ERR "interrupt              = %d\n", p->des01.etx.interrupt);
+	printk(KERN_ERR "last_segment           = %d\n", p->des01.etx.last_segment);
+	printk(KERN_ERR "first_segment          = %d\n", p->des01.etx.first_segment);
+	printk(KERN_ERR "crc_disable            = %d\n", p->des01.etx.crc_disable);
+	printk(KERN_ERR "disable_padding        = %d\n", p->des01.etx.disable_padding);
+	printk(KERN_ERR "time_stamp_enable      = %d\n", p->des01.etx.time_stamp_enable);
+	printk(KERN_ERR "checksum_insertion     = %d\n", p->des01.etx.checksum_insertion);
+	printk(KERN_ERR "end_ring               = %d\n", p->des01.etx.end_ring);
+	printk(KERN_ERR "second_address_chained = %d\n", p->des01.etx.second_address_chained);
+	printk(KERN_ERR "buffer2_size           = %d\n", p->des01.etx.buffer2_size);
+	printk(KERN_ERR "buffer1_size           = %d\n", p->des01.etx.buffer1_size);
 }
 #endif
 
@@ -814,7 +830,6 @@ static void stmmac_adjust_link(struct net_device *dev)
 			}
 
 			priv->speed = phydev->speed;
-#if 1	/* No32 */
 #ifdef  CONFIG_ARCH_LM2         /* lm2 workaround */
 			if ( phydev->speed == SPEED_1000 ) {
 				writel(0x00000800,priv->ioaddr + GMAC_TCPD);  /* GMACTCPD */
@@ -823,9 +838,7 @@ static void stmmac_adjust_link(struct net_device *dev)
 				writel(0x00003f00,priv->ioaddr + GMAC_TCPD);  /* GMACTCPD */
 				writel(0x00003f00,priv->ioaddr + GMAC_RCPD);  /* GMACRCPD */
 			}
-//			printk(KERN_ERR "No32 Link is Up (%d) TCPD/RCPD Set\n", (int)priv->speed);
 #endif  /* CONFIG_ARCH_LM2 */   /* lm2 workaround */
-#endif	/* No32 */
 		}
 
 		writel(ctrl, priv->ioaddr + MAC_CTRL_REG);
@@ -1001,8 +1014,6 @@ static int stmmac_set_bfsize(int mtu, int bufsize)
 		ret = BUF_SIZE_8KiB;
 	else if (mtu >= BUF_SIZE_2KiB)
 		ret = BUF_SIZE_4KiB;
-	else if (mtu >= DEFAULT_BUFSIZE)
-		ret = BUF_SIZE_2KiB;
 	else
 		ret = DEFAULT_BUFSIZE;
 
@@ -1990,7 +2001,7 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 	unsigned int txsize = priv->dma_tx_size;
-	unsigned int entry, entry_new;
+	unsigned int entry;
 	int i, csum_insertion = 0, is_jumbo = 0;
 	int nfrags = skb_shinfo(skb)->nr_frags;
 	struct dma_desc *desc, *first;
@@ -2030,6 +2041,64 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (enh_desc)
 		is_jumbo = priv->hw->ring->is_jumbo_frm(skb->len, enh_desc);
 
+#if 1	/* Workaround */
+	if( csum_insertion && skb->len > 1534) {
+		unsigned short Ethertype;
+		unsigned int   packet_len=0;
+		Ethertype = skb->data[12]<<8 | skb->data[13]<<0 ;
+		if ( Ethertype == 0x0800 ) {
+			unsigned char  Iptype;
+			packet_len = ((skb->data[ETH_HLEN + 2] *256) + skb->data[ETH_HLEN + 2 +1]);	
+			/* IPv4 */
+			Iptype = skb->data[23];
+			if ( Iptype == 0x06 ) {
+				/* tcp */
+				int i;
+				unsigned int	checksum=0;
+				unsigned short	tmp;
+				unsigned char	pseudo_header[32];
+				unsigned int	tcp_header_start = ETH_HLEN + (skb->data[ETH_HLEN] & 0x0f)*4 ;
+				unsigned int	tcp_header_end   = tcp_header_start + packet_len - 20 ;
+				unsigned int	tcp_checksum_cpu=0;
+				unsigned int	tcp_checksum_calc=0;
+				/* Pseudo Header */
+				memcpy(&pseudo_header[0], &skb->data[ETH_HLEN + 12], 4);
+				memcpy(&pseudo_header[4], &skb->data[ETH_HLEN + 16], 4);
+				pseudo_header[8]=0;
+				pseudo_header[9]=0x6;
+				pseudo_header[10]= ((packet_len-20)&0xff00) >> 8;
+				pseudo_header[11]= ((packet_len-20)&0x00ff) ;
+				for(i=0;i<12;i+=2) {
+					if( i%2 == 0 ){
+						tmp = ((pseudo_header[i] *256) + pseudo_header[i +1]);
+						checksum += tmp;
+					}
+				}
+				for(i=tcp_header_start;i<tcp_header_end;i+=2) {
+					if( i%2 == 0 && (i != tcp_header_start+16)){
+						if ( (i+1)  == tcp_header_end ) {
+							tmp =  (skb->data[i] *256);
+						} else {
+							tmp = ((skb->data[i] *256) + skb->data[i +1]);
+						}
+						checksum += tmp;
+					}
+					if(i==tcp_header_start+16) {
+						tcp_checksum_cpu = ((skb->data[i] *256) + skb->data[i +1]);
+					}
+				}
+				tcp_checksum_calc  = checksum & 0x0000ffff;
+				tcp_checksum_calc += (checksum & 0xffff0000)>>16;
+				tcp_checksum_calc ^= 0xffff;
+				//printk(KERN_ERR "TCP: Checksum=0x%04x(calc:%04x)\n",tcp_crc, tcp_checksum_calc);
+				/* Checksum update */
+				skb->data[tcp_header_start+16] = (tcp_checksum_calc&0xff00)>>8;
+				skb->data[tcp_header_start+17] = (tcp_checksum_calc&0x00ff)>>0;
+			}
+		}
+	}
+#endif
+
 	if (likely(!is_jumbo)) {
 		tmp = dma_map_single(priv->device, skb->data, nopaged_len, DMA_TO_DEVICE);
 		if (dma_mapping_error(priv->device, tmp))
@@ -2041,24 +2110,17 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		wmb();
 		pkt_num=1;
 	} else {
-		desc = first;
-		entry_new = priv->hw->ring->jumbo_frm(priv, skb, csum_insertion);
-		if (unlikely(entry_new < 0))
+		first = desc;
+		entry = priv->hw->ring->jumbo_frm(priv, skb, csum_insertion);
+		if (unlikely(entry < 0))
 			goto dma_map_err;
 
-		if ( entry != entry_new ) {
-			entry = entry_new;
-			if (priv->extend_desc)
-				desc = (struct dma_desc *)(priv->dma_etx + entry);
-			else
-				desc = priv->dma_tx + entry;
-		}
-		if ( skb_headlen(skb) > (BUF_SIZE_4KiB + BUF_SIZE_2KiB)  )
-			pkt_num=2;
+		if (priv->extend_desc)
+			desc = (struct dma_desc *)(priv->dma_etx + entry);
 		else
-			pkt_num=1;
+			desc = priv->dma_tx + entry;
+		pkt_num=2;
 	}
-
 	for (i = 0; i < nfrags; i++) {
 		const skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
 		int len = skb_frag_size(frag);
@@ -2105,7 +2167,12 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		priv->tx_count_frames = 0;
 
 	/* To avoid raise condition */
-	priv->hw->desc->set_tx_owner(first);
+	if ( pkt_num == 1) {
+		priv->hw->desc->set_tx_owner(first);
+	} else {
+		priv->hw->desc->set_tx_owner(first);
+		priv->hw->desc->set_tx_owner(desc);
+	}
 	wmb();
 
 #ifdef	CONFIG_ARCH_LM2
@@ -2136,6 +2203,18 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (!priv->hwts_tx_en)
 		skb_tx_timestamp(skb);
 
+#ifdef	STMMAC_XMIT_DEBUG
+	if ( pkt_num == 2 ) {
+		print_txdesc("first", first);
+		print_txdesc("desc",  desc);
+	} else {
+		print_txdesc("first", first);
+	}
+	if ( skb->len > JUMBO_FLAME_LEN ) {
+		print_pkt("Tx", skb->data, skb->len);
+	}
+#endif /* STMMAC_XMIT_DEBUG */
+
 	priv->hw->dma->enable_dma_transmission(priv->ioaddr);
 	priv->cur_tx += pkt_num;
 
@@ -2159,7 +2238,6 @@ dma_map_err:
 static inline void stmmac_rx_refill(struct stmmac_priv *priv)
 {
 	unsigned int rxsize = priv->dma_rx_size;
-	int bfsize = priv->dma_buf_sz;
 	for (; priv->cur_rx - priv->dirty_rx > 0; priv->dirty_rx++) {
 		unsigned int entry = priv->dirty_rx % rxsize;
 		struct dma_desc *p;
@@ -2172,14 +2250,15 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv)
 		if (likely(priv->rx_skbuff[entry] == NULL)) {
 			struct sk_buff *skb;
 
-			skb = netdev_alloc_skb_ip_align(priv->dev, bfsize);
-
-			if (unlikely(skb == NULL))
+			skb = netdev_alloc_skb_ip_align(priv->dev, priv->dma_buf_sz);
+			if (!skb) {
+				pr_err("%s: Rx refill fails; skb is NULL\n", __func__);
 				break;
+			}
 
 			priv->rx_skbuff[entry] = skb;
 			priv->rx_skbuff_dma[entry] =
-			    dma_map_single(priv->device, skb->data, bfsize,
+			    dma_map_single(priv->device, skb->data, priv->dma_buf_sz,
 					   DMA_FROM_DEVICE);
 			if (dma_mapping_error(priv->device,
 					      priv->rx_skbuff_dma[entry])) {
@@ -2275,14 +2354,11 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 			 */
 			if (unlikely(status != llc_snap))
 				frame_len -= ETH_FCS_LEN;
-#if 1	/* No34 No35 No36 */
 			if (frame_len > priv->dev->mtu + ETH_HLEN) {
-//printk(KERN_ERR "No34-36 RX frame size=%d > %d ==>drop\n",frame_len, priv->dev->mtu + ETH_HLEN);
 				pr_debug("RX frame size %d > (%d) ==>drop\n",frame_len, priv->dev->mtu + ETH_HLEN);
 				priv->dev->stats.rx_dropped++;
 				break;
 			}
-#endif	/* No34 No35 No36 */
 #ifdef STMMAC_RX_DEBUG
 			if (frame_len > ETH_FRAME_LEN)
 				pr_debug("\tRX frame size %d, COE status: %d\n",
@@ -2316,7 +2392,7 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 				skb->ip_summed = CHECKSUM_UNNECESSARY;
 
 #ifdef	STMMAC_RX_DEBUG
-			print_pkt(skb->data, frame_len);
+			print_pkt("Rx", skb->data, frame_len);
 #endif
 			napi_gro_receive(&priv->napi, skb);
 
