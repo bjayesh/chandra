@@ -80,6 +80,8 @@ int	rc_num = 1;
 int	ep_num = 2;
 int	nu_num = 3;
 int	bifur_num = 2;
+static	void __iomem	*pcie_1_reg;
+static	void __iomem	*pcie_wrap;
 
 #define IRQ_V2M_PCIE            (32 + 17)
 /*
@@ -723,96 +725,137 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 	void __iomem *pciegen3_base1 = pp->pciegen3_base1;
 	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
 	void __iomem *pciegen3_base3 = pp->pciegen3_base3;
-	
+	unsigned long	kernel_addr = 0x05000000;
+	unsigned long	in_size = 0x0ffffc00;	/* 255MB */
+	unsigned long	pex_addr = 0x05000000;
+	unsigned long	wind_cmd;
+
+	wind_cmd = in_size | 0x05;
+
 	switch (which)
 	{
-		case 1: 
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
+	case 1: 
+		synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
 
-			// window 0
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0X);
-//			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  0x05000000);
-//			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0X, AXI_ADDR_H_DDR);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0X, 0x00000008);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE1_DDR);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE1_DDR);
+		// window 0
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL0,      wind_cmd);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  kernel_addr);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0X, AXI_ADDR_H_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE0X, 0x00000008);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, pex_addr);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, 0x00000008);
+
+	kernel_addr = kernel_addr + in_size;
+	pex_addr = pex_addr + in_size;
+		// Windows 1
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL1,      wind_cmd);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_L_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  kernel_addr);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1X, AXI_ADDR_H_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1X, 0x00000008);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, pex_addr);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, 0x00000008);
+
+	kernel_addr = kernel_addr + in_size;
+	pex_addr = pex_addr + in_size;
+		// Window 2
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL2,      wind_cmd);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_L_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  kernel_addr);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE2X, AXI_ADDR_H_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE2X, 0x00000008);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, pex_addr);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000008);
+
+	kernel_addr = kernel_addr + in_size;
+	pex_addr = pex_addr + in_size;
+
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL3,      wind_cmd);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  AXI_ADDR_L_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  kernel_addr);
+//	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE3X, AXI_ADDR_H_DDR);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE3X, 0x00000008);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, pex_addr);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, 0x00000008);
 #if 0
-			// window 1
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, PEX_ADDR_L_PCIE1_SP);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, PEX_ADDR_H_PCIE1_SP);
-			// window 2
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL2,      PAB_PEX_AMAP_CTRL2);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_XYZ);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, PEX_ADDR_PCIE1_XYZ);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000000);
-			// window 3
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL3,      PAB_PEX_AMAP_CTRL3);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE1_MSI);
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE1_MSI);
+		// window 1
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE1X,  AXI_ADDR_SP);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, PEX_ADDR_L_PCIE1_SP);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, PEX_ADDR_H_PCIE1_SP);
+
+		// window 2
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL2,      PAB_PEX_AMAP_CTRL2);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_XYZ);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, PEX_ADDR_PCIE1_XYZ);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000000);
+		// window 3
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_CTRL3,      PAB_PEX_AMAP_CTRL3);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE1_MSI);
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE1_MSI);
 #endif 	/* not used */
-			/* INT A Enable */
-			synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_INT_MISC_EN, 0x00000020);
-			break;
+		/* INT A Enable */
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_INT_MISC_EN, 0x00000020);
+	break;
 #if 0
-		case 2: 
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
-			// window 0
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE0X,  AXI_ADDR_H_DDR);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE2_DDR_RC); // NOTE special _RC suffix
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE2_DDR_RC); // NOTE special _RC suffix
+	case 2: 
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
+		// window 0
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE0X,  AXI_ADDR_H_DDR);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE2_DDR_RC); // NOTE special _RC suffix
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE2_DDR_RC); // NOTE special _RC suffix
 
-			// window 1
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, PEX_ADDR_L_PCIE2_SP_RC);  // NOTE special _RC suffix
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, PEX_ADDR_H_PCIE2_SP_RC);  // NOTE special _RC suffix
-			// window 2
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL2,      PAB_PEX_AMAP_CTRL2);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_XYZ);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, PEX_ADDR_PCIE2_XYZ_RC);   // NOTE special _RC suffix
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000000);
-			// window 3
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL3,      PAB_PEX_AMAP_CTRL3);
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE2_MSI_RC); // NOTE special _RC suffix
-			synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE2_MSI_RC); // NOTE special _RC suffix
-			break;
-		case 3: 
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
-			// window 0
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE0X,  AXI_ADDR_H_DDR);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE3_DDR);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE3_DDR);
+		// window 1
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, PEX_ADDR_L_PCIE2_SP_RC);  // NOTE special _RC suffix
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, PEX_ADDR_H_PCIE2_SP_RC);  // NOTE special _RC suffix
+		// window 2
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL2,      PAB_PEX_AMAP_CTRL2);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_XYZ);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, PEX_ADDR_PCIE2_XYZ_RC);   // NOTE special _RC suffix
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000000);
+		// window 3
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_CTRL3,      PAB_PEX_AMAP_CTRL3);
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE2_MSI_RC); // NOTE special _RC suffix
+	synopsys_writel(pciegen3_base2 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE2_MSI_RC); // NOTE special _RC suffix
+	break;
+	case 3: 
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_PIO_CTRL0, ENABLE_PORT);
+	// window 0
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL0,      PAB_PEX_AMAP_CTRL0);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE0,  AXI_ADDR_L_DDR);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE0X,  AXI_ADDR_H_DDR);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL0, PEX_ADDR_L_PCIE3_DDR);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH0, PEX_ADDR_H_PCIE3_DDR);
 
-			// window 1
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, PEX_ADDR_L_PCIE3_SP);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, PEX_ADDR_H_PCIE3_SP);
-			// window 2
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL2,      PAB_PEX_AMAP_CTRL2);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_XYZ);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, PEX_ADDR_PCIE3_XYZ);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000000);
-			// window 3
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL3,      PAB_PEX_AMAP_CTRL3);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE3_MSI);
-			synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE3_MSI);
+		// window 1
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL1,      PAB_PEX_AMAP_CTRL1);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE1,  AXI_ADDR_SP);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL1, PEX_ADDR_L_PCIE3_SP);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH1, PEX_ADDR_H_PCIE3_SP);
+		// window 2
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL2,      PAB_PEX_AMAP_CTRL2);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE2,  AXI_ADDR_XYZ);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL2, PEX_ADDR_PCIE3_XYZ);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH2, 0x00000000);
+		// window 3
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_CTRL3,      PAB_PEX_AMAP_CTRL3);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_AXI_BASE3,  0x00000000); // not applicable
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEL3, PEX_ADDR_L_PCIE3_MSI);
+	synopsys_writel(pciegen3_base3 + PCIE_PAB_PEX_AMAP_PEX_BASEH3, PEX_ADDR_H_PCIE3_MSI);
 
-			break;
+	break;
 #endif
-		default:
-			dev_err(pp->dev, "synopsys_pcie_PexToAxiInitRc: which is %d Error\n",which);
-			break;
+	default:
+	dev_err(pp->dev, "synopsys_pcie_PexToAxiInitRc: which is %d Error\n",which);
+	break;
 	}
 }
 
@@ -991,6 +1034,15 @@ static void synopsys_pcie_enable_interrupts(struct pcie_port *pp)
 	return;
 }
 
+/* PCIe Card Driver Interrupt helper function */
+int	synopsys_pcie_interrupt_clear(unsigned int irq_no)
+{
+	synopsys_writel(pcie_1_reg + PCIE_PAB_AXI_INT_MISC_STAT, irq_no);
+	synopsys_writel(pcie_wrap + PCIE_PCIE1_INT_CLR, PCIE_INT_GDA_PAB);
+	return	0;
+}
+EXPORT_SYMBOL(synopsys_pcie_interrupt_clear);
+
 static int  synopsys_pcie_host_init(struct pcie_port *pp)
 {
 	struct pcie_port_info *config = &pp->config;
@@ -1006,6 +1058,7 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init: Start\n");
 #endif
+
 
 	/* PCIE core resets from RSTGEN default to asserted, deassert them now */
 	val = synopsys_readl(resetgen_base + RSTGENSWRSTSTATIC10);
@@ -1100,10 +1153,21 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 		dev_err(pp->dev, "PCIe can't Data link Up\n");
 		return	-1;
 	}
+	/* Interrupt clear reg base */
+	pcie_wrap = pp->pciewrap_base;
+	pcie_1_reg = pp->pciegen3_base1;
 
 	/* host bridge interrupt routing enable */
-	synopsys_writel(pciewrap_base + PCIE_INT_EN, 0x00000001);
-	synopsys_pcie_enable_interrupts(pp);
+	val = synopsys_readl(pciewrap_base +PCIE_PCIE1_INT_EN);
+	val |= PCIE_INT_GDA_PAB;
+	synopsys_writel(pciewrap_base + PCIE_PCIE1_INT_EN, val);
+
+	val = synopsys_readl(pciegen3_base1 + PCIE_PAB_AXI_INT_MISC_EN);
+	val |= PCIE_AXI_INT_INTA;
+	synopsys_writel(pciegen3_base1 + PCIE_PAB_AXI_INT_MISC_EN, val);
+
+//	synopsys_writel(pciewrap_base + PCIE_INT_EN, 0x00000001);
+//	synopsys_pcie_enable_interrupts(pp);
 out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init:%x End\n",pciegen3_base1);

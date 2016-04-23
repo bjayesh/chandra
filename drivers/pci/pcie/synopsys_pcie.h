@@ -213,6 +213,14 @@
 #define PCIE3_PMEM_LIMIT_U		0x000022FF
 
 #define	PCIE_INT_EN			0x0000005C
+#define	PCIE_PCIE1_INT_EN		0x00000060
+#define	PCIE_INT_GDA_PAB		0x00000001
+
+//#define	PCIE_PAB_AXI_INT_MISC_EN	0x00000bec
+#define	PCIE_AXI_INT_INTA		0x00000020
+
+#define	PCIE_PAB_AXI_INT_MISC_STAT	0x00000c00	/* Clear interrupt */
+#define	PCIE_PCIE1_INT_CLR		0x00000070	/* Clear PEX Interrupt */
 
 
 //--------------------------------------------------------------
@@ -312,6 +320,7 @@
 #define	PCIE_PAB_PEX_AMAP_AXI_BASE0X	0x0F40
 #define	PCIE_PAB_PEX_AMAP_AXI_BASE1X	0x0F44
 #define	PCIE_PAB_PEX_AMAP_AXI_BASE2X	0x0F48
+#define	PCIE_PAB_PEX_AMAP_AXI_BASE3X	0x0F4c	/* May be */
 #define	PCIE_PAB_PEX_AMAP_BAR0_F0X	0x0F80
 #define	PCIE_PAB_PEX_AMAP_BAR1_F0X	0x0F84
 #define	PCIE_PAB_PEX_AMAP_BAR2_F0X	0x0F88

@@ -54,6 +54,7 @@
 #include "e1000.h"
 
 #define DRV_EXTRAVERSION "-k"
+extern	int	synopsys_pcie_interrupt_clear(unsigned int irq_no);
 
 #define DRV_VERSION "2.3.2" DRV_EXTRAVERSION
 char e1000e_driver_name[] = "e1000e";
@@ -1799,6 +1800,7 @@ static irqreturn_t e1000_intr(int __always_unused irq, void *data)
 	struct e1000_hw *hw = &adapter->hw;
 	u32 rctl, icr = er32(ICR);
 
+//printk(KERN_ERR "___%s Entry\n",__FUNCTION__);
 	if (!icr || test_bit(__E1000_DOWN, &adapter->state))
 		return IRQ_NONE;  /* Not our interrupt */
 
@@ -1838,7 +1840,8 @@ static irqreturn_t e1000_intr(int __always_unused irq, void *data)
 		if (!test_bit(__E1000_DOWN, &adapter->state))
 			mod_timer(&adapter->watchdog_timer, jiffies + 1);
 	}
-
+	synopsys_pcie_interrupt_clear(95);	/* yamano */
+//printk(KERN_ERR "___%s Interrupt Clear\n",__FUNCTION__);
 	/* Reset on uncorrectable ECC error */
 	if ((icr & E1000_ICR_ECCER) && (hw->mac.type == e1000_pch_lpt)) {
 		u32 pbeccsts = er32(PBECCSTS);
@@ -2135,32 +2138,44 @@ static int e1000_request_irq(struct e1000_adapter *adapter)
 {
 	struct net_device *netdev = adapter->netdev;
 	int err;
-
+//printk(KERN_ERR "===== %s Entry\n",__FUNCTION__);
 	if (adapter->msix_entries) {
 		err = e1000_request_msix(adapter);
-		if (!err)
+		if (!err){
+//printk(KERN_ERR "===== %s msix error\n",__FUNCTION__);
 			return err;
+		}
 		/* fall back to MSI */
 		e1000e_reset_interrupt_capability(adapter);
 		adapter->int_mode = E1000E_INT_MODE_MSI;
 		e1000e_set_interrupt_capability(adapter);
+//printk(KERN_ERR "===== %s msix fall back\n",__FUNCTION__);
 	}
 	if (adapter->flags & FLAG_MSI_ENABLED) {
+//printk(KERN_ERR "===== %s FLAG_MSI_ENABLE\n",__FUNCTION__);
 		err = request_irq(adapter->pdev->irq, e1000_intr_msi, 0,
 				  netdev->name, netdev);
-		if (!err)
-			return err;
+		if (!err){
+//printk(KERN_ERR "===== %s MSI error\n",__FUNCTION__);
 
+			return err;
+		}
 		/* fall back to legacy interrupt */
 		e1000e_reset_interrupt_capability(adapter);
 		adapter->int_mode = E1000E_INT_MODE_LEGACY;
+//printk(KERN_ERR "===== %s MSI fall back legacy\n",__FUNCTION__);
 	}
 
+//printk(KERN_ERR "===== %s interrupt register %d \n",__FUNCTION__,adapter->pdev->irq);
 	err = request_irq(adapter->pdev->irq, e1000_intr, IRQF_SHARED,
 			  netdev->name, netdev);
-	if (err)
-		e_err("Unable to allocate interrupt, Error: %d\n", err);
+	if (err){
 
+//printk(KERN_ERR "===== %s unable to allocate interrupt\n",__FUNCTION__);
+		e_err("Unable to allocate interrupt, Error: %d\n", err);
+	}
+
+//printk(KERN_ERR "===== %s Normal Exit\n",__FUNCTION__);
 	return err;
 }
 
@@ -4476,11 +4491,12 @@ static void e1000e_update_phy_task(struct work_struct *work)
 static void e1000_update_phy_info(unsigned long data)
 {
 	struct e1000_adapter *adapter = (struct e1000_adapter *)data;
-
+//printk(KERN_ERR "===== %s Entry\n",__FUNCTION__);
 	if (test_bit(__E1000_DOWN, &adapter->state))
 		return;
 
 	schedule_work(&adapter->update_phy_task);
+//printk(KERN_ERR "===== %s Reschedule Exit\n",__FUNCTION__);
 }
 
 /**
@@ -4829,6 +4845,7 @@ static void e1000_watchdog_task(struct work_struct *work)
 	struct e1000_hw *hw = &adapter->hw;
 	u32 link, tctl;
 
+//printk(KERN_ERR "===== %s Entry \n",__FUNCTION__);	/* yamano */
 	if (test_bit(__E1000_DOWN, &adapter->state))
 		return;
 
@@ -5196,7 +5213,7 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 	unsigned int len = skb_headlen(skb);
 	unsigned int offset = 0, size, count = 0, i;
 	unsigned int f, bytecount, segs;
-
+//printk(KERN_ERR "___%s Entry\n",__FUNCTION__);
 	i = tx_ring->next_to_use;
 
 	while (len) {
@@ -5213,6 +5230,7 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 		if (dma_mapping_error(&pdev->dev, buffer_info->dma))
 			goto dma_error;
 
+//printk(KERN_ERR "___%s DMA %llx\n",__FUNCTION__,buffer_info->dma);
 		len -= size;
 		offset += size;
 		count++;
@@ -5245,6 +5263,7 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 			buffer_info->dma = skb_frag_dma_map(&pdev->dev, frag,
 							    offset, size,
 							    DMA_TO_DEVICE);
+//printk(KERN_ERR "___%s DMA %llx\n",__FUNCTION__,buffer_info->dma);
 			buffer_info->mapped_as_page = true;
 			if (dma_mapping_error(&pdev->dev, buffer_info->dma))
 				goto dma_error;
@@ -5267,6 +5286,7 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 	return count;
 
 dma_error:
+//printk(KERN_ERR "___%s Error\n",__FUNCTION__);
 	dev_err(&pdev->dev, "Tx DMA map failed\n");
 	buffer_info->dma = 0;
 	if (count)
@@ -6499,7 +6519,6 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	u16 eeprom_data = 0;
 	u16 eeprom_apme_mask = E1000_EEPROM_APME;
 
-printk(KERN_ERR "###>>> %s Entry\n",__FUNCTION__);
 	if (ei->flags2 & FLAG2_DISABLE_ASPM_L0S)
 		aspm_disable_flag = PCIE_LINK_STATE_L0S;
 	if (ei->flags2 & FLAG2_DISABLE_ASPM_L1)
@@ -6507,7 +6526,6 @@ printk(KERN_ERR "###>>> %s Entry\n",__FUNCTION__);
 	if (aspm_disable_flag)
 		e1000e_disable_aspm(pdev, aspm_disable_flag);
 
-printk(KERN_ERR "###>>> %s PCI enable\n",__FUNCTION__);
 	err = pci_enable_device_mem(pdev);
 	if (err)
 		return err;
@@ -6540,7 +6558,6 @@ printk(KERN_ERR "###>>> %s PCI enable\n",__FUNCTION__);
 	/* AER (Advanced Error Reporting) hooks */
 	pci_enable_pcie_error_reporting(pdev);
 
-printk(KERN_ERR "###>>> %s PCI master enable\n",__FUNCTION__);
 	pci_set_master(pdev);
 	/* PCI config space info */
 	err = pci_save_state(pdev);
@@ -6572,11 +6589,12 @@ printk(KERN_ERR "###>>> %s PCI master enable\n",__FUNCTION__);
 
 	mmio_start = pci_resource_start(pdev, 0);
 	mmio_len = pci_resource_len(pdev, 0);
+
 	err = -EIO;
 	adapter->hw.hw_addr = ioremap(mmio_start, mmio_len);
 	if (!adapter->hw.hw_addr)
 		goto err_ioremap;
-printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x \n",mmio_start,mmio_len);
+
 	if ((adapter->flags & FLAG_HAS_FLASH) &&
 	    (pci_resource_flags(pdev, 1) & IORESOURCE_MEM)) {
 		flash_start = pci_resource_start(pdev, 1);
@@ -6603,14 +6621,12 @@ printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x \n",mmio_start,mmio_len)
 	adapter->bd_number = cards_found++;
 
 	e1000e_check_options(adapter);
-printk(KERN_ERR "____ %s check option\n",__FUNCTION__);
 
 	/* setup adapter struct */
 	err = e1000_sw_init(adapter);
 	if (err)
 		goto err_sw_init;
 
-printk(KERN_ERR "____ %s setup adapter\n",__FUNCTION__);
 	memcpy(&hw->mac.ops, ei->mac_ops, sizeof(hw->mac.ops));
 	memcpy(&hw->nvm.ops, ei->nvm_ops, sizeof(hw->nvm.ops));
 	memcpy(&hw->phy.ops, ei->phy_ops, sizeof(hw->phy.ops));
@@ -6625,7 +6641,7 @@ printk(KERN_ERR "____ %s setup adapter\n",__FUNCTION__);
 
 	hw->mac.ops.get_bus_info(&adapter->hw);
 
-	adapter->hw.phy.autoneg_wait_to_complete = 1;	/* yamano debug 0-> 1*/
+	adapter->hw.phy.autoneg_wait_to_complete = 0;
 
 	/* Copper options */
 	if (adapter->hw.phy.media_type == e1000_media_type_copper) {
@@ -6634,11 +6650,10 @@ printk(KERN_ERR "____ %s setup adapter\n",__FUNCTION__);
 		adapter->hw.phy.ms_type = e1000_ms_hw_default;
 	}
 
-	if (hw->phy.ops.check_reset_block && hw->phy.ops.check_reset_block(hw)){
-printk(KERN_ERR "____ %s PHY reset is blocked\n",__FUNCTION__);
+	if (hw->phy.ops.check_reset_block && hw->phy.ops.check_reset_block(hw))
 		dev_info(&pdev->dev,
 			 "PHY reset is blocked due to SOL/IDER session.\n");
-}
+
 	/* Set initial default active device features */
 	netdev->features = (NETIF_F_SG |
 			    NETIF_F_HW_VLAN_CTAG_RX |
@@ -6799,7 +6814,7 @@ printk(KERN_ERR "____ %s PHY reset is blocked\n",__FUNCTION__);
 
 	if (pci_dev_run_wake(pdev))
 		pm_runtime_put_noidle(&pdev->dev);
-printk(KERN_ERR "###<<< %s Exit\n",__FUNCTION__);
+
 	return 0;
 
 err_register:

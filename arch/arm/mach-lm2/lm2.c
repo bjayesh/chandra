@@ -338,8 +338,8 @@ static struct resource lm2_pcie_resource[]={
 //               .start  = LM2_IRQ_PCIE_BUS,
 //               .end    = LM2_IRQ_PCIE_BUS,
                .flags  = IORESOURCE_IRQ,
-               .start  = LM2_IRQ_PCIE1-1,
-               .end    = LM2_IRQ_PCIE1-1,
+               .start  = LM2_IRQ_PCIE1,
+               .end    = LM2_IRQ_PCIE1,
        },
 };
 
