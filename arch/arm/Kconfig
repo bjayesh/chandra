@@ -384,6 +384,7 @@ config ARCH_LM2
         select NO_IOPORT
         select PLAT_WAIKIKI
         select ARCH_DMA_ADDR_T_64BIT
+        select HAVE_SMP
         help
           This enables support for the Fuji Xerox Co., Ltd Waikiki LM2 boards.
 

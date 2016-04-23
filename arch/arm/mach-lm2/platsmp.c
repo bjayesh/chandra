@@ -16,13 +16,15 @@
 #include <linux/of_fdt.h>
 
 #include <asm/smp_scu.h>
-#include <asm/hardware/gic.h>
+//#include <asm/hardware/gic.h>
 #include <asm/mach/map.h>
 
 #include <mach/motherboard.h>
 
 #include "core.h"
 
+extern	void	lm2_secondary_startup(void);
+static	void	__iomem *misc_base;
 extern	void	waikiki_boot_secondary(void);
 extern	void	waikiki_secondary_init(unsigned int cpus);
 
@@ -90,12 +92,14 @@ void __init lm2_smp_init_cpus(void)
 
 	for(i = 0 ; i < ncore ; i++)
 		set_cpu_possible(i,true);
-	set_smp_cross_call(gic_raise_softirq);
+//	set_smp_cross_call(gic_raise_softirq);
 #endif	/* CONFIG_ARCH_LM2_DT */
 }
 
 void __init lm2_smp_prepare_cpus(unsigned int max_cpus)
 {
+	void __iomem		*cpu1_addr;
+	unsigned long long	adr;
 	/*
 	 * Initialise the present map, which describes the set of CPUs
 	 * actually populated at the present time.
@@ -115,6 +119,20 @@ void __init lm2_smp_prepare_cpus(unsigned int max_cpus)
 /*
 	v2m_flags_set(virt_to_phys(versatile_secondary_startup));
 */
+	misc_base = ioremap(0x05400018, 0x4);
+	adr = virt_to_phys(lm2_secondary_startup);
+	__raw_writel((adr&0xffffffff), misc_base);
+#if 0	// FX
+	cpu1_addr = ioremap(0x043B0000,0x32);
+	writel(0x3ff, cpu1_addr + 0x24);
+	printk(KERN_ERR "** CPU1 Power Up.(0x05400018=>0x%x(vir=0x%x)) (0x043B0024=>0x%x)\n",readl(misc_base), &lm2_secondary_startup, readl(cpu1_addr + 0x24));
+	iounmap(cpu1_addr);
+#endif
+	iounmap(misc_base);
+}
+
+void __ref waikiki_cpu_die(unsigned int cpu)
+{
 }
 
 struct	smp_operations	__initdata	lm2_smp_ops = {
@@ -122,5 +140,8 @@ struct	smp_operations	__initdata	lm2_smp_ops = {
 	.smp_prepare_cpus	= lm2_smp_prepare_cpus,
 	.smp_secondary_init	= waikiki_secondary_init,
 	.smp_boot_secondary	= waikiki_boot_secondary,
+#ifdef CONFIG_HOTPLUG_CPU
+	.cpu_die		= waikiki_cpu_die,
+#endif
 };
 

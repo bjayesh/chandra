@@ -487,15 +487,15 @@ u32 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = MPIDR_INVALID };
 
 void __init smp_setup_processor_id(void)
 {
-#if 0	/* yamano */
-	int i;
-	u32 mpidr = is_smp() ? read_cpuid_mpidr() & MPIDR_HWID_BITMASK : 0;
-#else
 	int	i;
-	u32	mpidr;
-
-	mpidr = 0;	/* yamano force single processor */
+#if 0   /* yamano force single processor */
+	u32     mpidr = 0;      /* yamano force single processor */
 	u32 cpu = MPIDR_AFFINITY_LEVEL(mpidr, 0);
+#else
+	u32 mpidr = is_smp() ? read_cpuid_mpidr() & MPIDR_HWID_BITMASK : 0;
+	u32 cpu = mpidr & 0x1;
+#endif
+
 	cpu_logical_map(0) = cpu;
 	for (i = 1; i < nr_cpu_ids; ++i)
 		cpu_logical_map(i) = i == cpu ? 0 : i;
@@ -508,7 +508,6 @@ void __init smp_setup_processor_id(void)
 	set_my_cpu_offset(0);
 
 	printk(KERN_INFO "Booting Linux on physical CPU 0x%x\n", mpidr);
-#endif	/* yamano */
 }
 
 static void __init setup_processor(void)

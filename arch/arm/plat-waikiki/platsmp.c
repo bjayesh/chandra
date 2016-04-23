@@ -8,6 +8,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#include <linux/memory.h>
+#include <linux/io.h>
 #include <linux/init.h>
 #include <linux/errno.h>
 #include <linux/delay.h>
@@ -17,7 +19,7 @@
 
 #include <asm/cacheflush.h>
 #include <asm/smp_plat.h>
-#include <asm/hardware/gic.h>
+//#include <asm/hardware/gic.h>
 
 /*
  * control for which core is the next to come out of the secondary
@@ -34,14 +36,21 @@ static void __cpuinit write_pen_release(int val)
 {
 	pen_release = val;
 	smp_wmb();
+#if 1
+	sync_cache_w(&pen_release);
+#else
 	__cpuc_flush_dcache_area((void *)&pen_release, sizeof(pen_release));
 	outer_clean_range(__pa(&pen_release), __pa(&pen_release + 1));
+#endif
 }
 
 static DEFINE_SPINLOCK(boot_lock);
 
 void __cpuinit waikiki_secondary_init(unsigned int cpu)
 {
+#if 1	/* debug */
+	printk("#### %s\n", __func__); //FX
+#endif
 	/*
 	 * if any interrupts are already enabled for the primary
 	 * core (e.g. timer irq), then they will not have been enabled
@@ -64,6 +73,11 @@ void __cpuinit waikiki_secondary_init(unsigned int cpu)
 int __cpuinit waikiki_boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
+#if 1	// FX
+	unsigned char *cpu1_addr;
+	volatile int a = 1;
+	printk("#### %s(cpu=%x)\n", __func__, cpu); // FX
+#endif
 
 	/*
 	 * Set synchronisation state between this boot processor
@@ -84,9 +98,20 @@ int __cpuinit waikiki_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 * the boot monitor to read the system wide flags register,
 	 * and branch to the address found there.
 	 */
+#if 1
+	write_pen_release(cpu);
+// FX
+#if 1
+	cpu1_addr = ioremap(0x043B0000,0x32);
+	writel(0x3ff, cpu1_addr + 0x24);
+	iounmap(cpu1_addr);
+//	while (a);
+#endif
+#else
 	gic_raise_softirq(cpumask_of(cpu), 1);
+#endif
 
-	timeout = jiffies + (1 * HZ);
+	timeout = jiffies + (6 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 		if (pen_release == -1)
