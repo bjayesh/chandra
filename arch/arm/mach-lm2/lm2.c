@@ -7,8 +7,6 @@
  */
 
 #include <linux/device.h>
-#include <linux/amba/bus.h>
-#include <linux/amba/mmci.h>
 #include <linux/io.h>
 #include <linux/init.h>
 #include <linux/of_address.h>
@@ -17,11 +15,10 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/ata_platform.h>
-#include <linux/smsc911x.h>
 #include <linux/memblock.h>
 #include <linux/spinlock.h>
 #include <linux/device.h>
-#include <linux/usb/isp1760.h>
+#include <linux/dma-mapping.h>
 #include <linux/clkdev.h>
 #include <linux/mtd/physmap.h>
 #include <linux/serial_8250.h>
@@ -35,13 +32,8 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/mach/time.h>
-#include <asm/hardware/arm_timer.h>
 #include <asm/hardware/cache-l2x0.h>
-#include <asm/hardware/gic.h>
-#include <asm/hardware/timer-sp.h>
-#include <asm/hardware/sp810.h>
-#include <linux/stmmac.h>
-
+#include <linux/irqchip/arm-gic.h>
 /*
  * BSPs include files 
  */
@@ -178,26 +170,7 @@ static int	__init lm2_console_init(void)
 /*
  * Ethernet Controller
  */
-//static	struct	plat_stmmacenet_data	lm2_gmac_resource ={
-//	.pmt = 1,
-//	.has_gmac = 1,
-//};
-//
-//static struct	platform_device lm2_gmac_device ={
-//	.name = "dwmac",
-//	.dev.platform_data = &lm2_gmac_resource,
-//};
-
 static struct resource lm2_eth_resources[] = {
-	{
-		.start	= FM3_MAC_BASE,
-		.end	= FM3_MAC_BASE + SZ_64K - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-		.start	= IRQ_V2M_LAN9118,
-		.end	= IRQ_V2M_LAN9118,
-		.flags	= IORESOURCE_IRQ,
-	},
 	{
 		.name	="macirq",
 		.start	= LM2_IRQ_GMACK_STAT,
@@ -252,21 +225,6 @@ static	struct platform_device	lm2_gpio_device = {
 	.id		= -1,
 	.resource	= lm2_gpio_resource,
 	.num_resources	= ARRAY_SIZE(lm2_gpio_resource),
-};
-
-/*
- * USB Host Device
- */
-static struct resource lm2_usb_resources[] = {
-	{
-		.start	= LM2_USB2,
-		.end	= LM2_USB2 + SZ_128K - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-		.start	= LM2_IRQ_USB_HOST,
-		.end	= LM2_IRQ_USB_HOST,
-		.flags	= IORESOURCE_IRQ,
-	},
 };
 
 /*
@@ -456,7 +414,7 @@ static void __init lm2_init(void)
 #ifdef	CONFIG_SATA_AHCI_PLATFORM
 	lm2_sata_register();
 #endif	/* CONFIG_SATA_AHCI_PLATFORM */
-//	lm2_usb_register();
+	lm2_usb_register();
         lm2_sdhci_init();
 
 	platform_device_register(&lm2_gpio_device);
