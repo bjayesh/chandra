@@ -1153,7 +1153,7 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned	length;
 		dma_addr_t	dma;
-#if	1	/*Original	<HN> 2015-03-05 */
+#if	0	/*Original	<HN> 2015-03-05 */
 		last_one = false;
 #else	/* yamano 0219 added from refer source */
 		last_one = true;
