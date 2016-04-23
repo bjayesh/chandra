@@ -90,6 +90,7 @@ struct	lm2_rtc	{
 	unsigned long		alm_sec;
 	int			tim_en;
 	struct work_struct 	irqwork;
+	int			hw_sts;	/* 2038 issue */
 };
 
 /*
@@ -222,6 +223,9 @@ static	int	lm2_set_time(struct device *dev, struct rtc_time *tm)
 
 	rtc_disconnect(rtc->rtc_base);
 
+	if(rtc->hw_sts != 0)	/* 2038 issue */
+		rtc->hw_sts = 0;
+
 	mutex_unlock(&rtc->lock);
 
 //	printk( KERN_WARNING "RTC set date and time completed\n");
@@ -236,6 +240,7 @@ static	int	lm2_get_time(struct device *dev, struct rtc_time *tm)
 	u32	current_sec;
 	int	result;
 
+//	printk( KERN_WARNING "RTC read date and time\n");
 //	if(rtc->rtc_base == NULL){
 //		dev_err(dev,"ioremap error lm2_rtc_get %x\n",rtc->rtc_base);
 //		return 0;
@@ -248,6 +253,16 @@ static	int	lm2_get_time(struct device *dev, struct rtc_time *tm)
 	}
 	
 	current_sec = readl(rtc->rtc_base + RTCCNT);
+//	current_sec = 0x80000000;	/* 2038 issue test code */
+
+	if(current_sec > 0x7fffffff){
+//		printk( KERN_ERR "RTC Counter problem %lx\n", current_sec);
+		rtc->hw_sts = 1;
+		return	-1;
+	}else{
+		rtc->hw_sts = 0;
+	}
+		
 	rtc_time_to_tm(current_sec,tm);
 
 	return	0;
@@ -382,7 +397,7 @@ static	int	lm2_voltage_status(struct device *dev, unsigned long value, int flag)
 static	int	lm2_ioctl(struct device *dev, unsigned int opecode, unsigned long value)
 {
 	int	result;
-
+	struct lm2_rtc	*rtc = dev_get_drvdata(dev);
 
 	switch(opecode){
 	case	RTC_VL_READ:
@@ -390,6 +405,10 @@ static	int	lm2_ioctl(struct device *dev, unsigned int opecode, unsigned long val
 		break;
 	case	RTC_VL_CLR:
 		result = lm2_voltage_status(dev, 0, LM2_SET); 
+		break;
+	case	RTC_HW_CHK:
+		put_user( rtc->hw_sts , (int *)value);
+		result = 0;
 		break;
 	default:
 		printk( KERN_ERR "%s Unknown opecode = %d\n", __func__, opecode);
@@ -458,6 +477,7 @@ static int __init lm2_rtc_probe(struct platform_device *pdev)
 	dev->count = 0;
 	dev->alm_en =0;
 	dev->tim_en =0;	
+	dev->hw_sts = 0;	/* 2038 issue */
 
 	platform_set_drvdata(pdev,dev);
 
