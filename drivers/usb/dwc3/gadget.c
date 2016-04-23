@@ -1137,9 +1137,11 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned	length;
 		dma_addr_t	dma;
-		last_one = false;	/*	Back Original	<HN> 2015-03-05 */
-/*		last_one = true;	*//* yamano 0219 added from refer source */
-
+#if	1	/*Original	<HN> 2015-03-05 */
+		last_one = false;
+#else	/* yamano 0219 added from refer source */
+		last_one = true;
+#endif
 		if (req->request.num_mapped_sgs > 0) {
 			struct usb_request *request = &req->request;
 			struct scatterlist *sg = request->sg;
@@ -1779,6 +1781,7 @@ static void dwc3_gadget_enable_irq(struct dwc3 *dwc)
 	u32			reg;
 
 	/* Enable all but Start and End of Frame IRQs */
+#if	0	/*	<HN ORG>*/
 	reg = (DWC3_DEVTEN_VNDRDEVTSTRCVEDEN |
 			DWC3_DEVTEN_EVNTOVERFLOWEN |
 			DWC3_DEVTEN_CMDCMPLTEN |
@@ -1788,7 +1791,16 @@ static void dwc3_gadget_enable_irq(struct dwc3 *dwc)
 			DWC3_DEVTEN_CONNECTDONEEN |
 			DWC3_DEVTEN_USBRSTEN |
 			DWC3_DEVTEN_DISCONNEVTEN);
-
+#else
+	reg = (DWC3_DEVTEN_VNDRDEVTSTRCVEDEN |
+			DWC3_DEVTEN_EVNTOVERFLOWEN |
+			DWC3_DEVTEN_CMDCMPLTEN |
+			DWC3_DEVTEN_ERRTICERREN |
+			DWC3_DEVTEN_WKUPEVTEN |
+			DWC3_DEVTEN_CONNECTDONEEN |
+			DWC3_DEVTEN_USBRSTEN |
+			DWC3_DEVTEN_DISCONNEVTEN);
+#endif
 	dwc3_writel(dwc->regs, DWC3_DEVTEN, reg);
 }
 
@@ -2873,9 +2885,15 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 		break;
 	case DWC3_LINK_STATE_RX_DET:	/* 2015-03-04 <HN> */
 		if(dwc->gadget.speed != USB_SPEED_SUPER){
-/*			phy_dp_pull_up(1, 1);*/
 			dwc3_suspend_gadget(dwc);
+			phy_dp_pull_up(1, 1);
+			dwc3_resume_gadget(dwc);
 			act_flag |= 0x0200; 
+		} else {
+			dwc3_suspend_gadget(dwc);
+			phy_dp_pull_up(1, 1);
+			dwc3_resume_gadget(dwc);
+			act_flag |= 0x1000; 
 		}
 		break;
 	default:
@@ -3307,6 +3325,7 @@ void dwc3_gadget_exit(struct dwc3 *dwc)
 	iounmap(cr_data_in);
 	iounmap(cr_write);
 	iounmap(cr_ack);
+    iounmap(cr_data_out);	/* added for fail-safe  0307 <HN>*/
 #endif
 }
 
