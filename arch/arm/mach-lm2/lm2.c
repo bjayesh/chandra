@@ -341,10 +341,10 @@ static	void __init lm2_fixup_mem(struct tag *tags, char **form, struct meminfo *
 {
 #if 1	/* yamano debug */
 	meminfo->bank[0].start = 0x890000000ULL;
-	meminfo->bank[0].size = 512*1024*1024;
-//	meminfo->bank[1].start = 0x8b0000000ULL;
-//	meminfo->bank[1].size = SZ_512M+SZ_512M+SZ_256M;
-	meminfo->nr_banks =1;
+	meminfo->bank[0].size = 760*1024*1024;
+//	meminfo->bank[1].start = 0x8bf800000ULL;
+//	meminfo->bank[1].size = SZ_512M+SZ_512M;
+	meminfo->nr_banks = 1;
 #endif /* yamano debug */
 	return;
 }
