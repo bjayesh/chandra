@@ -148,17 +148,19 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 	struct	i2c_msg	dat;
 	u32	length;
 	u32	idx;
+	u32	addr;
 
 	if (lm2_i2c_busy_check(id)) {
 		dev_err(&adap->dev, "lm2-i2c %d: bus busy!\n", adap->nr);
 		return -EBUSY;
 	}
-	dev_info( &adap->dev, "call master xfer %x %d\n", msgs, num);
-	dev_info(&adap->dev, "slave addr = %d\n",msgs->addr);
-	dev_info(&adap->dev, "flags = %x\n",msgs->flags);
-	dev_info(&adap->dev, "msg length = %d\n",msgs->len);
-	dev_info(&adap->dev, "buf = %x\n",msgs->buf);
-
+//	dev_info( &adap->dev, "call master xfer %x %d\n", msgs, num);
+//	dev_info(&adap->dev, "slave addr = %d\n",msgs->addr);
+//	dev_info(&adap->dev, "flags = %x\n",msgs->flags);
+//	dev_info(&adap->dev, "msg length = %d\n",msgs->len);
+//	dev_info(&adap->dev, "buf = %x\n",msgs->buf);
+	addr = (msgs->addr)<<1;
+	writel(addr,id->iobase + ESAR);
 	id->msg = msgs;
 	length = msgs->len;
 	idx = 0;
@@ -172,7 +174,7 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 		/* setup synchronize */
 		init_completion(&id->xfer_done);
 
-dev_info(&adap->dev, "idx = %d length= %d\n", idx, length);
+// dev_info(&adap->dev, "idx = %d length= %d\n", idx, length);
 		if (msgs->flags & I2C_M_RD){
 			id->addr = idx;
 			lm2_i2c_mrecv(id);	/* recv */

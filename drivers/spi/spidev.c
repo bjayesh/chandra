@@ -580,6 +580,7 @@ static int spidev_probe(struct spi_device *spi)
 	int			status;
 	unsigned long		minor;
 
+	dev_info(&spi->dev, "spidev probing\n");
 	printk("%s:enter spidev_probe\n", __func__);
 	/* Allocate driver data */
 	spidev = kzalloc(sizeof(*spidev), GFP_KERNEL);
@@ -689,19 +690,24 @@ static int __init spidev_init(void)
 	 * that will key udev/mdev to add/remove /dev nodes.  Last, register
 	 * the driver which manages those device numbers.
 	 */
+printk(KERN_ERR "===== spidev init call ======\n");
 	BUILD_BUG_ON(N_SPI_MINORS > 256);
 	status = register_chrdev(SPIDEV_MAJOR, "spi", &spidev_fops);
-	if (status < 0)
+	if (status < 0){
+		printk(KERN_ERR "spidev could not create character device\n");
 		return status;
+	}
 
 	spidev_class = class_create(THIS_MODULE, "spidev");
 	if (IS_ERR(spidev_class)) {
+		printk(KERN_ERR "spidev could not create device class for spidev\n");
 		unregister_chrdev(SPIDEV_MAJOR, spidev_spi_driver.driver.name);
 		return PTR_ERR(spidev_class);
 	}
 
 	status = spi_register_driver(&spidev_spi_driver);
 	if (status < 0) {
+		printk(KERN_ERR "spidev could not registered for spidev\n");
 		class_destroy(spidev_class);
 		unregister_chrdev(SPIDEV_MAJOR, spidev_spi_driver.driver.name);
 	}

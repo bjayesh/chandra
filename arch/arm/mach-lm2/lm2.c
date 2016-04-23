@@ -90,20 +90,6 @@ static struct map_desc lm2_io_desc[] __initdata = {
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	},
-#if 0
-	{
-		.virtual	= LM2_CCI_VIRT,
-		.pfn		= __phys_to_pfn(0x04060000ULL),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	},
-	{
-		.virtual	= LM2_GPIO_VIRT,
-		.pfn		= __phys_to_pfn(0x04080000ULL),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	},
-#endif
 };
 
 /*
@@ -409,9 +395,6 @@ void __init lm2_dt_map_io(void)
 
 	iotable_init(lm2_io_desc, ARRAY_SIZE(lm2_io_desc));
 
-#if defined(CONFIG_SMP)
-	vexpress_dt_smp_map_io();
-#endif
 }
 
 static u32 osc;

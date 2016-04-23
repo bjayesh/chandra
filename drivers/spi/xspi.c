@@ -170,14 +170,13 @@ static int xspi_probe(struct platform_device *pdev)
 		return	-ENOMEM;
 	}
 
-	platform_set_drvdata(pdev, master);
-
+//	master->dev.of_node = pdev->dev.of_node;
 	master->mode_bits = SPI_MODE_0;
-	master->bits_per_word_mask = BIT(8 - 1);
+//	master->bits_per_word_mask = BIT(8 - 1);
 	master->bus_num = -1;
 	master->num_chipselect = 2;
 	master->transfer_one_message = xspi_transfer_one;
-	master->dev.of_node = pdev->dev.of_node;
+	platform_set_drvdata(pdev, master);
 
 	xspi= spi_master_get_devdata(master);
 
@@ -235,6 +234,7 @@ static int xspi_probe(struct platform_device *pdev)
 	xspi_wr(xspi, SPI_CLK1, 0x40002020); /* SPI mode 0 300MHz/64 */
 	xspi_wr(xspi, SPI_CFG + 4, 0xc00000e0);
 
+//	err = devm_spi_register_master(&pdev->dev, master);
 	err = spi_register_master(master);
 	if(err){
 		dev_err(&pdev->dev, "could not register SPI Master Driver \n");
@@ -281,7 +281,8 @@ MODULE_DEVICE_TABLE(of, xspi_dt_ids);
 
 static struct platform_driver xspi_driver = {
 	.driver = {
-		.name = "xspi",
+		.name	= "mmio-xspi",
+		.owner	= THIS_MODULE,
 #ifdef	CONFIG_OF
 		.of_match_table = of_match_ptr(xspi_dt_ids),
 #endif

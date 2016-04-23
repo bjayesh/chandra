@@ -6,9 +6,27 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
+#include <linux/spi/spi.h>
 
 #include "mach/irqs.h"
 #include "mach/motherboard.h"
+
+static	struct spi_board_info	lm2_spi_devices[] __initdata = {
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 0,
+		.max_speed_hz	= 580000,
+		.mode		= SPI_MODE_0,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 1,
+		.max_speed_hz	= 580000,
+		.mode		= SPI_MODE_0,
+	}
+};
 
 static	struct resource	lm2_xspi_resource[] = {
 	{
@@ -24,13 +42,13 @@ static	struct resource	lm2_xspi_resource[] = {
 };
 
 static	struct platform_device	lm2_xspi_device = {
-	.name	= "xspi",
-	.id	= -1,
+	.name	= "mmio-xspi",
+	.id	= 0,
 	.num_resources	= ARRAY_SIZE( lm2_xspi_resource ),
 	.resource	= lm2_xspi_resource,
 };
 
-static	struct platform_device lm2_spidev_device = {
+static	struct platform_device	lm2_spidev_device = {
 	.name	= "spidev",
 	.id	= -1,
 };
@@ -39,8 +57,9 @@ int	__init lm2_xspi_register(void)
 {
 	int	result;
 
-	result = platform_device_register( &lm2_xspi_device );
+	spi_register_board_info(lm2_spi_devices,ARRAY_SIZE(lm2_spi_devices));
 	result = platform_device_register( &lm2_spidev_device );
+	result = platform_device_register( &lm2_xspi_device );
 	return	result;
 }
 

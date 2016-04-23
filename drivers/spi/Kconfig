@@ -531,7 +531,6 @@ config SPI_DW_MMIO
 config SPI_XSPI
 	tristate "LM2 XSPI SRAM/CPLD Driver"
 	depends on ARCH_LM2
-	select	SPI_SPIDEV
 	help
 
 #
