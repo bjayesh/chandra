@@ -271,6 +271,15 @@ static int dwmac1000_irq_status(void __iomem *ioaddr,
 				x->pcs_speed = SPEED_10;
 
 			x->pcs_link = 1;
+#if 1	/* ohkuma workaround */
+			if ( x->pcs_speed == SPEED_1000 ) {
+				writel(0x00000800,ioaddr + 0x0410);	/* GMACTCPD */
+				writel(0x00000000,ioaddr + 0x0408);	/* GMACRCPD */
+			} else {
+				writel(0x00003f00,ioaddr + 0x0410);	/* GMACTCPD */
+				writel(0x00003f00,ioaddr + 0x0408);	/* GMACRCPD */
+			}
+#endif	/* ohkuma workaround */
 			pr_debug("Link is Up - %d/%s\n", (int)x->pcs_speed,
 				 x->pcs_duplex ? "Full" : "Half");
 		} else {

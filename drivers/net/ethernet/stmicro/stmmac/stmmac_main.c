@@ -51,6 +51,8 @@
 #include "stmmac_ptp.h"
 #include "stmmac.h"
 
+#define	OHKU_TEST
+
 #undef STMMAC_DEBUG
 /*#define STMMAC_DEBUG*/
 #ifdef STMMAC_DEBUG
@@ -969,6 +971,9 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 				  int i)
 {
 	struct sk_buff *skb;
+#ifdef	OHKU_TEST
+	dma_addr_t	tmp;
+#endif
 
 	skb = __netdev_alloc_skb(priv->dev, priv->dma_buf_sz + NET_IP_ALIGN,
 				 GFP_KERNEL);
@@ -982,7 +987,13 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 						priv->dma_buf_sz,
 						DMA_FROM_DEVICE);
 
+#ifdef  OHKU_TEST
+	tmp = priv->rx_skbuff_dma[i];
+	/* 64 ->32 */
+	p->des2 = tmp&0xffffffff;
+#else
 	p->des2 = priv->rx_skbuff_dma[i];
+#endif
 
 	if ((priv->mode == STMMAC_RING_MODE) &&
 	    (priv->dma_buf_sz == BUF_SIZE_16KiB))
@@ -1779,6 +1790,9 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	int nfrags = skb_shinfo(skb)->nr_frags;
 	struct dma_desc *desc, *first;
 	unsigned int nopaged_len = skb_headlen(skb);
+#ifdef  OHKU_TEST
+        dma_addr_t      tmp;
+#endif
 
 	if (unlikely(stmmac_tx_avail(priv) < nfrags + 1)) {
 		if (!netif_queue_stopped(dev)) {
@@ -1838,9 +1852,22 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 							   csum_insertion);
 	}
 	if (likely(!is_jumbo)) {
+#ifdef  OHKU_TEST
+		tmp = dma_map_single(priv->device, skb->data, nopaged_len, DMA_TO_DEVICE);
+		desc->des2 = tmp&0xffffffff;
+		priv->tx_skbuff_dma[entry] = tmp;
+#else
 		desc->des2 = dma_map_single(priv->device, skb->data,
 					    nopaged_len, DMA_TO_DEVICE);
 		priv->tx_skbuff_dma[entry] = desc->des2;
+#endif
+#if 1	/* ohkuma GMAC_EXTCFG Set. */
+		if ( sizeof(dma_addr_t) == 8 ) {
+			if ( priv->tx_skbuff_dma[entry] >=0x100000000 ) {
+				writel((priv->tx_skbuff_dma[entry])>>32, priv->ioaddr + 0x041C);
+			}
+		} 
+#endif
 		priv->hw->desc->prepare_tx_desc(desc, 1, nopaged_len,
 						csum_insertion, priv->mode);
 	} else
@@ -1857,9 +1884,15 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 			desc = priv->dma_tx + entry;
 
 		TX_DBG("\t[entry %d] segment len: %d\n", entry, len);
+#ifdef  OHKU_TEST
+		tmp = skb_frag_dma_map(priv->device, frag, 0, len, DMA_TO_DEVICE);
+		desc->des2 = tmp&0xffffffff;
+		priv->tx_skbuff_dma[entry] = tmp;
+#else
 		desc->des2 = skb_frag_dma_map(priv->device, frag, 0, len,
 					      DMA_TO_DEVICE);
 		priv->tx_skbuff_dma[entry] = desc->des2;
+#endif
 		priv->tx_skbuff[entry] = NULL;
 		priv->hw->desc->prepare_tx_desc(desc, 0, len, csum_insertion,
 						priv->mode);
@@ -1964,7 +1997,11 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv)
 			    dma_map_single(priv->device, skb->data, bfsize,
 					   DMA_FROM_DEVICE);
 
+#ifdef  OHKU_TEST
+			p->des2 = priv->rx_skbuff_dma[entry]&0xffffffff;
+#else
 			p->des2 = priv->rx_skbuff_dma[entry];
+#endif
 
 			priv->hw->ring->refill_desc3(priv, p);
 
@@ -2703,11 +2740,14 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 		goto error_netdev_register;
 	}
 
+#if 1	/* ohkuma clk_get() no used */
+#else
 	priv->stmmac_clk = clk_get(priv->device, STMMAC_RESOURCE_NAME);
 	if (IS_ERR(priv->stmmac_clk)) {
 		pr_warn("%s: warning: cannot get CSR clock\n", __func__);
 		goto error_clk_get;
 	}
+#endif
 
 	/* If a specific clk_csr value is passed from the platform
 	 * this means that the CSR Clock Range selection cannot be
@@ -2715,10 +2755,13 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 	 * set the MDC clock dynamically according to the csr actual
 	 * clock input.
 	 */
+#if 1   /* ohkuma clk_get() no used */
+#else
 	if (!priv->plat->clk_csr)
 		stmmac_clk_csr_set(priv);
 	else
 		priv->clk_csr = priv->plat->clk_csr;
+#endif
 
 	stmmac_check_pcs_mode(priv);
 
