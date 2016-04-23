@@ -3789,12 +3789,20 @@ printk("##### %s set needed spd scontrole = %x \n",__FUNCTION__,scontrol); /* ya
 	if ((rc = sata_scr_read(link, SCR_CONTROL, &scontrol)))
 		goto out;
 
-	scontrol = (scontrol & 0x0f0) | 0x301;
-//	scontrol = (scontrol & 0x0f0) | 0x321;
+//	scontrol = (scontrol & 0x0f0) | 0x301;
+	scontrol = (scontrol & 0x0f0) | 0x321;
 printk("##### %s scontrole = %x \n",__FUNCTION__,scontrol); /* yamano */
 
 	if ((rc = sata_scr_write_flush(link, SCR_CONTROL, scontrol)))
 		goto out;
+/* yamano append issue link up 3.0 Gbps*/
+	if ((rc = sata_scr_read(link, SCR_CONTROL, &scontrol)))
+		goto out;
+	
+	scontrol = (scontrol & 0x0f0) | 0x020;
+	if ((rc = sata_scr_write_flush(link, SCR_CONTROL, scontrol)))
+		goto out;
+/* yamano append end */
 
 	/* Couldn't find anything in SATA I/II specs, but AHCI-1.1
 	 * 10.4.2 says at least 1 ms.
