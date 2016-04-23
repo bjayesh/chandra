@@ -3360,7 +3360,7 @@ int xhci_discover_or_reset_device(struct usb_hcd *hcd, struct usb_device *udev)
 	struct xhci_slot_ctx *slot_ctx;
 	int old_active_eps = 0;
 
-printk("## %s entry\n",__FUNCTION__);	/* yamano */
+//printk("## %s entry\n",__FUNCTION__);	/* yamano */
 	ret = xhci_check_args(hcd, udev, NULL, 0, false, __func__);
 	if (ret <= 0)
 		return ret;
@@ -3608,7 +3608,9 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	int timeleft;
 	int ret;
 	union xhci_trb *cmd_trb;
-printk("## %s entry\n",__FUNCTION__);	/* yamano */
+
+	msleep(1000);
+//printk("## %s entry\n",__FUNCTION__);	/* yamano */
 	spin_lock_irqsave(&xhci->lock, flags);
 //	spin_lock(&xhci->lock);
 	cmd_trb = xhci_find_next_enqueue(xhci->cmd_ring);
@@ -3623,11 +3625,11 @@ printk("## %s entry\n",__FUNCTION__);	/* yamano */
 	spin_unlock_irqrestore(&xhci->lock, flags);
 //	spin_unlock(&xhci->lock);
 
-printk("## %s wait completion\n",__FUNCTION__);	/* yamano */
+//printk("## %s wait completion\n",__FUNCTION__);	/* yamano */
 	/* XXX: how much time for xHC slot assignment? */
 	timeleft = wait_for_completion_interruptible_timeout(&xhci->addr_dev,
 			XHCI_CMD_DEFAULT_TIMEOUT);
-printk("## %s wait exit\n",__FUNCTION__);	/* yamano */
+//printk("## %s wait exit\n",__FUNCTION__);	/* yamano */
 	if (timeleft <= 0) {
 		xhci_warn(xhci, "%s while waiting for a slot\n",
 				timeleft == 0 ? "Timeout" : "Signal");
@@ -3640,7 +3642,7 @@ printk("## %s wait exit\n",__FUNCTION__);	/* yamano */
 		return 0;
 	}
 
-printk("## %s completion next step\n",__FUNCTION__);	/* yamano */
+//printk("## %s completion next step\n",__FUNCTION__);	/* yamano */
 	if ((xhci->quirks & XHCI_EP_LIMIT_QUIRK)) {
 		spin_lock_irqsave(&xhci->lock, flags);
 //		spin_lock(&xhci->lock);

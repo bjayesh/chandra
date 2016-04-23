@@ -152,7 +152,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	if (ret)
 		goto put_usb3_hcd;
 
-dev_info(&pdev->dev, "==================== USB Normal End =========================\n");
+//dev_info(&pdev->dev, "==================== USB Normal End =========================\n");
 	return 0;
 
 put_usb3_hcd:
