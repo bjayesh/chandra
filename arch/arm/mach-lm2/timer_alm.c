@@ -49,6 +49,10 @@ struct cipui_tim_device {
 struct cipui_tim_device *cipui_tim;
 void __iomem            *cipui_tim_base;
 
+/* CIP UI Interrupt handling */
+void	(* osddiIntTimerEvent)(void);
+EXPORT_SYMBOL_GPL(osddiIntTimerEvent);
+
 #ifdef	DEBUG_TIMALM
 static void cipui_tim_dump(void) {
 	printk(KERN_ERR "%s: *** reg dump ***\n", __func__);
@@ -139,6 +143,8 @@ printk(KERN_ERR "%s: IRQ found.(0x%x status=0x%x)\n", __func__,irq, status);
 		printk(KERN_ERR "%s: TimerAlam IRQ found.(0x%x)\n", __func__,irq);
 		writel(0x0,                  cipui_tim_base + CUPUI_TCONTROL);
 		writel(USE_IRQBIT,           cipui_tim->cipui_irq_base + 0x08);
+		if(osddiIntTimerEvent)
+			(osddiIntTimerEvent)();
 		return IRQ_HANDLED;
 	}
 	return IRQ_NONE;
