@@ -39,6 +39,8 @@ struct plat_serial8250_port {
 	void		(*pm)(struct uart_port *, unsigned int state,
 			      unsigned old);
 	void		(*handle_break)(struct uart_port *);
+
+	unsigned char fxpwsave_enable;
 };
 
 /*
@@ -98,6 +100,9 @@ struct uart_8250_port {
 	/* 8250 specific callbacks */
 	int			(*dl_read)(struct uart_8250_port *);
 	void			(*dl_write)(struct uart_8250_port *, int);
+
+	unsigned char fxpwsave_enable;
+	unsigned char fxpwsave_flag;
 };
 
 int serial8250_register_8250_port(struct uart_8250_port *);

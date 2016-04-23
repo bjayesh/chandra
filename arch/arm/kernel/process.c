@@ -40,6 +40,8 @@
 #include <asm/stacktrace.h>
 #include <asm/mach/time.h>
 
+#include <linux/fxmodule/kernelOsddi.h>
+
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
 unsigned long __stack_chk_guard __read_mostly;
@@ -210,7 +212,8 @@ void machine_halt(void)
 {
 	smp_send_stop();
 #ifdef	CONFIG_ARCH_LM2
-	a7_softirq(6);  // shutdown IPI
+	//a7_softirq(6);  // shutdown IPI
+	kernelGioNegate(OS_GIO_HW_RST); /* HW Reset */
 #endif	/* CONFIG_ARCH_LM2 */
 
 	local_irq_disable();
@@ -250,6 +253,10 @@ void machine_restart(char *cmd)
 
 	/* Give a grace period for failure to restart of 1s */
 	mdelay(1000);
+#ifdef	CONFIG_ARCH_LM2
+	//a7_softirq(6);  // shutdown IPI
+	kernelGioNegate(OS_GIO_HW_RST); /* HW Reset */
+#endif	/* CONFIG_ARCH_LM2 */
 
 	/* Whoops - the platform was unable to reboot. Tell the user! */
 	printk("Reboot failed -- System halted\n");

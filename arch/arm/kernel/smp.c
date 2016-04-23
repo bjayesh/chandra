@@ -66,6 +66,14 @@ enum ipi_msg_type {
 	IPI_CALL_FUNC,
 	IPI_CALL_FUNC_SINGLE,
 	IPI_CPU_STOP,
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
+	IPI_UNUSED_6, IPI_UNUSED_7, IPI_UNUSED_8,
+	IPI_UNUSED_9, IPI_UNUSED_10, IPI_UNUSED_11,
+	IPI_RX_CMD_NOT_EMPTY,
+	IPI_RX_CMD_NOT_FULL,
+	IPI_TX_CMD_NOT_EMPTY,
+	IPI_TX_CMD_NOT_FULL,
+#endif
 };
 
 static DECLARE_COMPLETION(cpu_running);
@@ -470,6 +478,18 @@ static const char *ipi_types[NR_IPI] = {
 	S(IPI_CALL_FUNC, "Function call interrupts"),
 	S(IPI_CALL_FUNC_SINGLE, "Single function call interrupts"),
 	S(IPI_CPU_STOP, "CPU stop interrupts"),
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
+	S(IPI_UNUSED_6, "Unknown IPI 6 interrupts"),
+	S(IPI_UNUSED_7, "Unknown IPI 7 interrupts"),
+	S(IPI_UNUSED_8, "Unknown IPI 8 interrupts"),
+	S(IPI_UNUSED_9, "Unknown IPI 9 interrupts"),
+	S(IPI_UNUSED_10, "Unknown IPI 10 interrupts"),
+	S(IPI_UNUSED_11, "Unknown IPI 11 interrupts"),
+	S(IPI_RX_CMD_NOT_EMPTY, "RX cmd not empty interrupts"),
+	S(IPI_RX_CMD_NOT_FULL, "RX cmd not full interrupts"),
+	S(IPI_TX_CMD_NOT_EMPTY, "TX cmd not empty interrupts"),
+	S(IPI_TX_CMD_NOT_FULL, "TX cmd not full interrupts"),
+#endif
 };
 
 void show_ipi_list(struct seq_file *p, int prec)
@@ -645,6 +665,20 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		irq_exit();
 		break;
 
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
+	case IPI_RX_CMD_NOT_EMPTY:
+		irq_enter();
+		wakeup_for_cmd_not_empty();
+		irq_exit();
+                break;
+
+	case IPI_RX_CMD_NOT_FULL:
+		irq_enter();
+		wakeup_for_cmd_not_full();
+		irq_exit();
+                break;
+#endif
+
 	default:
 		printk(KERN_CRIT "CPU%u: Unknown IPI message 0x%x\n",
 		       cpu, ipinr);
@@ -676,6 +710,18 @@ void smp_send_stop(void)
 	if (num_online_cpus() > 1)
 		pr_warning("SMP: failed to stop secondary CPUs\n");
 }
+
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
+void smp_send_cmd_not_empty(int cpu)
+{
+	smp_cross_call(cpumask_of(cpu), IPI_TX_CMD_NOT_EMPTY);
+}
+
+void smp_send_cmd_not_full(int cpu)
+{
+	smp_cross_call(cpumask_of(cpu), IPI_TX_CMD_NOT_FULL);
+}
+#endif
 
 /*
  * not supported here

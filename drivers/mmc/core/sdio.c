@@ -18,6 +18,7 @@
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
+#include <linux/mmc/sdhci.h>
 
 #include "core.h"
 #include "bus.h"
@@ -158,6 +159,9 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 				goto out;
 
 			if (mmc_host_uhs(card->host)) {
+
+				card->sw_caps.sd3_bus_mode=SD_MODE_UHS_SDR25;
+
 				if (data & SDIO_UHS_DDR50)
 					card->sw_caps.sd3_bus_mode
 						|= SD_MODE_UHS_DDR50;
@@ -480,18 +484,13 @@ static int sdio_set_bus_speed_mode(struct mmc_card *card)
 
 	bus_speed = SDIO_SPEED_SDR12;
 	timing = MMC_TIMING_UHS_SDR12;
+	/*
 	if ((card->host->caps & MMC_CAP_UHS_SDR104) &&
 	    (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_SDR104)) {
 			bus_speed = SDIO_SPEED_SDR104;
 			timing = MMC_TIMING_UHS_SDR104;
 			card->sw_caps.uhs_max_dtr = UHS_SDR104_MAX_DTR;
 			card->sd_bus_speed = UHS_SDR104_BUS_SPEED;
-	} else if ((card->host->caps & MMC_CAP_UHS_DDR50) &&
-		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_DDR50)) {
-			bus_speed = SDIO_SPEED_DDR50;
-			timing = MMC_TIMING_UHS_DDR50;
-			card->sw_caps.uhs_max_dtr = UHS_DDR50_MAX_DTR;
-			card->sd_bus_speed = UHS_DDR50_BUS_SPEED;
 	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
 		    MMC_CAP_UHS_SDR50)) && (card->sw_caps.sd3_bus_mode &
 		    SD_MODE_UHS_SDR50)) {
@@ -499,7 +498,14 @@ static int sdio_set_bus_speed_mode(struct mmc_card *card)
 			timing = MMC_TIMING_UHS_SDR50;
 			card->sw_caps.uhs_max_dtr = UHS_SDR50_MAX_DTR;
 			card->sd_bus_speed = UHS_SDR50_BUS_SPEED;
-	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
+	} else if ((card->host->caps & MMC_CAP_UHS_DDR50) &&
+		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_DDR50)) {
+			bus_speed = SDIO_SPEED_DDR50;
+			timing = MMC_TIMING_UHS_DDR50;
+			card->sw_caps.uhs_max_dtr = UHS_DDR50_MAX_DTR;
+			card->sd_bus_speed = UHS_DDR50_BUS_SPEED;
+	} else */
+	if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
 		    MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR25)) &&
 		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_SDR25)) {
 			bus_speed = SDIO_SPEED_SDR25;
@@ -664,19 +670,25 @@ try_again:
 	 * it.
 	 */
 	if (!powered_resume && (ocr & R4_18V_PRESENT) && mmc_host_uhs(host)) {
-		err = mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180);
-		if (err == -EAGAIN) {
-			sdio_reset(host);
-			mmc_go_idle(host);
-			mmc_send_if_cond(host, host->ocr_avail);
-			mmc_remove_card(card);
-			retries--;
-			goto try_again;
-		} else if (err) {
-			ocr &= ~R4_18V_PRESENT;
-			host->ocr &= ~R4_18V_PRESENT;
+		struct sdhci_host *sd_host=mmc_priv(host);
+		if(sd_host->ch==0){
+			err = mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180);
+			if (err == -EAGAIN) {
+				sdio_reset(host);
+				mmc_go_idle(host);
+				mmc_send_if_cond(host, host->ocr_avail);
+				mmc_remove_card(card);
+				retries--;
+				goto try_again;
+			} else if (err) {
+				ocr &= ~R4_18V_PRESENT;
+				host->ocr &= ~R4_18V_PRESENT;
+			}
+			err = 0;
+		}else{/*delete power switch sequence for ch1*/
+			host->ios.signal_voltage = MMC_SIGNAL_VOLTAGE_180;
+			host->ios.vdd = 7; /* MMC_VDD_165_195 (1.8V)  */
 		}
-		err = 0;
 	} else {
 		ocr &= ~R4_18V_PRESENT;
 		host->ocr &= ~R4_18V_PRESENT;
@@ -1145,6 +1157,8 @@ int mmc_attach_sdio(struct mmc_host *host)
 	if (host->ocr_avail_sdio)
 		host->ocr_avail = host->ocr_avail_sdio;
 
+	host->ocr_avail=MMC_VDD_32_33 | MMC_VDD_33_34 |MMC_VDD_29_30 | MMC_VDD_30_31 | MMC_VDD_165_195;/* add 3.3V support */
+
 	/*
 	 * Sanity check the voltages that the card claims to
 	 * support.
@@ -1265,4 +1279,62 @@ err:
 
 	return err;
 }
+
+#include <linux/export.h>
+int sdio_reset_comm(struct mmc_card *card)
+{
+	struct mmc_host *host = card->host;
+	u32 ocr;
+	int err;
+
+	printk("%s():\n", __func__);
+	mmc_go_idle(host);
+
+	mmc_set_clock(host, host->f_min);
+
+	err = mmc_send_io_op_cond(host, 0, &ocr);
+	if (err)
+		goto err;
+
+	host->ocr = mmc_select_voltage(host, ocr);
+	if (!host->ocr) {
+		err = -EINVAL;
+		goto err;
+	}
+
+	err = mmc_send_io_op_cond(host, host->ocr, &ocr);
+	if (err)
+		goto err;
+
+	if (mmc_host_is_spi(host)) {
+		err = mmc_spi_set_crc(host, use_spi_crc);
+		if (err)
+		goto err;
+	}
+
+	if (!mmc_host_is_spi(host)) {
+		err = mmc_send_relative_addr(host, &card->rca);
+		if (err)
+			goto err;
+		mmc_set_bus_mode(host, MMC_BUSMODE_PUSHPULL);
+	}
+	if (!mmc_host_is_spi(host)) {
+		err = mmc_select_card(card);
+		if (err)
+			goto err;
+	}
+
+	mmc_set_clock(host, card->cis.max_dtr);
+	err = sdio_enable_wide(card);
+	if (err)
+		goto err;
+
+	return 0;
+ err:
+	printk("%s: Error resetting SDIO communications (%d)\n",
+	       mmc_hostname(host), err);
+	mmc_release_host(host);
+	return err;
+}
+EXPORT_SYMBOL_GPL(sdio_reset_comm);
 

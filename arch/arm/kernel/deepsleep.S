@@ -213,6 +213,7 @@ ENTRY(lm2_wfi0)
 	str	r1, [r0, #0x08]
 	bl	set_chksum
 	bl	v7_flush_kern_cache_all
+	bl      go_cpu_off
 #ifdef	LM2_FORCE_LOOP
 __lm2_force_loop0:
 	wfi

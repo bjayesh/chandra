@@ -17,11 +17,11 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 	chosen {
-		bootargs = "root=/dev/sda1 ip=dhcp console=ttyS0,38400 mem=2992M";
+		bootargs = "root=/dev/mmcblk0p2 rootwait init=/etc/preinit console=ttyS0,38400 quiet";
 	};
-	mac_addr {
-		mac-address = [ 11 22 33 44 55 66 ];
-	};
+        mac_addr {
+                mac-address = [ 11 22 33 44 55 66 ];
+        };
 /*
 	aliases {
 		serial0 = &lm2_serial0;
@@ -76,12 +76,14 @@
 			clock-frequency = <800000000>;
 		};
 	};
-/*
+
 	memory@800000000 {
 		device_type = "memory";
-		reg = <0x8 0x00000000  0xc0000000>;
+		reg = <0x05000000 0xC0000000>; /* 3GB */
+		contigmem_size = <325058560>; /* 310MB */
+		pagemem_size = <276824064>; /* 1024MB */
 	};
-*/
+
         gic: interrupt-controller@04300000 {
                 compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
                 #interrupt-cells = <3>;
@@ -227,16 +229,15 @@
 			reg = <0x04a30000 0x200>;
 			interrupts = <85>;
 		};
-*/
+
 		ethernet@04410000 {
 			compatible = "snps,dwmac";
 			reg = <0x04410000 0x10000>;
 			interrupts = <94 93>;
 			phy-mode = "mii";
 			reg-io-width = <4>;
-			mac-address = [ 00 00 00 00 00 00 ];
 		};
-/*
+
 		sdio@04440000 {
 			compatible = "sdhci";
 			reg = <0x0 0x04440000 0x0 0x500>;

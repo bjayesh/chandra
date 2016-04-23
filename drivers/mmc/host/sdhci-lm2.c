@@ -19,7 +19,12 @@
 
 static unsigned int sdhci_lm2_get_max_clk(struct sdhci_host *host)
 {
-	return 177780000/2;	/* 177.78MHz/2 */
+	if(host->ch==0){
+		return 200000000;       /* 200MHz */;
+		//return 177780000/2;/* 177.78MHz/2 */
+	}else{
+		return 200000000;	/* 200MHz */
+	}
 }
 
 static void sdhci_lm2_set_clock(struct sdhci_host *host, unsigned int clock)
@@ -28,11 +33,22 @@ static void sdhci_lm2_set_clock(struct sdhci_host *host, unsigned int clock)
 	int div = 1;
 	u16 clk=0;
 	unsigned long timeout;
+	u16 ctrl;
 
 	if (clock == host->clock)
 		return;
 
 	sdhci_writew(host, 0, SDHCI_CLOCK_CONTROL);
+
+	if(host->ch==1){
+		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+		if(!(ctrl&SDHCI_CTRL_VDD_180)){
+			ctrl |= SDHCI_CTRL_VDD_180;
+			sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
+			ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+		}
+
+	}
 
 	if (clock == 0)
 		return;
@@ -96,7 +112,172 @@ static int sdhci_lm2_buswidth(struct sdhci_host *host, int bus_width)
         sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
         return 0;
 }
-static void sdhci_lm2_platform_init(struct sdhci_host *host)
+
+
+/******* FUNCTION SPECIFICATIONS BEGIN ****************************************
+
+ 機能 LM2 SD PHY遅延値設定
+ 形式 STATUS sdcLm2SetPhyDelay(pCard, mode)
+ 引数 pCard  カード情報構造体ポインタ
+      mode   SDカードスピードモード
+ 返値 なし
+ 説明 LM2 SDカードコントローラPHY遅延値を設定する
+
+******** FUNCTION SPECIFICATIONS END *****************************************/
+
+#define SDC_LM2_SPDMODE_DS           (0)
+#define SDC_LM2_SPDMODE_HS           (1)
+#define SDC_LM2_SPDMODE_SDR12        (2)
+#define SDC_LM2_SPDMODE_SDR25        (3)
+#define SDC_LM2_SPDMODE_SDR50        (4)
+#define SDC_LM2_SPDMODE_DDR50        (5)
+
+#define UIS_PHY_ADDR_WR_DS				(0b00000)
+#define UIS_PHY_ADDR_WR_HS				(0b00001)
+#define UIS_PHY_ADDR_WR_SDR12			(0b01000)
+#define UIS_PHY_ADDR_WR_SDR25			(0b01001)
+#define UIS_PHY_ADDR_WR_SDR50			(0b01010)
+#define UIS_PHY_ADDR_WR_SDR104			(0b01011)
+#define UIS_PHY_ADDR_WR_DDR50			(0b01100)
+#define UIS_PHY_ADDR_WR_MMCDS			(0b10000)
+#define UIS_PHY_ADDR_WR_MMCHS			(0b10001)
+#define UIS_PHY_ADDR_WR_MMCDDR			(0b10100)
+
+#define UIS_PHY_ADDR_RD_DS				(0b00000)
+#define UIS_PHY_ADDR_RD_HS				(0b00001)
+#define UIS_PHY_ADDR_RD_SDR12			(0b00010)
+#define UIS_PHY_ADDR_RD_SDR25			(0b00011)
+#define UIS_PHY_ADDR_RD_SDR50			(0b00100)
+#define UIS_PHY_ADDR_RD_SDR104			(0b00101)
+#define UIS_PHY_ADDR_RD_DDR50			(0b00110)
+#define UIS_PHY_ADDR_RD_MMCDS			(0b00111)
+#define UIS_PHY_ADDR_RD_MMCHS			(0b01000)
+#define UIS_PHY_ADDR_RD_MMCDDR			(0b01001)
+
+
+
+#define SDIO0_PHYDELAY_DS			(9)
+#define SDIO0_PHYDELAY_HS			(2)
+#define SDIO0_PHYDELAY_SDR12		(0)
+#define SDIO0_PHYDELAY_SDR25		(0)
+#define SDIO0_PHYDELAY_SDR50		(0)
+#define SDIO0_PHYDELAY_DDR50		(2)
+
+#define SDIO1_PHYDELAY_DS			(9)
+#define SDIO1_PHYDELAY_HS			(2)
+#define SDIO1_PHYDELAY_SDR12		(0)
+#define SDIO1_PHYDELAY_SDR25		(0)
+#define SDIO1_PHYDELAY_SDR50		(3)
+#define SDIO1_PHYDELAY_DDR50		(2)
+
+
+
+
+#define SDIO_HRS44_OFF					0x000000B0
+
+#define SDIO0_HRS44						0x044400B0
+#define SDIO1_HRS44						0x044500B0
+
+#define SDIO_HRS44__ACK__SHIFT			26
+#define SDIO_HRS44__ACK__WIDTH			1
+#define SDIO_HRS44__ACK__MASK			0x04000000
+#define SDIO_HRS44__ACK__HW_DEFAULT		0x0
+#define SDIO_HRS44__RD__SHIFT			25
+#define SDIO_HRS44__RD__WIDTH			1
+#define SDIO_HRS44__RD__MASK			0x02000000
+#define SDIO_HRS44__RD__HW_DEFAULT		0x0
+#define SDIO_HRS44__WR__SHIFT			24
+#define SDIO_HRS44__WR__WIDTH			1
+#define SDIO_HRS44__WR__MASK			0x01000000
+#define SDIO_HRS44__WR__HW_DEFAULT		0x0
+#define SDIO_HRS44__WDATA__SHIFT		16
+#define SDIO_HRS44__WDATA__WIDTH		5
+#define SDIO_HRS44__WDATA__MASK			0x001F0000
+#define SDIO_HRS44__WDATA__HW_DEFAULT	0x0
+#define SDIO_HRS44__RDATA__SHIFT		8
+#define SDIO_HRS44__RDATA__WIDTH		5
+#define SDIO_HRS44__RDATA__MASK			0x00001F00
+#define SDIO_HRS44__RDATA__HW_DEFAULT	0x0
+#define SDIO_HRS44__ADDR__SHIFT			0
+#define SDIO_HRS44__ADDR__WIDTH			6
+#define SDIO_HRS44__ADDR__MASK			0x0000003F
+#define SDIO_HRS44__ADDR__HW_DEFAULT	0x0
+
+
+static char sdio_phy_delay[2][6]=
+{
+	{SDIO0_PHYDELAY_DS,SDIO0_PHYDELAY_HS,SDIO0_PHYDELAY_SDR12,SDIO0_PHYDELAY_SDR25,SDIO0_PHYDELAY_SDR50,SDIO0_PHYDELAY_DDR50},
+	{SDIO1_PHYDELAY_DS,SDIO1_PHYDELAY_HS,SDIO1_PHYDELAY_SDR12,SDIO1_PHYDELAY_SDR25,SDIO1_PHYDELAY_SDR50,SDIO1_PHYDELAY_DDR50}
+};
+
+
+void sdcLm2SetPhyDelay(int ch,int mode)
+{
+	void __iomem *virt_addr;
+	u32     val;
+	unsigned char addr;
+	unsigned char data;
+	int i;
+
+	switch(mode) {
+	case SDC_LM2_SPDMODE_DS:
+		addr = UIS_PHY_ADDR_WR_DS;
+		break;
+	case SDC_LM2_SPDMODE_HS:
+		addr = UIS_PHY_ADDR_WR_HS;
+		break;
+	case SDC_LM2_SPDMODE_DDR50:
+		addr = UIS_PHY_ADDR_WR_DDR50;
+		break;
+	case SDC_LM2_SPDMODE_SDR50:
+		addr = UIS_PHY_ADDR_WR_SDR50;
+		break;
+	default:
+		return; /* 何もしない */
+	}
+
+	data = sdio_phy_delay[ch][mode];
+
+	/* 1) write UIS_ADDR field to reg SDIO0_HRS44 */
+	/* 2)write HRS44.UIS_RWDATA field */
+	/* 3)set HRS44.UIS_WR */
+	if(ch==0){
+		virt_addr = ioremap(SDIO0_HRS44,0x4);
+	}else{
+		virt_addr = ioremap(SDIO1_HRS44,0x4);
+	}
+
+	val  = readl(virt_addr);
+	val = (addr << SDIO_HRS44__ADDR__SHIFT) | (data << SDIO_HRS44__RDATA__SHIFT);
+	val |= SDIO_HRS44__WR__MASK;
+	writel(val, virt_addr);
+
+	/* 4)wait until HRS44.UIS_ACK=1 */
+	for(i=0;i<100;i++){
+		val  = readl(virt_addr);
+		if(val&SDIO_HRS44__ACK__MASK){
+			break;
+		}
+	}
+	/* 5)clear HRS44.UIS_WR */
+	val &= ( ~ SDIO_HRS44__WR__MASK);
+	writel(val, virt_addr);
+
+	/* 6)wait until HRS44.UIS_ACK=0 */
+	for(i=0;i<100;i++){
+		val  = readl(virt_addr);
+		if(!(val&SDIO_HRS44__ACK__MASK)){
+			break;
+		}
+	}
+
+	/* 7)write operation is now complete */
+	iounmap(virt_addr);
+
+}     
+
+
+static void sdhci_lm2_platform_init_ch0(struct sdhci_host *host)
 {
 	void __iomem *virt_addr;
 	u32     val;
@@ -104,7 +285,7 @@ static void sdhci_lm2_platform_init(struct sdhci_host *host)
 	/***************/
 	/* SDIO 0 init */
 	/***************/
-
+#if 0
 	/* GPF-SYS(0x288:SDIOPWRCTRL) */
 	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
 	val  = readl(virt_addr + 0x8);
@@ -125,6 +306,7 @@ static void sdhci_lm2_platform_init(struct sdhci_host *host)
 	val  = 0x00441111;
 	writel(val, virt_addr + 0x28);		/* SDIO Low Dropout Regulator Output : */
 	iounmap(virt_addr);
+#endif
 
 	/* SDIO0 HRS2 */
 	virt_addr = ioremap(LM2_SDIO0_BASE + 0x08,0x4);
@@ -143,11 +325,32 @@ static void sdhci_lm2_platform_init(struct sdhci_host *host)
 	writel(0x00000081, virt_addr + 0x0);	/* SDIO0ADB Control register */
 	iounmap(virt_addr);
 
+	/* PHY遅延値設定 */
+//	sdcLm2SetPhyDelay(SDC_LM2_SPDMODE_DS); /* Default Speed Mode(Max 25MHz) */
+//	sdcLm2SetPhyDelay(SDC_LM2_SPDMODE_HS); /* High Speed Mode(Max 50MHz) */
+	sdcLm2SetPhyDelay(host->ch,SDC_LM2_SPDMODE_DDR50); /* UHS-I DDR50 Speed Mode(Max 50MHz) */
+}
+
+static void sdhci_lm2_platform_init_ch1(struct sdhci_host *host)
+{
+	void __iomem *virt_addr;
+	u32     val;
+
 	/***************/
 	/* SDIO 1 init */
 	/***************/
+	/* 1.8V */
+	virt_addr = ioremap(LM2_SDIO1_BASE + 0x128,0x4);
+	writel(0x00000b06, virt_addr);
+	val = readl(virt_addr);
+	iounmap(virt_addr);
 
-	/* GPF-SYS(0x288) */
+	virt_addr = ioremap(LM2_SDIO1_BASE + 0x13c,0x4);
+	writel(0x00080000, virt_addr);
+	val = readl(virt_addr);
+	iounmap(virt_addr);
+
+	/* GPF-SYS(0x288) SDIOPWRCTRL  */
 	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
 	val  = readl(virt_addr + 0x8);
 	val  = (val & 0xffff8eff);
@@ -159,32 +362,44 @@ static void sdhci_lm2_platform_init(struct sdhci_host *host)
 	virt_addr = ioremap(LM2_OVLSYS_BASE, 0x30);
 	val  = readl(virt_addr + 0x2c);
 	val  = (val & 0x88888888);
-	val |= 0x00000022;			/* Input is "SD0S1CMDI"; output is "SD0S1CMDO" */
-						/* Output is "SD0S1CLK" */
-	val |= 0x11222200;
-	writel(val, virt_addr + 0x2c);		/* SDIO Low Dropout Regulator Output : */
+	val |= 0x11111111;
 
+	writel(val, virt_addr + 0x2c);		/* SDIO Low Dropout Regulator Output : */
 
 	/* SDIO1 HRS2 */
 	virt_addr = ioremap(LM2_SDIO1_BASE + 0x08,0x4);
 	writel(0x00000004, virt_addr);		/* SDIO1_HRS2  DMA Burst=4  */
-	pr_err("SDIO1_HRS2 0x8: 0x%08x\n",readl(virt_addr));
 	iounmap(virt_addr);
 
-	/* GPF-SYS(0x284) */
+	/*  GPF-SYS(0x284:SDIO1_EXTCTL) */
 	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x280 ,0x10);
 	val = readl(virt_addr + 0x4);
 	val = (val & 0xfffffff3) | 0x4;
 	writel(val, virt_addr + 0x4);
 	iounmap(virt_addr);
 
-	/* GPF-SYS(0x1B8:SDIO0ADBCTL) */
+	/* GPF-SYS(0x1B8:SDIO1ADBCTL) */
 	virt_addr = ioremap(LM2_GPFSYS_BASE + 0x1b8 ,0x10);
-	writel(0x00000081, virt_addr + 0x4);	/* SDIO0ADB Control register */
+	writel(0x00000081, virt_addr + 0x0);	/* SDIO0ADB Control register */
 	iounmap(virt_addr);
 
-
+	/* PHY遅延値設定 */
+//	sdcLm2SetPhyDelay(SDC_LM2_SPDMODE_DS); /* Default Speed Mode(Max 25MHz) */
+//	sdcLm2SetPhyDelay(SDC_LM2_SPDMODE_HS); /* High Speed Mode(Max 50MHz) */
+	sdcLm2SetPhyDelay(host->ch,SDC_LM2_SPDMODE_DDR50); /* UHS-I DDR50 Speed Mode(Max 50MHz) */
+	sdcLm2SetPhyDelay(host->ch,SDC_LM2_SPDMODE_SDR50); /* UHS-I SDR50 Speed Mode(Max 100MHz) */
 }
+
+static void sdhci_lm2_platform_init(struct sdhci_host *host)
+{
+	if(host->ch==0){
+		return sdhci_lm2_platform_init_ch0(host);
+	}else{
+		return sdhci_lm2_platform_init_ch1(host);
+	}
+}
+
+
 static u8 sdhci_lm2_read_b(struct sdhci_host *host, int reg)
 {
 	u16 res;

@@ -612,6 +612,9 @@ u64 __init dt_mem_next_cell(int s, __be32 **cellp)
 	return of_read_number(p, s);
 }
 
+phys_addr_t real_ram_top;
+phys_addr_t contigmem_start;
+phys_addr_t pagemem_start;
 /**
  * early_init_dt_scan_memory - Look for an parse memory nodes
  */
@@ -621,6 +624,9 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 	char *type = of_get_flat_dt_prop(node, "device_type", NULL);
 	__be32 *reg, *endp;
 	unsigned long l;
+	u64 base = 0ULL, size = 0ULL;
+	unsigned long contigmem_size;
+	unsigned long pagemem_size;
 
 	/* We are scanning "memory" nodes only */
 	if (type == NULL) {
@@ -644,8 +650,8 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 	pr_debug("memory scan node %s, reg size %ld, data: %x %x %x %x,\n",
 	    uname, l, reg[0], reg[1], reg[2], reg[3]);
 
+
 	while ((endp - reg) >= (dt_root_addr_cells + dt_root_size_cells)) {
-		u64 base, size;
 
 		base = dt_mem_next_cell(dt_root_addr_cells, &reg);
 		size = dt_mem_next_cell(dt_root_size_cells, &reg);
@@ -655,8 +661,20 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 		pr_debug(" - %llx ,  %llx\n", (unsigned long long)base,
 		    (unsigned long long)size);
 
-		early_init_dt_add_memory_arch(base, size);
+		early_init_dt_add_memory_arch(0x800000000ULL|base, size);
 	}
+	reg = of_get_flat_dt_prop(node, "contigmem_size", &l);
+	contigmem_size = of_read_ulong(reg, l/4);
+	reg = of_get_flat_dt_prop(node, "pagemem_size", &l);
+	pagemem_size = of_read_ulong(reg, l/4);
+
+	real_ram_top = base + size + contigmem_size;
+	contigmem_start = base + size;
+	printk("System Memory: 0x%0llx - 0x%0llx (%llu MB)\n", base|0x800000000, (base+size-1)|0x800000000, size/1024/1024);
+	printk("Contig Memory: 0x%0llx - 0x%0llx (%lu MB)\n", (base+size)|0x800000000, (base+size+contigmem_size-1)|0x800000000, contigmem_size/1024/1024);
+	printk("Page Memory  : 0x%0llx - 0x%0llx (%lu MB)\n", (base+size+contigmem_size)|0x800000000, (base+size+contigmem_size+pagemem_size-1)|0x800000000, pagemem_size/1024/1024);
+
+	pagemem_start = (base + size + contigmem_size) | 0x800000000;
 
 	return 0;
 }

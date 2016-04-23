@@ -32,6 +32,8 @@
 #include "../base.h"
 #include "power.h"
 
+#include <asm/lm2_pm_logger.h>
+
 typedef int (*pm_callback_t)(struct device *);
 
 /*
@@ -696,6 +698,7 @@ void dpm_resume(pm_message_t state)
 
 			mutex_unlock(&dpm_list_mtx);
 
+			energyTraceKernel(dev_name(dev));
 			error = device_resume(dev, state, false);
 			if (error) {
 				suspend_stats.failed_resume++;
@@ -1186,6 +1189,7 @@ int dpm_suspend(pm_message_t state)
 		get_device(dev);
 		mutex_unlock(&dpm_list_mtx);
 
+		energyTraceKernel(dev_name(dev));
 		error = device_suspend(dev);
 
 		mutex_lock(&dpm_list_mtx);

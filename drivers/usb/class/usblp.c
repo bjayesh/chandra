@@ -78,6 +78,10 @@
 #define IOCNR_GET_BUS_ADDRESS		5
 #define IOCNR_GET_VID_PID		6
 #define IOCNR_SOFT_RESET		7
+#define IOCNR_FX_SET_RESET		8
+#define IOCNR_FX_GET_LENGTH		9
+
+
 /* Get device_id string: */
 #define LPIOC_GET_DEVICE_ID(len) _IOC(_IOC_READ, 'P', IOCNR_GET_DEVICE_ID, len)
 /* The following ioctls were added for http://hpoj.sourceforge.net: */
@@ -96,6 +100,10 @@
 /* Perform class specific soft reset */
 #define LPIOC_SOFT_RESET _IOC(_IOC_NONE, 'P', IOCNR_SOFT_RESET, 0);
 
+#define LPIOC_FX_SET_RESET		_IOC(_IOC_NONE, 'P', IOCNR_FX_SET_RESET, 0)
+#define LPIOC_FX_GET_LENGTH		_IOC(_IOC_READ, 'P', IOCNR_FX_GET_LENGTH, sizeof(int))
+
+
 /*
  * A DEVICE_ID string may include the printer's serial number.
  * It should end with a semi-colon (';').
@@ -112,6 +120,11 @@ MFG:HEWLETT-PACKARD;MDL:DESKJET 970C;CMD:MLC,PCL,PML;CLASS:PRINTER;DESCRIPTION:H
 #define USBLP_REQ_GET_STATUS			0x01
 #define USBLP_REQ_RESET				0x02
 #define USBLP_REQ_HP_CHANNEL_CHANGE_REQUEST	0x00	/* HP Vendor-specific */
+
+
+#define USBLP_REQ_SET_RESET			0x00
+#define USBLP_REQ_GET_LEN			0x01
+
 
 #define USBLP_MINORS		16
 #define USBLP_MINOR_BASE	0
@@ -278,6 +291,13 @@ static int usblp_ctrl_msg(struct usblp *usblp, int request, int type, int dir, i
 	usblp_ctrl_msg(usblp, USBLP_REQ_GET_ID, USB_TYPE_CLASS, USB_DIR_IN, USB_RECIP_INTERFACE, config, id, maxlen)
 #define usblp_reset(usblp)\
 	usblp_ctrl_msg(usblp, USBLP_REQ_RESET, USB_TYPE_CLASS, USB_DIR_OUT, USB_RECIP_OTHER, 0, NULL, 0)
+
+#define usblp_setreset(usblp)\
+	usblp_ctrl_msg(usblp, USBLP_REQ_SET_RESET, USB_TYPE_VENDOR, USB_DIR_OUT, USB_RECIP_DEVICE, 0, NULL, 0)
+
+#define usblp_get_len(usblp, len)\
+	usblp_ctrl_msg(usblp, USBLP_REQ_GET_LEN, USB_TYPE_VENDOR, USB_DIR_IN, USB_RECIP_DEVICE, 0, len, 4)
+
 
 #define usblp_hp_channel_change_request(usblp, channel, buffer) \
 	usblp_ctrl_msg(usblp, USBLP_REQ_HP_CHANNEL_CHANGE_REQUEST, USB_TYPE_VENDOR, USB_DIR_IN, USB_RECIP_INTERFACE, channel, buffer, 1)
@@ -498,6 +518,7 @@ static long usblp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int status;
 	int twoints[2];
 	int retval = 0;
+	int fxlen;
 
 	mutex_lock(&usblp->mut);
 	if (!usblp->present) {
@@ -654,8 +675,32 @@ static long usblp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			}
 			retval = usblp_reset(usblp);
 			break;
-		default:
+			
+		case IOCNR_FX_SET_RESET:
+			if (_IOC_DIR(cmd) != _IOC_NONE) {
+				retval = -EINVAL;
+				goto done;
+			}
+			retval = usblp_setreset(usblp);
+			break;		default:
 			retval = -ENOTTY;
+
+		case IOCNR_FX_GET_LENGTH: /* get the DEVICE_ID string */
+		
+			if (_IOC_DIR(cmd) != _IOC_READ) {
+				retval = -EINVAL;
+				goto done;
+			}
+
+			if ((retval = usblp_get_len(usblp, &fxlen))) {
+				printk_ratelimited(KERN_ERR "usblp%d:"
+					    "failed get fx lenth (%d)\n",usblp->minor, retval);
+				retval = -EIO;
+				goto done;
+			}
+			if (copy_to_user((void __user *)arg, &fxlen, sizeof(int)))
+				retval = -EFAULT;
+			break;
 		}
 	else	/* old-style ioctl value */
 		switch (cmd) {
@@ -1409,6 +1454,7 @@ static const struct usb_device_id usblp_ids[] = {
 	{ USB_INTERFACE_INFO(7, 1, 2) },
 	{ USB_INTERFACE_INFO(7, 1, 3) },
 	{ USB_DEVICE(0x04b8, 0x0202) },	/* Seiko Epson Receipt Printer M129C */
+	{ USB_DEVICE(0x0550, 0x0002) }, /* fx test printer */
 	{ }						/* Terminating entry */
 };
 

@@ -205,6 +205,8 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 				  struct dma_desc *p)
 {
 	int ret = good_frame;
+	int error_summary = 0;
+
 	struct net_device_stats *stats = (struct net_device_stats *)data;
 
 	if (unlikely(p->des01.erx.error_summary)) {
@@ -242,6 +244,7 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 			stats->rx_crc_errors++;
 		}
 		ret = discard_frame;
+		error_summary = 1;
 	}
 
 	/* After a payload csum error, the ES bit is set.
@@ -276,6 +279,10 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 		x->rx_vlan++;
 	}
 #endif
+
+	if(error_summary){
+		return discard_frame;
+	}
 
 	return ret;
 }

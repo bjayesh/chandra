@@ -13,6 +13,9 @@
  *     - JMicron (hardware and technical support)
  */
 
+#include <linux/kernel.h>
+#include <linux/sched.h>
+#include <linux/kthread.h>
 #include <linux/delay.h>
 #include <linux/highmem.h>
 #include <linux/io.h>
@@ -46,6 +49,8 @@
 
 static unsigned int debug_quirks = 0;
 static unsigned int debug_quirks2;
+
+void sdhci_send_command12(struct sdhci_host *host);
 
 static void sdhci_finish_data(struct sdhci_host *);
 
@@ -1081,6 +1086,86 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->opcode, flags), SDHCI_COMMAND);
 }
 
+
+void sdhci_send_command12(struct sdhci_host *host)
+{
+	int flags;
+	u32 mask;
+	unsigned long timeout;
+
+
+	WARN_ON(host->cmd);
+
+	/* Wait max 10 ms */
+	timeout = 10;
+
+	mask = SDHCI_CMD_INHIBIT;
+
+	/* We shouldn't wait for data inihibit for stop commands, even
+	   though they might use busy signaling */
+
+	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
+		if (timeout == 0) {
+			pr_err("%s: Controller never released "
+				"inhibit bit(s).\n", mmc_hostname(host->mmc));
+			sdhci_dumpregs(host);
+			tasklet_schedule(&host->finish_tasklet);
+			return;
+		}
+		timeout--;
+		mdelay(1);
+	}
+
+	mod_timer(&host->timer, jiffies + 10 * HZ);
+
+	sdhci_writel(host, 0, SDHCI_ARGUMENT);
+	sdhci_writew(host, 0, SDHCI_TRANSFER_MODE);
+
+	flags = SDHCI_CMD_ABORTCMD|SDHCI_CMD_INDEX;
+
+	sdhci_writew(host, SDHCI_MAKE_CMD(12, flags), SDHCI_COMMAND);
+}
+
+
+void sdhci_send_command52(struct sdhci_host *host)
+{
+	int flags;
+	u32 mask;
+	unsigned long timeout;
+
+
+	WARN_ON(host->cmd);
+
+	/* Wait max 10 ms */
+	timeout = 10;
+
+	mask = SDHCI_CMD_INHIBIT;
+
+	/* We shouldn't wait for data inihibit for stop commands, even
+	   though they might use busy signaling */
+
+	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
+		if (timeout == 0) {
+			pr_err("%s: Controller never released "
+				"inhibit bit(s).\n", mmc_hostname(host->mmc));
+			sdhci_dumpregs(host);
+			tasklet_schedule(&host->finish_tasklet);
+			return;
+		}
+		timeout--;
+		mdelay(1);
+	}
+
+	mod_timer(&host->timer, jiffies + 10 * HZ);
+
+	sdhci_writel(host, 0x00000a00, SDHCI_ARGUMENT); /* dummy read offset05 register */
+	sdhci_writew(host, 0, SDHCI_TRANSFER_MODE);
+
+	flags = SDHCI_CMD_ABORTCMD|SDHCI_CMD_INDEX;
+
+	sdhci_writew(host, SDHCI_MAKE_CMD(52, flags), SDHCI_COMMAND);
+}
+
 static void sdhci_finish_command(struct sdhci_host *host)
 {
 	int i;
@@ -1742,6 +1827,7 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
 	unsigned long flags;
+	u32 presentstate;
 
 	spin_lock_irqsave(&host->lock, flags);
 	sdhci_enable_sdio_irq_nolock(host, enable);
@@ -2255,10 +2341,10 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 	BUG_ON(intmask == 0);
 
 	if (!host->cmd) {
-		pr_err("%s: Got command interrupt 0x%08x even "
+		/*pr_err("%s: Got command interrupt 0x%08x even "
 			"though no command operation was in progress.\n",
 			mmc_hostname(host->mmc), (unsigned)intmask);
-		sdhci_dumpregs(host);
+		sdhci_dumpregs(host);*/
 		return;
 	}
 
@@ -2444,6 +2530,8 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	struct sdhci_host *host = dev_id;
 	u32 intmask, unexpected = 0;
 	int cardint = 0, max_loops = 16;
+	u32 presentstate;
+	bool need_wakeup_recovery=false;
 
 	spin_lock(&host->lock);
 
@@ -2463,6 +2551,14 @@ again:
 	DBG("*** %s got interrupt: 0x%08x\n",
 		mmc_hostname(host->mmc), intmask);
 
+	if(host->flags & SDHCI_SDIO_IRQ_ENABLED){
+		if (intmask & (SDHCI_INT_RESPONSE|SDHCI_INT_DATA_END)){
+			presentstate = sdhci_readl(host, SDHCI_PRESENT_STATE);
+			if(presentstate==0x01df0008){/*CMDLine=1,DAT[1]=0,WriteProtect=1,CardDetect=1,CardStateStable=1,CardInsert=1,Re-TunningRequest=1   */
+				cardint=1;
+			}
+		}
+	}
 	if (intmask & (SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE)) {
 		u32 present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 			      SDHCI_CARD_PRESENT;
@@ -2512,8 +2608,10 @@ again:
 
 	intmask &= ~SDHCI_INT_BUS_POWER;
 
-	if (intmask & SDHCI_INT_CARD_INT)
+
+	if (intmask & SDHCI_INT_CARD_INT){
 		cardint = 1;
+	}
 
 	intmask &= ~SDHCI_INT_CARD_INT;
 
@@ -2525,8 +2623,10 @@ again:
 	result = IRQ_HANDLED;
 
 	intmask = sdhci_readl(host, SDHCI_INT_STATUS);
-	if (intmask && --max_loops)
+
+	if (intmask && --max_loops){
 		goto again;
+	}
 out:
 	spin_unlock(&host->lock);
 
@@ -2538,8 +2638,9 @@ out:
 	/*
 	 * We have to delay this as it calls back into the driver.
 	 */
-	if (cardint)
+	if (cardint){
 		mmc_signal_sdio_irq(host->mmc);
+	}
 
 	return result;
 }
@@ -2814,6 +2915,8 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	sdhci_reset(host, SDHCI_RESET_ALL);
 
+	host->quirks2|=SDHCI_QUIRK2_PRESET_VALUE_BROKEN;
+
 	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
 	host->version = (host->version & SDHCI_SPEC_VER_MASK)
 				>> SDHCI_SPEC_VER_SHIFT;
@@ -2825,6 +2928,14 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	caps[0] = (host->quirks & SDHCI_QUIRK_MISSING_CAPS) ? host->caps :
 		sdhci_readl(host, SDHCI_CAPABILITIES);
+
+	if(host->ch==1){
+		caps[0] &= ~(SDHCI_CAN_VDD_330|SDHCI_CAN_VDD_300);
+	}
+	if(host->ch==0){
+	        /* For LM2 eMMC */
+		mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA;	
+	}
 
 	if (host->version >= SDHCI_SPEC_300)
 		caps[1] = (host->quirks & SDHCI_QUIRK_MISSING_CAPS) ?
@@ -3026,6 +3137,8 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (host->quirks2 & SDHCI_QUIRK2_NO_1_8_V)
 		caps[1] &= ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
 		       SDHCI_SUPPORT_DDR50);
+
+	caps[1] &= ~(SDHCI_SUPPORT_SDR104);/* our ASIC can't support SDR104 */
 
 	/* Any UHS-I mode in caps implies SDR12 and SDR25 support. */
 	if (caps[1] & (SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |

@@ -27,6 +27,7 @@
 #include <linux/of.h>
 #include <linux/of_net.h>
 #include "stmmac.h"
+#include "dwmac1000.h"
 
 #define GMAC_EXTCFG	0x801c
 
@@ -75,6 +76,27 @@ static int stmmac_probe_config_dt(struct platform_device *pdev,
 	return -ENOSYS;
 }
 #endif /* CONFIG_OF */
+
+
+#define MII_BUSY 0x00000001
+#define MII_WRITE 0x00000002
+
+static int stmmac_busy_wait(void __iomem *ioaddr, unsigned int mii_addr)
+{
+	unsigned long curr;
+	unsigned long finish = jiffies + 3 * HZ;
+
+	do {
+		curr = jiffies;
+		if (readl(ioaddr + mii_addr) & MII_BUSY)
+			cpu_relax();
+		else
+			return 0;
+	} while (!time_after_eq(curr, finish));
+
+	return -EBUSY;
+}
+
 
 /**
  * stmmac_pltfr_probe
@@ -150,8 +172,12 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 #endif
 
 	/* Get MAC address if available (DT) */
-	if (mac)
+	if (mac){
 		memcpy(priv->dev->dev_addr, mac, ETH_ALEN);
+	}else{
+		/* get the mac address from the dmac register */	
+		stmmac_get_mac_addr(priv->ioaddr,priv->dev->dev_addr,GMAC_ADDR_HIGH(0),GMAC_ADDR_LOW(0));
+	}
 
 	/* Get the MAC information */
 	priv->dev->irq = platform_get_irq_byname(pdev, "macirq");
@@ -164,6 +190,17 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 #ifdef  CONFIG_ARCH_LM2	/* No19 */
 	/* GMAC_EXTCFG Set */
 	writel(0x18 , priv->ioaddr + GMAC_EXTCFG);
+
+	/* NetPHY LED setting */
+	stmmac_busy_wait(priv->ioaddr,GMAC_MII_ADDR);
+	writel(0x0d04, priv->ioaddr + GMAC_MII_DATA);
+	writel(0x07cb, priv->ioaddr + GMAC_MII_ADDR);
+
+	stmmac_busy_wait(priv->ioaddr,GMAC_MII_ADDR);
+	writel(0x2c00, priv->ioaddr + GMAC_MII_DATA);
+	writel(0x040b, priv->ioaddr + GMAC_MII_ADDR);
+	stmmac_busy_wait(priv->ioaddr,GMAC_MII_ADDR);
+
 #endif	/* CONFIG_ARCH_LM2 */
 	/*
 	 * On some platforms e.g. SPEAr the wake up irq differs from the mac irq

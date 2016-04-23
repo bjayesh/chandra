@@ -61,7 +61,10 @@ struct lm2_i2c_eeprom {
 	unsigned int	len;
 	unsigned char	offset;
 	unsigned char	buf[32];
+	struct mutex lock;
 };
+
+extern int lm2_board_is_A0(void);
 
 /*
  * Interrupt handler
@@ -101,9 +104,10 @@ static void lm2_i2c_mrecv(struct lm2_i2c_eeprom *id)
 	int len;
 	unsigned int	reg;
 
-	dev_info(id->adap.dev.parent, "mrecv call\n");
+//	dev_info(id->adap.dev.parent, "mrecv call\n");
 	/* set the read count */
 	reg = readl(id->iobase + EMSR);
+	reg = reg & ~0x0003c000; /* clear */
 	reg |= ((id->len-1) << 14);
 	writel(reg, id->iobase + EMSR);
 
@@ -123,8 +127,9 @@ static void lm2_i2c_msend(struct lm2_i2c_eeprom *id)
 {
 	u32	val;
 
-	dev_info(id->adap.dev.parent, "msend call\n");
+//	dev_info(id->adap.dev.parent, "msend call\n");
 	val = readl(id->iobase + EMSR);
+	val = val & ~0x0003c000; /* clear */
 	val = val | ((id->len-1) << 14);
 	writel(val, id->iobase+EMSR);
 
@@ -150,19 +155,27 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 	struct lm2_i2c_eeprom *id = adap->algo_data;
 	int 	i, ret;
 	struct	i2c_msg	dat;
+	unsigned int delay_msec = lm2_board_is_A0() ? 50 : 5;
+
 	u32	length;
 	u32	idx;
+	u32	start;
 	u32	addr;
 
 	if (lm2_i2c_busy_check(id)) {
 		dev_err(&adap->dev, "lm2-i2c %d: bus busy!\n", adap->nr);
 		return -EBUSY;
 	}
+	mutex_lock(&id->lock);
 //	dev_info( &adap->dev, "call master xfer %x %d\n", msgs, num);
 //	dev_info(&adap->dev, "slave addr = %d\n",msgs->addr);
 //	dev_info(&adap->dev, "flags = %x\n",msgs->flags);
 //	dev_info(&adap->dev, "msg length = %d\n",msgs->len);
 //	dev_info(&adap->dev, "buf = %x\n",msgs->buf);
+	/* FX */
+	start = msgs->buf[0];
+	msgs++;
+	/* FX */
 	addr = (msgs->addr)<<1;
 	writel(addr,id->iobase + ESAR);
 	id->msg = msgs;
@@ -170,9 +183,14 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 	idx = 0;
 	id->addr =0;
 	while (length) {
-		if(length > 32){
-			id->len = 32;
-		}else{
+		if(idx == 0 && (start % 16) != 0){
+			id->len = 16 - (start % 16);
+			if (id->len > length){
+				id->len = length;
+			}
+		} else if(length > 16){
+			id->len = 16;
+		} else {
 			id->len = length;
 		}
 		/* setup synchronize */
@@ -180,9 +198,10 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 
 // dev_info(&adap->dev, "idx = %d length= %d\n", idx, length);
 		if (msgs->flags & I2C_M_RD){
-			id->addr = idx;
+			id->addr = start + idx;
 			lm2_i2c_mrecv(id);	/* recv */
 		}else{
+			id->addr = start + idx;
 			for(i = 0 ; i < id->len ; i++){
 				writel(msgs->buf[idx],id->iobase+EDR1+i*4);
 				idx++;
@@ -205,7 +224,9 @@ static int lm2_i2c_master_xfer(struct i2c_adapter *adap,
 			}
 		}
 		length = length - id->len;
+		mdelay(delay_msec);
 	}
+	mutex_unlock(&id->lock);
 	return	num;
 }
 

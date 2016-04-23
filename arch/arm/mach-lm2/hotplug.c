@@ -94,6 +94,8 @@ printk(KERN_ERR "==%d platform_do_lowpower: wfi end(pen_release=%d)\n",read_cpui
 #endif
 }
 
+extern void return_from_cpu_off(void);
+
 /*
  * platform-specific code to shutdown a CPU
  *
@@ -117,7 +119,7 @@ printk(KERN_ERR "==%d %s: cpu=%d\n",read_cpuid_mpidr()&0xff, __func__, cpu);
 	 * coherency, and then restore interrupts
 	 */
 	cpu_leave_lowpower();
-
+	return_from_cpu_off();
 	if (spurious)
 		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
 }

@@ -33,8 +33,6 @@
 #include "common.h"
 #include <linux/ptp_clock_kernel.h>
 
-#define	JUMBO_FLAME_LEN	(BUF_SIZE_4KiB + BUF_SIZE_2KiB)
-
 struct stmmac_tx_info {
 	dma_addr_t buf;
 	bool map_as_page;

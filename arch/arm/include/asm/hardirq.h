@@ -5,7 +5,11 @@
 #include <linux/threads.h>
 #include <asm/irq.h>
 
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
+#define NR_IPI	16
+#else
 #define NR_IPI	6
+#endif
 
 typedef struct {
 	unsigned int __softirq_pending;

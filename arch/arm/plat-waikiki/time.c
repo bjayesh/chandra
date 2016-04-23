@@ -31,15 +31,15 @@
  * also affect other timer.
  */
 
-#define	SYSCLK		(300*1000*1000)	/* 300MHz */
-#define	DIVISOR		3000	/* 100KHz 10msec */
-#define	PRESCALE	6	/* 50MHz 20nsec */
+extern int lm2_board_is_A0(void);
+#define	SYSCLK		( lm2_board_is_A0() ? (300*1000*1000) : (275*1000*1000) ) /* 275MHz */
+#define	DIVISOR		100	/* For HZ=100 10msec */
+#define	PRESCALE	275	/* Same as Panbug */
 
 /* Register offsets, x is channel number */
 #define	PRESCL(x)	((x)+0)
-#define	HTCNTR_H(x)	((x)+0x04)
-#define	HTCNTR_L(x)	((x)+0x08)
-#define	HTCTLR(x)		((x)+0x0c)
+#define HTCNTR(x)       ((x)+0x04)
+#define	HTCTLR(x)	((x)+0x08)
 
 #define CTLR(x)		((x)+8)
 #define LOAD(x)		((x)+0)
@@ -68,7 +68,7 @@ static	unsigned int	ticks_per_jiffy;
 
 static	u32	lm2_read_sched_clock(void)
 {
-	return	readl(HTCNTR_L(clksrc_base));
+	return	readl(HTCNTR(clksrc_base));
 }
 
 #ifdef CONFIG_PM
@@ -131,13 +131,14 @@ void	lm2_clocksource_init(__iomem void *gpt_base)
 	writel(PRESCALE-1,PRESCL(clksrc_base));
 
 	/* Start Timer */
+	writel(HTCTLR_CLR,HTCTLR(clksrc_base));
 	writel(HTCTLR_START,HTCTLR(clksrc_base));
 
 	/* rate culculate */
 	tick_rate = SYSCLK / PRESCALE;
 
 	/* register the clocksource tick_rate */
-	result = clocksource_mmio_init(HTCNTR_L(clksrc_base),"system_timer",tick_rate,
+	result = clocksource_mmio_init(HTCNTR(clksrc_base),"system_timer",tick_rate,
 		200, 32, clocksource_mmio_readl_up);
 
 	setup_sched_clock(lm2_read_sched_clock,32,tick_rate);

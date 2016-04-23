@@ -1291,6 +1291,8 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				value = min(w_length, (u16) value);
 			}
 			break;
+		default:
+			goto unknown;
 		}
 		break;
 

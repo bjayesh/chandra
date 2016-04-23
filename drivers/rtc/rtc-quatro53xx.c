@@ -569,6 +569,7 @@ void rtc_reg_load(void __iomem *base, int *bak_adr, int offset, int size)
 
 static int lm2_rtc_suspend(struct device *dev)
 {
+#if 0
 //	struct lm2_rtc  *rtc = dev_get_drvdata(dev);
 	int i=0;
 	void __iomem *base;
@@ -582,12 +583,14 @@ static int lm2_rtc_suspend(struct device *dev)
 	reg_bak_chksum=0;
 	for(i=0; i<LM2_REGBAK_SIZE; i++)
 		reg_bak_chksum += reg_bak[i];
+#endif
 
         return 0;
 }
 
 static int lm2_rtc_resume(struct device *dev)
 {
+#if 0
 //	struct lm2_rtc  *rtc = dev_get_drvdata(dev);
 	int i=0;
 	void __iomem *base;
@@ -607,7 +610,7 @@ static int lm2_rtc_resume(struct device *dev)
         rtc_reg_load(base, &i, 0x018,  1);
         rtc_reg_load(base, &i, 0x01c,  1);
         iounmap(base);
-
+#endif
         return 0;
 }
 #endif	/* CONFIG_ARCH_LM2 */
@@ -623,7 +626,7 @@ static	struct	platform_driver lm2_rtc_driver = {
 	.driver = {
 		.name	= "lm2-rtc",
 		.owner	= THIS_MODULE,
-		/* .pm	= &lm2_rtc_pm_ops, */
+//		.pm	= &lm2_rtc_pm_ops,
 	},
 	.id_table	= lm2_rtc_id_table,
 	.probe		= lm2_rtc_probe,

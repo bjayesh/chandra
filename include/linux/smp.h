@@ -37,6 +37,8 @@ int smp_call_function_single(int cpuid, smp_call_func_t func, void *info,
 #include <linux/thread_info.h>
 #include <asm/smp.h>
 
+#define CONFIG_FX_FWCMD_IPI_WITH_A7
+
 /*
  * main cross-CPU interfaces, handles INIT, TLB flush, STOP, etc.
  * (defined in asm header):
@@ -67,6 +69,18 @@ extern int __cpu_up(unsigned int cpunum, struct task_struct *tidle);
  * Final polishing of CPUs
  */
 extern void smp_cpus_done(unsigned int max_cpus);
+
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7 
+/*
+ * OS intermediate communication with A7
+ */ 
+
+extern void smp_send_cmd_not_empty(int cpu);
+extern void smp_send_cmd_not_full(int cpu);
+
+void wakeup_for_cmd_not_empty(void);
+void wakeup_for_cmd_not_full(void);
+#endif
 
 /*
  * Call a function on all other processors

@@ -857,6 +857,20 @@ config USB_G_PRINTER
 	  For more information, see Documentation/usb/gadget_printer.txt
 	  which includes sample code for accessing the device file.
 
+config USB_G_FXPRINTER
+	tristate "Fuji Xerox Printer Gadget"
+	select USB_LIBCOMPOSITE
+	help
+	  The Fuji Xerox Printer Gadget channels data between the USB host and a
+	  userspace program driving the print engine. The user space
+	  program reads and writes the device file /dev/g_printer to
+	  receive or send printer data. It can use ioctl calls to
+	  the device file to get or set printer status.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "g_fxprinter".
+
+
 if TTY
 
 config USB_CDC_COMPOSITE

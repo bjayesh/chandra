@@ -160,6 +160,13 @@ ep_matches (
 	}
 
 	/* MATCH!! */
+	if ((isdigit (ep->name [2]))&&(desc->bEndpointAddress&USB_ENDPOINT_NUMBER_MASK)) {
+		u8	num = simple_strtoul (&ep->name [2], NULL, 10);
+
+		if(num!=(desc->bEndpointAddress&USB_ENDPOINT_NUMBER_MASK)){
+			return 0;
+		}
+	}
 
 	/* report address */
 	desc->bEndpointAddress &= USB_DIR_IN;

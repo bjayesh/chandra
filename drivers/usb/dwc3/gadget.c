@@ -1337,6 +1337,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 	req->request.status	= -EINPROGRESS;
 	req->direction		= dep->direction;
 	req->epnum		= dep->number;
+	req->dep		=dep;
 
 #if	0	/*<HN>*/
 	dev_vdbg(dwc->dev, "%s <HN>\n",__FUNCTION__);

@@ -311,6 +311,27 @@ printk(KERN_ERR "LM2_PM: irq=%03d offset=0x%x shift=%d val=0x%08x\n",irq, (GIC_D
 #endif
 }
 EXPORT_SYMBOL(irq_to_a7);
+
+void irq_to_a15(unsigned int irq)
+{
+        unsigned int offset;
+        unsigned int shift;
+        u32     val;
+        struct gic_chip_data *gic = &gic_data[0];
+        void __iomem *base = gic_data_dist_base(gic);
+
+        offset = irq / 4;
+        shift  = irq % 4;
+        raw_spin_lock(&irq_controller_lock);
+        val  = readl_relaxed(base + GIC_DIST_TARGET + offset * 4) & ~(0xff << (( irq % 4 ) * 8));
+        val |= 0x02 << (( irq % 4 ) * 8);
+        writel_relaxed(val,  base + GIC_DIST_TARGET + offset * 4);
+        raw_spin_unlock(&irq_controller_lock);
+#ifdef  LM2_PM_DEBUG
+printk(KERN_ERR "LM2_PM: irq=%03d offset=0x%x shift=%d val=0x%08x\n",irq, (GIC_DIST_TARGET+offset*4), shift,val);
+#endif
+}
+EXPORT_SYMBOL(irq_to_a15);
 #endif	/* CONFIG_ARCH_LM2 */
 
 #ifdef CONFIG_PM
@@ -828,6 +849,15 @@ void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	/* Convert our logical CPU mask into a physical one. */
 	for_each_cpu(cpu, mask)
 		map |= gic_cpu_map[cpu];
+
+#ifdef CONFIG_FX_FWCMD_IPI_WITH_A7
+/* for debug */
+        if ((map != 2) && (map != 4)) {
+/*              printk("gic_raise_softirq: map = %d irq = %d cpu = %d mask = 0x%x\n", (unsigned int)map, irq, cpu, (unsigned int)mask); */
+                map = 1;
+/*              printk("gic_raise_softirq: new map = %d irq = %d\n", (unsigned int)map, irq); */
+        }
+#endif
 
 	/*
 	 * Ensure that stores to Normal memory are visible to the

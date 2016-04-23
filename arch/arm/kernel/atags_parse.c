@@ -192,6 +192,7 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 			printk("Machine: %s\n", p->name);
 			mdesc = p;
 			break;
+		}else{	/* yamano debug */
 		}
 
 	if (!mdesc) {

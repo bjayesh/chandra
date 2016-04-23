@@ -124,7 +124,7 @@ __tagtable(ATAG_INITRD2, parse_tag_initrd2);
 #ifdef CONFIG_OF_FLATTREE
 void __init early_init_dt_setup_initrd_arch(unsigned long start, unsigned long end)
 {
-	phys_initrd_start = start;
+	phys_initrd_start = start|0x800000000ULL;
 	phys_initrd_size = end - start;
 }
 #endif /* CONFIG_OF_FLATTREE */

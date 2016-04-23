@@ -358,6 +358,8 @@ static int ahci_resume(struct device *dev)
 			goto disable_unprepare_clk;
 	}
 
+	sata_clk_set();
+
 	if (dev->power.power_state.event == PM_EVENT_SUSPEND) {
 		rc = ahci_reset_controller(host);
 		if (rc)

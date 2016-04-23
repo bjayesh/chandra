@@ -46,6 +46,8 @@
 
 #include "core.h"
 
+#include <linux/fxmodule/kernelOsddi.h>
+
 extern	void	lm2_clocksource_init(void __iomem *gpt);
 extern	void	lm2_clockevent_init(int irq, void __iomem *gpt);
 extern void    lm2_init_clock(void);
@@ -73,6 +75,8 @@ static struct map_desc lm2_io_desc[] __initdata = {
 const unsigned char lm2_use_irq[] = {
 34,    // RTC
 40,    // Timer
+44,    // CPLD
+45,    // Ethernet PHY Link up
 #ifndef        NEW_PANBUG
 50,    // UART0
 #endif
@@ -96,6 +100,25 @@ const unsigned char lm2_use_irq[] = {
 };
 const unsigned int lm2_use_irq_size = sizeof(lm2_use_irq);
 
+static int lm2_board_version = 0;
+
+static void lm2_get_board_version(void)
+{
+	void __iomem *virt_addr;
+	u32     val;
+	virt_addr = ioremap(0x04010024,0x4);
+	val  = readl(virt_addr);
+	iounmap(virt_addr);
+	lm2_board_version = val;
+}
+
+int lm2_board_is_A0(void)
+{
+	return (lm2_board_version == 0);
+}
+
+EXPORT_SYMBOL_GPL(lm2_board_is_A0);
+
 /*
  * system timer initial
  */
@@ -104,7 +127,9 @@ static void __init lm2_timer_init(void)
 	void	__iomem	*clksrc_timer;
 	void	__iomem	*clkevt_timer;
 
-	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x10, 0x10);
+	lm2_get_board_version();
+
+	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x20, 0x10); /* HRT1 */
 	clkevt_timer = ioremap(LM2_TIMER_BASE + 0x5c, 0x0c);
 	lm2_clocksource_init(clksrc_timer);
 	lm2_clockevent_init(LM2_IRQ_TIMER_4,clkevt_timer);
@@ -121,7 +146,18 @@ static	struct	plat_serial8250_port	lm2_serial_resource[]={
 		.regshift	= 0,
 		.iotype		= UPIO_MEM,
 		.flags		= UPF_SKIP_TEST,
+		.fxpwsave_enable	= 0,
 	},
+	{
+		.mapbase	= LM2_UART_3_BASE,
+		.irq		= LM2_IRQ_UART_3,
+		.uartclk	= LM2_UART3_CLK,
+		.regshift	= 0,
+		.iotype		= UPIO_MEM,
+		.flags		= UPF_SKIP_TEST,
+		.fxpwsave_enable	= 1,
+	},
+
 	{},
 };
 static struct platform_device lm2_serial_device = {
@@ -298,9 +334,11 @@ static	struct platform_device lm2_pcie_device = {
 	.num_resources	= ARRAY_SIZE(lm2_pcie_resource),
 };
 
+
 static void __init lm2_init_early(void)
 {
 }
+
 static void lm2_restart(char str, const char *cmd)
 {
 	printk(KERN_EMERG "Unable to reboot\n");
@@ -340,6 +378,8 @@ static	void __init lm2_fixup_mem(struct tag *tags, char **form, struct meminfo *
 #endif /* yamano debug */
 	return;
 }
+
+
 /*
  * Machine initialize routine without DTB mode
  */
@@ -348,6 +388,7 @@ static void __init lm2_init(void)
 	void __iomem *virt_addr;
 
 	lm2_init_clock();
+
 	virt_addr = ioremap(LM2_UART_1_BASE,0x32);
 	lm2_serial_resource[0].membase = virt_addr;
 #ifndef NEW_PANBUG
@@ -444,14 +485,51 @@ static void __init lm2_dt_init(void)
         void __iomem *virt_addr;
 	struct device_node	*node;
 	const struct	of_device_id *of_id;
+	int productId;
+
 	lm2_init_clock();
 	/* Serial DTB ok */
 	virt_addr = ioremap(LM2_UART_1_BASE,0x32);
 	lm2_serial_resource[0].membase = virt_addr;
+	if (lm2_board_is_A0()) lm2_serial_resource[0].uartclk = (300*1000*1000);
 #ifndef NEW_PANBUG
 	virt_addr = ioremap(LM2_UART_0_BASE,0x32);
 	lm2_serial_resource[1].membase = virt_addr;
+	if (lm2_board_is_A0()) lm2_serial_resource[1].uartclk = (300*1000*1000);
 #endif /* NEW_PANBUG */
+
+	productId = kernelGetProductId();
+	if (productId < 0) {
+		printk(KERN_ERR "lm2.c UART : %s : <ERROR> kernelGetProductId failed (ret=%d). Assign default port.\n", __func__, productId);
+	}
+	else {
+		printk(KERN_INFO "lm2.c UART : %s : productId = 0x%x\n", __func__, productId);
+	}
+
+	switch (productId) {
+	case OS_PRODUCT_ID_BOMBORA:
+	case OS_PRODUCT_ID_KAIMANA:
+		printk(KERN_INFO "lm2.c UART : %s : assign port 2\n", __func__);
+		lm2_serial_resource[1].membase	= ioremap(LM2_UART_2_BASE,0x32);
+		lm2_serial_resource[1].irq		= LM2_IRQ_UART_2;
+		lm2_serial_resource[1].uartclk	= LM2_UART2_CLK;
+		break;
+	case OS_PRODUCT_ID_TOMBOLO:
+	case OS_PRODUCT_ID_MARIS:
+		printk(KERN_INFO "lm2.c UART : %s : assign port 3\n", __func__);
+		lm2_serial_resource[1].membase	= ioremap(LM2_UART_3_BASE,0x32);
+		lm2_serial_resource[1].irq		= LM2_IRQ_UART_3;
+		lm2_serial_resource[1].uartclk	= LM2_UART3_CLK;
+		break;
+	default:
+		printk(KERN_INFO "lm2.c UART : %s : assign port 5\n", __func__);
+		lm2_serial_resource[1].membase	= ioremap(LM2_UART_5_BASE,0x32);
+		lm2_serial_resource[1].irq		= LM2_IRQ_UART_5;
+		lm2_serial_resource[1].uartclk	= LM2_UART5_CLK;
+	}
+
+	if (lm2_board_is_A0()) lm2_serial_resource[1].uartclk = (300*1000*1000);
+
 	platform_device_register(&lm2_serial_device);
 	platform_device_register(&lm2_eth_device);
 #ifdef	CONFIG_SATA_AHCI_PLATFORM
@@ -481,6 +559,16 @@ static void __init lm2_dt_init(void)
 		of_node_put(node);
 	}
 	lm2_cipui_tim_init();
+
+	if (lm2_board_is_A0()){
+		printk("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+		printk("@             This is A0 board              @\n");
+		printk("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+	} else {
+		printk("*********************************************\n");
+		printk("*             This is B0 board               \n");
+		printk("*********************************************\n");
+	}
 }
 
 /*

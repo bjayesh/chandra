@@ -10,10 +10,13 @@
  */
 
 #include <linux/export.h>
+#include <linux/delay.h>
+
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_func.h>
+#include <linux/mmc/sdhci.h>
 
 #include "sdio_ops.h"
 
@@ -306,6 +309,13 @@ static int sdio_io_rw_ext_helper(struct sdio_func *func, int write,
 	unsigned remainder = size;
 	unsigned max_blocks;
 	int ret;
+	bool is_block=false;
+	struct sdhci_host *host;
+	unsigned long flags;
+
+	host = mmc_priv(func->card->host);
+	spin_lock_irqsave(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, flags);
 
 	/* Do the bulk of the transfer using block mode (if supported). */
 	if (func->card->cccr.multi_block && (size > sdio_max_byte_size(func))) {
@@ -326,7 +336,7 @@ static int sdio_io_rw_ext_helper(struct sdio_func *func, int write,
 				blocks, func->cur_blksize);
 			if (ret)
 				return ret;
-
+			is_block=true;
 			remainder -= size;
 			buf += size;
 			if (incr_addr)
@@ -348,6 +358,11 @@ static int sdio_io_rw_ext_helper(struct sdio_func *func, int write,
 		buf += size;
 		if (incr_addr)
 			addr += size;
+	}
+
+	if(is_block){
+		extern void sdhci_send_command52(struct sdhci_host *host);
+		sdhci_send_command52(host);
 	}
 	return 0;
 }

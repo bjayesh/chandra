@@ -51,8 +51,8 @@ static struct platform_device lm2_sdhci0_device = {
 };
 static struct resource lm2_sdhci1_resources[] = {
 	[0] = {
-		.start  = LM2_SDIO1_BASE + 0x200,       /* slot1 */
-		.end    = LM2_SDIO1_BASE + 0x300,
+		.start  = LM2_SDIO1_BASE + 0x100,       /* slot1 */
+		.end    = LM2_SDIO1_BASE + 0x200,
 		.flags  = IORESOURCE_MEM,
 	},
 	[1] = {

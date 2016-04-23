@@ -46,6 +46,8 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
+#include <linux/fxmodule/fx_uart.h>
+
 #include "8250.h"
 /*
  * Configuration:
@@ -78,6 +80,12 @@ static unsigned int skip_txen_test; /* force skip of txen test at init time */
 #define DEBUG_INTR(fmt...)	printk(fmt)
 #else
 #define DEBUG_INTR(fmt...)	do { } while (0)
+#endif
+
+#if 0
+#define FXDEBUG(fmt...) printk(fmt)
+#else
+#define FXDEBUG(fmt...)	do { } while (0)
 #endif
 
 /*
@@ -1289,6 +1297,11 @@ static void serial8250_stop_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
+
 	__stop_tx(up);
 
 	/*
@@ -1304,6 +1317,11 @@ static void serial8250_start_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
 
 	if (up->dma && !serial8250_tx_dma(up)) {
 		return;
@@ -1334,6 +1352,11 @@ static void serial8250_stop_rx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
+
 	up->ier &= ~UART_IER_RLSI;
 	up->port.read_status_mask &= ~UART_LSR_DR;
 	serial_port_out(port, UART_IER, up->ier);
@@ -1343,6 +1366,11 @@ static void serial8250_enable_ms(struct uart_port *port)
 {
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
 
 	/* no MSR capabilities */
 	if (up->bugs & UART_BUG_NOMSR)
@@ -1800,6 +1828,11 @@ static unsigned int serial8250_tx_empty(struct uart_port *port)
 	unsigned long flags;
 	unsigned int lsr;
 
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return TIOCSER_TEMT;
+	}
+
 	spin_lock_irqsave(&port->lock, flags);
 	lsr = serial_port_in(port, UART_LSR);
 	up->lsr_saved_flags |= lsr & LSR_SAVE_FLAGS;
@@ -1815,6 +1848,11 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
 	unsigned int status;
 	unsigned int ret;
 
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return 0;
+	}
+
 	status = serial8250_modem_status(up);
 
 	ret = 0;
@@ -1826,6 +1864,7 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
 		ret |= TIOCM_DSR;
 	if (status & UART_MSR_CTS)
 		ret |= TIOCM_CTS;
+
 	return ret;
 }
 
@@ -1834,6 +1873,11 @@ static void serial8250_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 	unsigned char mcr = 0;
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
 
 	if (mctrl & TIOCM_RTS)
 		mcr |= UART_MCR_RTS;
@@ -1856,6 +1900,11 @@ static void serial8250_break_ctl(struct uart_port *port, int break_state)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
 
 	spin_lock_irqsave(&port->lock, flags);
 	if (break_state == -1)
@@ -1909,6 +1958,13 @@ static void wait_for_xmitr(struct uart_8250_port *up, int bits)
 static int serial8250_get_poll_char(struct uart_port *port)
 {
 	unsigned char lsr = serial_port_in(port, UART_LSR);
+	struct uart_8250_port *up =
+		container_of(port, struct uart_8250_port, port);
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return NO_POLL_CHAR;
+	}
 
 	if (!(lsr & UART_LSR_DR))
 		return NO_POLL_CHAR;
@@ -1923,6 +1979,11 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	unsigned int ier;
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
 
 	/*
 	 *	First save the IER then disable the interrupts
@@ -1961,6 +2022,15 @@ static int serial8250_startup(struct uart_port *port)
 	unsigned long flags;
 	unsigned char lsr, iir;
 	int retval;
+
+	struct uart_state *state;
+	struct tty_struct *tty = NULL;
+	struct circ_buf *xmit = NULL;
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return 0;
+	}
 
 	if (port->type == PORT_8250_CIR)
 		return -ENODEV;
@@ -2002,6 +2072,13 @@ static int serial8250_startup(struct uart_port *port)
 	 * (they will be reenabled in set_termios())
 	 */
 	serial8250_clear_fifos(up);
+
+	state = port->state;
+	tty = state->port.tty;
+	xmit = &state->xmit;
+
+	uart_circ_clear(xmit);
+	tty_buffer_flush(tty);
 
 	/*
 	 * Clear the interrupt registers.
@@ -2212,6 +2289,11 @@ static void serial8250_shutdown(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
 
 	/*
 	 * Disable interrupts from this port
@@ -2473,6 +2555,14 @@ static void
 serial8250_set_termios(struct uart_port *port, struct ktermios *termios,
 		       struct ktermios *old)
 {
+	struct uart_8250_port *up =
+		container_of(port, struct uart_8250_port, port);
+
+	if (up->fxpwsave_flag) {
+		FXDEBUG(KERN_INFO "8250 UART (%d) : %s ignore\n", serial8250_find_port(port), __func__);
+		return;
+	}
+
 	if (port->set_termios)
 		port->set_termios(port, termios, old);
 	else
@@ -2504,10 +2594,39 @@ static void
 serial8250_pm(struct uart_port *port, unsigned int state,
 	      unsigned int oldstate)
 {
-	if (port->pm)
+	struct uart_state *st;
+	struct tty_struct *tty = NULL;
+	struct circ_buf *xmit = NULL;
+	struct uart_8250_port *up;
+
+	st = port->state;
+	tty = st->port.tty;
+	xmit = &st->xmit;
+	up = container_of(port, struct uart_8250_port, port);
+
+	if (up->fxpwsave_enable) {
+		if (state == UART_PM_STATE_ON && !port->suspended) {
+			up->fxpwsave_flag = 0;          /* open / resume */
+		}
+		else if (state != UART_PM_STATE_ON && port->suspended) {
+			up->fxpwsave_flag = 1;          /* close / suspend */
+		}
+		else if (state == UART_PM_STATE_ON && port->suspended) {
+			up->fxpwsave_flag = 1;          /* open */
+		}
+		else if (state != UART_PM_STATE_ON && !port->suspended) {
+			up->fxpwsave_flag = 0;          /* close */
+		}
+	}
+
+	printk(KERN_INFO "8250 UART (%d) : %s (st=%u, oldst=%u, suspended=%u, flg=%u)\n", serial8250_find_port(port), __func__, state, oldstate, port->suspended, up->fxpwsave_flag);
+
+	if (port->pm) {
 		port->pm(port, state, oldstate);
-	else
+	}
+	else {
 		serial8250_do_pm(port, state, oldstate);
+	}
 }
 
 static unsigned int serial8250_port_size(struct uart_8250_port *pt)
@@ -2723,6 +2842,60 @@ serial8250_type(struct uart_port *port)
 	return uart_config[type].name;
 }
 
+
+static int serial8250_ioctl(struct uart_port *p,
+							unsigned int cmd, unsigned long arg)
+{
+	struct uart_state *state;
+	struct tty_struct *tty = NULL;
+	struct tty_port *tty_p;
+	struct circ_buf *xmit = NULL;
+	int line;
+	struct uart_8250_port *up;
+
+	state = p->state;
+	tty = state->port.tty;
+	tty_p = &state->port;
+	xmit = &state->xmit;
+	up = container_of(p, struct uart_8250_port, port);
+	line = serial8250_find_port(p);
+	if (line < 0) return line;
+
+	switch(cmd) {
+		case UART_SLEEPING:
+			printk(KERN_INFO "8250 UART (%d) : UART_SLEEPING start\n", line);
+
+			mutex_unlock(&tty_p->mutex);
+			uart_suspend_port(&serial8250_reg, p);
+			mutex_lock(&tty_p->mutex);
+
+			printk(KERN_INFO "8250 UART (%d) : UART_SLEEPING end\n", line);
+
+			break;
+
+		case UART_WAKEUP:
+			printk(KERN_INFO "8250 UART (%d) : UART_WAKEUP start\n", line);
+
+			/* if not set, resume doesn't work */
+			set_bit(ASYNCB_SUSPENDED, &tty_p->flags);
+			clear_bit(ASYNCB_INITIALIZED, &tty_p->flags);
+			state->pm_state = UART_PM_STATE_OFF;
+
+			mutex_unlock(&tty_p->mutex);
+			serial8250_resume_port(line);
+			mutex_lock(&tty_p->mutex);
+
+			printk(KERN_INFO "8250 UART (%d) : UART_WAKEUP end\n", line);
+
+			break;
+
+		default:
+			return -ENOIOCTLCMD;
+	}
+
+	return 0;
+}
+
 static struct uart_ops serial8250_pops = {
 	.tx_empty	= serial8250_tx_empty,
 	.set_mctrl	= serial8250_set_mctrl,
@@ -2746,6 +2919,7 @@ static struct uart_ops serial8250_pops = {
 	.poll_get_char = serial8250_get_poll_char,
 	.poll_put_char = serial8250_put_poll_char,
 #endif
+	.ioctl = serial8250_ioctl,
 };
 
 static struct uart_8250_port serial8250_ports[UART_NR];
@@ -3105,6 +3279,7 @@ static int serial8250_probe(struct platform_device *dev)
 		uart.port.pm		= p->pm;
 		uart.port.dev		= &dev->dev;
 		uart.port.irqflags	|= irqflag;
+		uart.fxpwsave_enable = p->fxpwsave_enable;
 		ret = serial8250_register_8250_port(&uart);
 		if (ret < 0) {
 			dev_err(&dev->dev, "unable to register port at index %d "
@@ -3139,7 +3314,8 @@ static int serial8250_suspend(struct platform_device *dev, pm_message_t state)
 	for (i = 0; i < UART_NR; i++) {
 		struct uart_8250_port *up = &serial8250_ports[i];
 
-		if (up->port.type != PORT_UNKNOWN && up->port.dev == &dev->dev)
+		if (up->port.type != PORT_UNKNOWN && up->port.dev == &dev->dev
+			&& !up->fxpwsave_enable)
 			uart_suspend_port(&serial8250_reg, &up->port);
 	}
 
@@ -3153,7 +3329,8 @@ static int serial8250_resume(struct platform_device *dev)
 	for (i = 0; i < UART_NR; i++) {
 		struct uart_8250_port *up = &serial8250_ports[i];
 
-		if (up->port.type != PORT_UNKNOWN && up->port.dev == &dev->dev)
+		if (up->port.type != PORT_UNKNOWN && up->port.dev == &dev->dev
+			&& !up->fxpwsave_enable)
 			serial8250_resume_port(i);
 	}
 
@@ -3259,6 +3436,9 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 		uart->port.fifosize	= up->port.fifosize;
 		uart->tx_loadsz		= up->tx_loadsz;
 		uart->capabilities	= up->capabilities;
+
+		uart->fxpwsave_flag = 0;
+		uart->fxpwsave_enable = up->fxpwsave_enable;
 
 		/* Take tx_loadsz from fifosize if it wasn't set separately */
 		if (uart->port.fifosize && !uart->tx_loadsz)

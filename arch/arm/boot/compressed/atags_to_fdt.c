@@ -4,12 +4,17 @@
 #ifdef	CONFIG_ARCH_LM2
 #include <asm/string.h>
 #include <asm/page.h>
+#include <asm/byteorder.h>
+
+#include "bootLoaderInfo.h"
+
 /*
- * 0x7fff_f000 start virtual address
+ * 0x0fff_f000 start virtual address
  */
-#define	PARAM_ADDR	0x7ffff000
+#define	PARAM_ADDR	0x0ffff000
 #define	ATAGS_ADDR	0x05000100
 
+#if 0
 struct	lm2_param {
 	unsigned int	magic;
 	unsigned char	macaddr[6];
@@ -20,7 +25,7 @@ struct	lm2_param {
 	unsigned long	firm_addr;
 	unsigned long	firm_size;
 };
-
+#endif
 #endif	/* CONFIG_ARCH_LM2 */
 
 #if defined(CONFIG_ARM_ATAG_DTB_COMPAT_CMDLINE_EXTEND)
@@ -53,6 +58,14 @@ static int setprop(void *fdt, const char *node_path, const char *property,
 	if (offset < 0)
 		return offset;
 	return fdt_setprop(fdt, offset, property, val_array, size);
+}
+
+static	int	replace_mac_addr(void *fdt, int total_space)
+{
+	boot_bootinfo_t	*p_ptr = (boot_bootinfo_t *)PARAM_ADDR;
+
+	setprop_inplace(fdt, "/mac_addr", "mac-address", p_ptr->bootInfoBootLoader.macaddr, 6);
+	return	1;
 }
 
 static int setprop_string(void *fdt, const char *node_path,
@@ -126,14 +139,6 @@ static void merge_fdt_bootargs(void *fdt, const char *fdt_cmdline)
 	setprop_string(fdt, "/chosen", "bootargs", cmdline);
 }
 
-static	int	replace_mac_addr(void *fdt, int total_space)
-{
-	struct	lm2_param	*p_ptr = (struct lm2_param *)PARAM_ADDR;
-
-	setprop_inplace(fdt, "/mac_addr", "mac-address", p_ptr->macaddr, 6);
-	return	1;
-}
-
 /*
  * Convert and fold provided ATAGs into the provided FDT.
  *
@@ -144,18 +149,108 @@ static	int	replace_mac_addr(void *fdt, int total_space)
  */
 int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 {
-	struct tag *atag = atag_list;
 	/* In the case of 64 bits memory size, need to reserve 2 cells for
 	 * address and size for each bank */
 	uint32_t mem_reg_property[2 * 2 * NR_BANKS];
+	uint32_t *size_len;
 	int memcount = 0;
-	int ret, memsize;
+	int ret;
 	int len;
-#ifdef	CONFIG_ARCH_LM2
-	if(replace_mac_addr(fdt,total_space))
-		return	1;
-#endif	/* CONFIG_ARCH_LM2 */
+	boot_bootinfo_t *p_ptr;
+	boot_infoBootLoader_t *pp;
+	boot_infoMemConfig_t *rp;
+	boot_infoInSeepRom_t *sp;
+	boot_infoInNVMem_t *np;
+	unsigned long long ramsize;
+	
+	uint32_t contigmem_size = 0, pagemem_size = 0;
 
+#ifdef	CONFIG_ARCH_LM2
+	replace_mac_addr(fdt,total_space);
+
+	/* FX */
+	p_ptr = (boot_bootinfo_t*)PARAM_ADDR;
+	if (p_ptr == NULL){
+		goto out;
+	}
+	pp = &(p_ptr->bootInfoBootLoader);
+	if (pp == NULL){
+		goto out;
+	}
+	rp = &(p_ptr->bootInfoMemConfig);
+	if (rp == NULL){
+		goto out;
+	}
+	sp = &(p_ptr->bootInfoInSeepRom);
+	np = &(p_ptr->bootInfoInNVMem);
+
+	ret = fdt_open_into(fdt, fdt, total_space);
+
+	if (rp->magic != BOOT_BOOTINFO_MAGIC){
+		/* bootinfo not found... use dtb as is */
+        	size_len =  getprop(fdt, "/memory", "contigmem_size", &len);
+        	if (size_len)
+                	contigmem_size = fdt32_to_cpu(*size_len);
+        	size_len =  getprop(fdt, "/memory", "pagemem_size", &len);
+        	if (size_len)
+                	pagemem_size = fdt32_to_cpu(*size_len);
+
+		size_len = getprop(fdt, "/memory", "reg", &len);
+		ramsize = cpu_to_fdt32(*(size_len+1)) - 0x5000000 - contigmem_size;
+	} else {
+		/* bootinfo found */ 
+		unsigned int size_be;
+		if (rp->data == NULL){
+			/* no meminfo */
+			pagemem_size = 0;
+			contigmem_size = 0;
+		} else {
+			memcpy(&size_be, rp->data, 4);
+			/*pagemem_size = be32_to_cpu(size_be);*/
+			pagemem_size = size_be;
+			memcpy(&size_be, (rp->data)+4, 4);
+			/*contigmem_size = be32_to_cpu(size_be);*/
+			contigmem_size = size_be;
+		}
+		ramsize = pp->ramsize;
+
+		if (ramsize == 1*1024*1024*1024ULL){
+			/* 1GB RAM */
+			ramsize = pp->ramsize - 0x5000000 - contigmem_size - pagemem_size;
+		} else if (pp->ramsize == 2*1024*1024*1024ULL){
+			/* 2GB RAM */
+			ramsize = pp->ramsize - 0x5000000 - contigmem_size - pagemem_size;
+		} else {
+			/* 4GB RAM */
+			ramsize = 0xC0000000 - 0x5000000 - contigmem_size;
+			pagemem_size = 0x40000000;
+		}
+		//pp->initrd_addr = 0x28000000;
+		//pp->initrd_size = 23687580;
+		setprop_cell(fdt, "/chosen", "linux,initrd-start", pp->initrd_addr);
+		setprop_cell(fdt, "/chosen", "linux,initrd-end", pp->initrd_addr + pp->initrd_size);
+		if (sp){
+			int uitype;
+			int productid = (sp->Unit7[0x80] << 16) | (sp->Unit7[0x81] << 24);
+			int printertype = (sp->Unit4[0x27] << 24);
+			memcpy(&uitype, sp->Unit7+0x0c, 4);
+			setprop_cell(fdt, "/bootinfo", "printertype", printertype); 
+			setprop_cell(fdt, "/bootinfo", "uitype", be32_to_cpu(uitype));  /* Big Endian */
+			setprop_cell(fdt, "/bootinfo", "productid", productid);
+		}
+	}
+	mem_reg_property[memcount++] = cpu_to_fdt32(0x05000000);
+	mem_reg_property[memcount++] = cpu_to_fdt32(ramsize);
+	setprop(fdt, "/memory", "reg", mem_reg_property, 4 * memcount);
+	setprop_cell(fdt, "/memory", "pagemem_size", pagemem_size);
+	setprop_cell(fdt, "/memory", "contigmem_size", contigmem_size);
+
+	return fdt_pack(fdt);
+out:
+	return -1;
+	/* FX */
+#endif	/* CONFIG_ARCH_LM2 */
+#if 0
 	/* make sure we've got an aligned pointer */
 	if ((u32)atag_list & 0x3)
 		return 1;
@@ -230,4 +325,5 @@ int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 	}
 
 	return fdt_pack(fdt);
+#endif
 }
