@@ -47,7 +47,8 @@ struct pci_sys_data {
 	struct list_head node;
 	int		busnr;		/* primary bus number			*/
 	u64		mem_offset;	/* bus->cpu memory mapping offset	*/
-	unsigned long	io_offset;	/* bus->cpu IO mapping offset		*/
+//	unsigned long	io_offset;	/* bus->cpu IO mapping offset		*/
+	phys_addr_t	io_offset;	/* bus->cpu IO mapping offset		*/
 	struct pci_bus	*bus;		/* PCI bus				*/
 	struct list_head resources;	/* root bus resources (apertures)       */
 	struct resource io_res;

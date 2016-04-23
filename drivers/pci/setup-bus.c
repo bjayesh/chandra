@@ -345,6 +345,7 @@ static void __assign_resources_sorted(struct list_head *head,
 				 struct list_head *realloc_head,
 				 struct list_head *fail_head)
 {
+printk( KERN_ERR " $$$ %s : Entry\n",__FUNCTION__);
 	/*
 	 * Should not assign requested resources at first.
 	 *   they could be adjacent, so later reassign can not reallocate
@@ -1188,14 +1189,16 @@ void __ref __pci_bus_assign_resources(const struct pci_bus *bus,
 {
 	struct pci_bus *b;
 	struct pci_dev *dev;
-
+printk( KERN_ERR " $$$ %s : Entry\n",__FUNCTION__);
 	pbus_assign_resources_sorted(bus, realloc_head, fail_head);
+printk( KERN_ERR " $$$ %s : sorted return\n",__FUNCTION__);
 
 	list_for_each_entry(dev, &bus->devices, bus_list) {
 		b = dev->subordinate;
 		if (!b)
 			continue;
 
+printk( KERN_ERR " $$$ %s : subordinate %x \n",__FUNCTION__, b);
 		__pci_bus_assign_resources(b, realloc_head, fail_head);
 
 		switch (dev->class >> 8) {
@@ -1460,6 +1463,7 @@ void __init
 pci_assign_unassigned_resources(void)
 {
 	struct pci_bus *bus;
+printk(KERN_ERR " #### %s Entry\n",__FUNCTION__);
 	LIST_HEAD(realloc_head); /* list of resources that
 					want additional resources */
 	struct list_head *add_list = NULL;

@@ -418,6 +418,7 @@ static int pcibios_init_resources(int busnr, struct pci_sys_data *sys)
 	int ret;
 	struct pci_host_bridge_window *window;
 
+printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 	if (list_empty(&sys->resources)) {
 		pci_add_resource_offset(&sys->resources,
 			 &iomem_resource, sys->mem_offset);
@@ -442,6 +443,7 @@ static int pcibios_init_resources(int busnr, struct pci_sys_data *sys)
 	pci_add_resource_offset(&sys->resources, &sys->io_res,
 				sys->io_offset);
 
+printk( KERN_ERR " $$$ %s : exit\n",__FUNCTION__);	/* yamano */
 	return 0;
 }
 
@@ -451,6 +453,7 @@ static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
 	int ret;
 	int nr, busnr;
 
+printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 	for (nr = busnr = 0; nr < hw->nr_controllers; nr++) {
 		sys = kzalloc(sizeof(struct pci_sys_data), GFP_KERNEL);
 		if (!sys)
@@ -495,13 +498,14 @@ static void pcibios_init_hw(struct hw_pci *hw, struct list_head *head)
 				break;
 		}
 	}
+printk( KERN_ERR " $$$ %s : exit\n",__FUNCTION__);	/* yamano */
 }
 
 void pci_common_init(struct hw_pci *hw)
 {
 	struct pci_sys_data *sys;
 	LIST_HEAD(head);
-
+printk( KERN_ERR " $$$ %s : entry\n",__FUNCTION__);	/* yamano */
 	pci_add_flags(PCI_REASSIGN_ALL_RSRC);
 	if (hw->preinit)
 		hw->preinit();
@@ -536,6 +540,7 @@ void pci_common_init(struct hw_pci *hw)
 		 */
 		pci_bus_add_devices(bus);
 	}
+printk( KERN_ERR " $$$ %s : exit\n",__FUNCTION__);	/* yamano */
 }
 
 #ifndef CONFIG_PCI_HOST_ITE8152

@@ -1312,7 +1312,7 @@ static void pci_init_capabilities(struct pci_dev *dev)
 void pci_device_add(struct pci_dev *dev, struct pci_bus *bus)
 {
 	int ret;
-
+printk(KERN_ERR " $$$$$ %s : Entry\n",__FUNCTION__);
 	device_initialize(&dev->dev);
 	dev->dev.release = pci_release_dev;
 
@@ -1353,24 +1353,29 @@ void pci_device_add(struct pci_dev *dev, struct pci_bus *bus)
 	WARN_ON(ret < 0);
 
 	pci_proc_attach_device(dev);
+printk(KERN_ERR " $$$$$ %s : Exit\n",__FUNCTION__);
 }
 
 struct pci_dev *__ref pci_scan_single_device(struct pci_bus *bus, int devfn)
 {
 	struct pci_dev *dev;
 
+//printk(KERN_ERR " $$$$$ %s : Entry\n",__FUNCTION__);
 	dev = pci_get_slot(bus, devfn);
 	if (dev) {
 		pci_dev_put(dev);
+//printk(KERN_ERR " $$$$$ %s : slot Exit\n",__FUNCTION__);
 		return dev;
 	}
 
 	dev = pci_scan_device(bus, devfn);
-	if (!dev)
+	if (!dev){
+//printk(KERN_ERR " $$$$$ %s : Device not\n",__FUNCTION__);
 		return NULL;
-
+}
 	pci_device_add(dev, bus);
 
+//printk(KERN_ERR " $$$$$ %s : Exit\n",__FUNCTION__);
 	return dev;
 }
 EXPORT_SYMBOL(pci_scan_single_device);
@@ -1432,7 +1437,7 @@ int pci_scan_slot(struct pci_bus *bus, int devfn)
 {
 	unsigned fn, nr = 0;
 	struct pci_dev *dev;
-
+//printk(KERN_ERR " ##### %s :Entry\n",__FUNCTION__);
 	if (only_one_child(bus) && (devfn > 0))
 		return 0; /* Already scanned the entire slot */
 
@@ -1454,6 +1459,7 @@ int pci_scan_slot(struct pci_bus *bus, int devfn)
 	/* only one slot has pcie device */
 	if (bus->self && nr)
 		pcie_aspm_init_link_state(bus->self);
+//printk(KERN_ERR " ##### %s :Exit\n",__FUNCTION__);
 
 	return nr;
 }
@@ -1812,18 +1818,32 @@ int pci_bus_update_busn_res_end(struct pci_bus *b, int bus_max)
 	resource_size_t size;
 	int ret;
 
-	if (res->start > bus_max)
+printk(KERN_ERR " ## %s : Entry bus=%x bus_max= %x\n",__FUNCTION__,b,bus_max);
+
+	if (res->start > bus_max){
+printk(KERN_ERR " ## %s : start %d > bus_max %d \n",__FUNCTION__,res->start,bus_max);
 		return -EINVAL;
+	}	/* yamano debug */
+printk( KERN_ERR "res->start =%x\n",res->start);
+printk( KERN_ERR "res->end =%x\n",res->end);
+printk( KERN_ERR "res->flags =%x\n",res->flags);
 
 	size = bus_max - res->start + 1;
 	ret = adjust_resource(res, res->start, size);
-	dev_printk(KERN_DEBUG, &b->dev,
-			"busn_res: %pR end %s updated to %02x\n",
+//	dev_printk(KERN_DEBUG, &b->dev,
+	printk(KERN_ERR "busn_res: %pR end %s updated to %02x\n",
 			&old_res, ret ? "can not be" : "is", bus_max);
 
-	if (!ret && !res->parent)
-		pci_bus_insert_busn_res(b, res->start, res->end);
+	if (!ret && !res->parent){
+printk(KERN_ERR " ## %s : instert busn_res\n",__FUNCTION__);
 
+		pci_bus_insert_busn_res(b, res->start, res->end);
+	}	/* yamano debug */
+printk(KERN_ERR "Information\n");
+printk(KERN_ERR "parent : %x \n",b->parent);
+printk(KERN_ERR "resource : %x \n",b->resources);
+
+printk(KERN_ERR " ## %s ;Exit bus->resources = %x\n",__FUNCTION__,b->busn_res);
 	return ret;
 }
 
@@ -1858,7 +1878,7 @@ struct pci_bus *pci_scan_root_bus(struct device *parent, int bus,
 	b = pci_create_root_bus(parent, bus, ops, sysdata, resources);
 	if (!b)
 		return NULL;
-
+printk(KERN_ERR " ## %s : root bus = %x\n",__FUNCTION__,b);
 	if (!found) {
 		dev_info(&b->dev,
 		 "No busn resource found for root bus, will use [bus %02x-ff]\n",
@@ -1869,10 +1889,13 @@ struct pci_bus *pci_scan_root_bus(struct device *parent, int bus,
 	max = pci_scan_child_bus(b);
 dev_info(&b->dev,"max=%d \n",max);	/* yamano debug */
 
-	if (!found)
+	if (!found){
+printk(KERN_ERR " ## %s : pci_bus_update\n",__FUNCTION__);
 		pci_bus_update_busn_res_end(b, max);
+	}
 
 	pci_bus_add_devices(b);
+printk(KERN_ERR " ## %s : return bus = %x\n",__FUNCTION__,b);
 	return b;
 }
 EXPORT_SYMBOL(pci_scan_root_bus);

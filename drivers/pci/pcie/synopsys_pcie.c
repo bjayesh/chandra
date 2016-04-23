@@ -30,6 +30,7 @@
 
 #undef	DEBUG_TRACE
 #undef	DEBUG_RW
+#define	DEBUG_CALLBACK
 
 #define	PCIE_PORT1	1
 #define	PCIE_PORT2	2
@@ -82,9 +83,9 @@ int	bifur_num = 2;
 
 #define IRQ_V2M_PCIE            (32 + 17)
 /*
- * Exynos PCIe IP consists of Synopsys specific part and Exynos
+ * CSR PCIe IP consists of Synopsys specific part and CSR
  * specific part. Only core block is a Synopsys designware part;
- * other parts are Exynos specific.
+ * other parts are CSR specific.
  */
 
 static struct hw_pci synopsys_pci;
@@ -156,22 +157,32 @@ static int synopsys_pcie_setup(int nr, struct pci_sys_data *sys)
 
 	pp = sys_to_pcie(sys);
 
+#ifdef	DEBUG_CALLBACK
+	dev_err(pp->dev, "##### %s : Start\n",__FUNCTION__);
+#endif
+
 	if (!pp) {
-#ifdef	DEBUG_TRACE
-		dev_err(pp->dev, "synopsys_pcie_setup: Error End\n");
+#ifdef	DEBUG_CALLBACK
+		dev_err(pp->dev, "##### %s : Error End\n",__FUNCTION__);
 #endif
 		return 0;
 	}
-#ifdef	DEBUG_TRACE
-	dev_err(pp->dev, "synopsys_pcie_setup: Start\n");
-#endif
-
-
+printk(KERN_ERR "sys->busnr :0x%x\n",sys->busnr);
+printk(KERN_ERR "sys->mem_offset :0x%x\n",sys->mem_offset);
+printk(KERN_ERR "sys->io_offset :0x%x\n",sys->io_offset);
+/* yamano resource debug */
 //	sys->mem_offset = pp->mem.start - pp->config.mem_bus_addr;
-	pci_add_resource_offset(&sys->resources, &pp->mem, sys->mem_offset);
+//	pci_add_resource_offset(&sys->resources, &pp->mem, sys->mem_offset);
+//	pci_add_resource_offset(&sys->resources, &pp->config[1].mem, sys->mem_offset);
+	sys->mem_offset = 0x404000000ULL - 0x10000000ULL;
+	sys->io_offset  = 0x411000000ULL - 0x10100000ULL;
+printk(KERN_ERR "print offset mem = %llx\n",sys->mem_offset);
+printk(KERN_ERR "print offset io = %llx\n",sys->io_offset);
+	pci_add_resource_offset(&sys->resources, &pp->config[0].mem, sys->mem_offset);
+	pci_add_resource_offset(&sys->resources, &pp->config[0].io, sys->io_offset);
 
-#ifdef	DEBUG_TRACE
-	dev_err(pp->dev, "synopsys_pcie_setup: End\n");
+#ifdef	DEBUG_CALLBACK
+	dev_err(pp->dev, "##### %s : End\n",__FUNCTION__);
 #endif
 	return 1;
 }
@@ -179,6 +190,9 @@ static int synopsys_pcie_setup(int nr, struct pci_sys_data *sys)
 static int synopsys_pcie_link_up(struct pcie_port *pp)
 {
 	u32 val;
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Start\n",__FUNCTION__);
+#endif
 	
 	val = synopsys_readl(pp->pciewrap_base + PCIE1_MISC_STAT);
 //	switch (pp->controller) {
@@ -309,18 +323,19 @@ static struct pci_bus *synopsys_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	struct pcie_port *pp = sys_to_pcie(sys);
 
 #ifdef	DEBUG_TRACE
-	dev_err(pp->dev, "%s: nr=%d bus=%d Start\n", __FUNCTION__, nr, sys->busnr);
+	dev_err(pp->dev, "##### %s : Entry nr=%d bus=%d Start\n", __FUNCTION__, nr, sys->busnr);
 #endif
 
 	if (pp) {
 		pp->root_bus_nr = sys->busnr;
+dev_err(pp->dev, "%s resources=%x\n",__FUNCTION__,sys->resources);
 		bus = pci_scan_root_bus(NULL, sys->busnr, &synopsys_pcie_ops, sys, &sys->resources);
 	} else {
 		bus = NULL;
 		BUG();
 	}
 #ifdef	DEBUG_TRACE
-	dev_err(pp->dev, "synopsys_pcie_scan_bus: End\n");
+	dev_err(pp->dev, "##### %s : Exit\n",__FUNCTION__);
 #endif
 	return bus;
 }
@@ -330,7 +345,7 @@ static int synopsys_pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 	struct pcie_port *pp = sys_to_pcie(dev->bus->sysdata);
 
 #ifdef	DEBUG_TRACE
-	dev_err(pp->dev, "%s entry\n",__FUNCTION__);
+	dev_err(pp->dev, "##### %s : Entry\n",__FUNCTION__);
 #endif
 	
 	return pp->irq;
@@ -347,22 +362,37 @@ static void synopsys_pcie_assert_phy_reset(struct pcie_port *pp)
 {
 	u32 regVal;
 	void __iomem *pciewrap_base = pp->pciewrap_base;
+
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Entry\n",__FUNCTION__);
+#endif
 	
 	regVal  = synopsys_readl(pciewrap_base + PCIE_PHY_RST_CTRL);
 	regVal |= PCIE_PHY_RST_CTRL__PHY_RESET__MASK;
 	synopsys_writel(pciewrap_base + PCIE_PHY_RST_CTRL, regVal);
+
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Exit\n",__FUNCTION__);
+#endif
 }
 
 static void synopsys_pcie_assert_pipe_reset(struct pcie_port *pp)
 {
 	u32 regVal;
 	void __iomem *pciewrap_base = pp->pciewrap_base;
+
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Entry\n",__FUNCTION__);
+#endif
 	
 	regVal  = synopsys_readl(pciewrap_base + PCIE_PHY_RST_CTRL);
 	regVal &= PCIE_PHY_RST_CTRL__PIPE0_RESET_N__INV_MASK;
 	regVal &= PCIE_PHY_RST_CTRL__PIPE1_RESET_N__INV_MASK;
 	regVal &= PCIE_PHY_RST_CTRL__PIPE2_RESET_N__INV_MASK;
 	synopsys_writel(pciewrap_base + PCIE_PHY_RST_CTRL, regVal);
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Exit\n",__FUNCTION__);
+#endif
 }
 
 static void synopsys_pcie_assert_gpex_reset(struct pcie_port *pp)
@@ -370,6 +400,9 @@ static void synopsys_pcie_assert_gpex_reset(struct pcie_port *pp)
 	u32 regVal;
 	void __iomem *pciewrap_base = pp->pciewrap_base;
 	
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Entry\n",__FUNCTION__);
+#endif
 	if( rc_num == 1 || ep_num == 1 || nu_num == 1 ) {
 		regVal  = synopsys_readl(pciewrap_base + PCIE1_SW_RST);
 		regVal &=(PCIE1_SW_RST__PAB_N__INV_MASK  &
@@ -394,6 +427,9 @@ static void synopsys_pcie_assert_gpex_reset(struct pcie_port *pp)
 			      PCIE3_SW_RST__LINK_N__INV_MASK);
 		synopsys_writel(pciewrap_base + PCIE3_SW_RST, regVal);
 	}
+#ifdef	DEBUG_TRACE
+	dev_err(pp->dev, "##### %s : Exit\n",__FUNCTION__);
+#endif
 }
 
 static void synopsys_pcie_set_bootstrap(struct pcie_port *pp, int which, int ep_rc)
@@ -1008,10 +1044,13 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 */	
 	/* locally initialize more PCIE1 RC CFG regs (45xx legacy code) */
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_CACHE);
+
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_BASE3_IOBASE);
 	synopsys_writel(pciegen3_base1 + PCIE_GPEXP_CFG_BASE4_MEMBASE, PCIE1_MEM_LIMIT_BASE);
+
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_BASE4_MEMBASE);
 	synopsys_writel(pciegen3_base1 + PCIE_GPEXP_CFG_BASE5_PMEMBASE, PCIE1_PMEM_LIMIT_BASE_L);
+
 	val = synopsys_readl(pciegen3_base1 + PCIE_GPEXP_CFG_BASE5_PMEMBASE);
 	synopsys_writel(pciegen3_base1 + PCIE_GPEXP_CFG_X_PBASEUDW, PCIE1_PMEM_BASE_U);
 	synopsys_writel(pciegen3_base1 + PCIE_GPEXP_CFG_SUBVENID_PLIMITUDW, PCIE1_PMEM_LIMIT_U);
@@ -1030,7 +1069,7 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 	wait_loop=0;
 	val = synopsys_readl(pciewrap_base + PCIE1_MISC_STAT);
 	while(val != PCIE1_MISC_STAT__GDA_PAB_DL_UP__MASK){
-		if(wait_loop > 1000){
+		if(wait_loop > 100){
 			result = 1;
 			break;
 		}
@@ -1046,16 +1085,6 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 
 	/* host bridge interrupt routing enable */
 	synopsys_writel(pciewrap_base + PCIE_INT_EN, 0x00000001);
-//
-//	adr_base = 0x400000000ULL;
-//	conFig = ioremap(adr_base, 0x10000000);
-
-//	dev_err(pp->dev, "addr = %llx vadr = %lx\n", adr_base,(u32)conFig);
-//	dev_err(pp->dev, "reg = %x\n",*((int *)(conFig+0x01000000)));
-//	val = synopsys_readl(conFig);
-//	dev_err(pp->dev, "reg = %x\n",val);
-//	iounmap(conFig);
-//	synopsys_pcie_enable_interrupts(pp);
 out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init:%x End\n",pciegen3_base1);
@@ -1205,19 +1234,27 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 #endif
 	/* Configureation resource */
 	pp->io.name	= "Multiport";
-	pp->io.start	= 0x410000000ULL;
-	pp->io.end	= 0x41000ffffULL;
-	pp->io.flags	= IORESOURCE_MEM;
+	pp->io.start	= 0x411000000ULL;
+	pp->io.end	= 0x41100ffffULL;
+	pp->io.flags	= IORESOURCE_IO;
 	pp->va_io = ioremap(0x410000000ULL,SZ_64K);
-	pp->config[0].io_size = resource_size(&pp->io);
+	pp->config[0].io.name = "Port 0 IO space";
+	pp->config[0].io.start = 0x411000000ULL;
+	pp->config[0].io.end   = 0x41100FFFFULL;
+	pp->config[0].io.flags = IORESOURCE_IO;
+	pp->config[0].io_size = resource_size(&pp->config[0].io);
 //	pp->config[0].io_bus_addr	= 0x410000000ULL;
-
 	pp->mem.name	= "Memory";
-	pp->mem.start	= 0x400000000ULL;
+	pp->mem.start	= 0x404000000ULL;
 	pp->mem.end	= 0x40fffffffULL;
+	pp->mem.flags	= IORESOURCE_MEM;
 	pp->va_cfg = ioremap(0x400000000ULL,SZ_64M);
 	pp->va_mem = ioremap(0x404000000ULL,SZ_128+SZ_64);
-	pp->config[0].mem_size = resource_size(&pp->mem);
+	pp->config[0].mem.name = "Port 0 Memory";
+	pp->config[0].mem.start = 0x404000000ULL;
+	pp->config[0].mem.end  	= 0x40fffffffULL;
+	pp->config[0].mem.flags = IORESOURCE_MEM;
+	pp->config[0].mem_size = resource_size(&pp->config[0].mem);
 //	pp->config[0].mem_bus_addr	= 0x400000000ULL;
 
 	pp->config[0].irq = LM2_IRQ_PCIE1;	/* device interrupt by port */

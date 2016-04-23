@@ -126,7 +126,7 @@ pci_bus_alloc_resource(struct pci_bus *bus, struct resource *res,
 	int i, ret = -ENOMEM;
 	struct resource *r;
 	resource_size_t max = -1;
-
+printk(KERN_ERR " ### %s : Entry bus->number = %x\n",__FUNCTION__,bus->number);
 	type_mask |= IORESOURCE_IO | IORESOURCE_MEM;
 
 	/* don't allocate too high if the pref mem doesn't support 64bit*/
@@ -148,6 +148,7 @@ pci_bus_alloc_resource(struct pci_bus *bus, struct resource *res,
 			continue;
 
 		/* Ok, try it out.. */
+printk(KERN_ERR " ### %s : resource allocate\n",__FUNCTION__);
 		ret = allocate_resource(r, res, size,
 					r->start ? : min,
 					max, align,
@@ -155,6 +156,7 @@ pci_bus_alloc_resource(struct pci_bus *bus, struct resource *res,
 		if (ret == 0)
 			break;
 	}
+printk(KERN_ERR " ### %s : Exit\n",__FUNCTION__);
 	return ret;
 }
 
