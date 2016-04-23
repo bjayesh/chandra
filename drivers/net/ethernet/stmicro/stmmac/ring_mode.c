@@ -38,6 +38,7 @@ static int stmmac_jumbo_frm(void *p, struct sk_buff *skb, int csum)
 	unsigned int bmax, len;
 #ifdef  CONFIG_ARCH_LM2
 	dma_addr_t	tmp;
+	unsigned int	cur_tx = priv->cur_tx;
 #endif
 
 	if (priv->extend_desc)
@@ -63,7 +64,7 @@ static int stmmac_jumbo_frm(void *p, struct sk_buff *skb, int csum)
 		wmb();
 
 		priv->tx_skbuff[entry] = NULL;
-		entry = (++priv->cur_tx) % txsize;
+		entry = (++cur_tx) % txsize;
 
 		if (priv->extend_desc)
 			desc = (struct dma_desc *)(priv->dma_etx + entry);
