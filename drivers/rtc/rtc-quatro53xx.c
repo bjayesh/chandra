@@ -623,7 +623,7 @@ static	struct	platform_driver lm2_rtc_driver = {
 	.driver = {
 		.name	= "lm2-rtc",
 		.owner	= THIS_MODULE,
-		.pm	= &lm2_rtc_pm_ops,
+		/* .pm	= &lm2_rtc_pm_ops, */
 	},
 	.id_table	= lm2_rtc_id_table,
 	.probe		= lm2_rtc_probe,
