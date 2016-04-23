@@ -49,7 +49,7 @@
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/of.h>
-#include <linux/phy/phy.h>
+#include <linux/usb/phy.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -498,8 +498,8 @@ err2:
 	dwc3_free_scratch_buffers(dwc);
 
 err1:
-	usb_phy_shutdown(dwc->usb2_phy);
-	usb_phy_shutdown(dwc->usb3_phy);
+//	usb_phy_shutdown(dwc->usb2_phy);
+//	usb_phy_shutdown(dwc->usb3_phy);
 	phy_exit(dwc->usb2_generic_phy);
 	phy_exit(dwc->usb3_generic_phy);
 
@@ -510,8 +510,8 @@ err0:
 static void dwc3_core_exit(struct dwc3 *dwc)
 {
 	dwc3_free_scratch_buffers(dwc);
-	usb_phy_shutdown(dwc->usb2_phy);
-	usb_phy_shutdown(dwc->usb3_phy);
+//	usb_phy_shutdown(dwc->usb2_phy);
+//	usb_phy_shutdown(dwc->usb3_phy);
 	phy_exit(dwc->usb2_generic_phy);
 	phy_exit(dwc->usb3_generic_phy);
 }
@@ -523,9 +523,11 @@ static int dwc3_core_get_phy(struct dwc3 *dwc)
 	int ret;
 
 	if (node) {
+dev_info(dev, "%s node = %x \n",__FUNCTION__,node);
 		dwc->usb2_phy = devm_usb_get_phy_by_phandle(dev, "usb-phy", 0);
 		dwc->usb3_phy = devm_usb_get_phy_by_phandle(dev, "usb-phy", 1);
 	} else {
+dev_info(dev, "%s static \n",__FUNCTION__);
 		dwc->usb2_phy = devm_usb_get_phy(dev, USB_PHY_TYPE_USB2);
 		dwc->usb3_phy = devm_usb_get_phy(dev, USB_PHY_TYPE_USB3);
 	}
@@ -724,9 +726,10 @@ dev_info(dev, "DWC3 USB controller init\n");
 		dwc->maximum_speed = USB_SPEED_SUPER;
 
 	ret = dwc3_core_get_phy(dwc);
-	if (ret)
+	if (ret){
+dev_info(dev, "DWC3 USB Phy Get Error\n");
 			return ret;
-
+	}
 	dwc->xhci_resources[0].start = res->start;
 	dwc->xhci_resources[0].end = dwc->xhci_resources[0].start +
 					DWC3_XHCI_REGS_END;
@@ -833,8 +836,8 @@ err_usb2phy_power:
 	phy_power_off(dwc->usb2_generic_phy);
 
 err1:
-	usb_phy_set_suspend(dwc->usb2_phy, 1);
-	usb_phy_set_suspend(dwc->usb3_phy, 1);
+//	usb_phy_set_suspend(dwc->usb2_phy, 1);
+//	usb_phy_set_suspend(dwc->usb3_phy, 1);
 	dwc3_core_exit(dwc);
 
 err0:

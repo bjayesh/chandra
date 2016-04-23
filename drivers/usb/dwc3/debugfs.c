@@ -616,7 +616,7 @@ static ssize_t dwc3_link_state_write(struct file *file,
 
 	if (copy_from_user(&buf, ubuf, min_t(size_t, sizeof(buf) - 1, count)))
 		return -EFAULT;
-
+printk(KERN_ERR "%s entry buf = %s\n",__FUNCTION__,buf);
 	if (!strncmp(buf, "SS.Disabled", 11))
 		state = DWC3_LINK_STATE_SS_DIS;
 	else if (!strncmp(buf, "Rx.Detect", 9))

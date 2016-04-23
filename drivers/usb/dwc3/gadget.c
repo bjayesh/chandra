@@ -62,14 +62,18 @@
 #define USB3_PHY_CR_CAP_ADDR      0x04400200
 #define USB3_PHY_CR_CAP_DATA      0x04400204
 #define USB3_PHY_CR_DATA_IN       0x04400208
+#define USB3_PHY_CR_READ          0x0440020C
 #define USB3_PHY_CR_WRITE         0x04400210
 #define USB3_PHY_CR_ACK           0x04400214
+#define USB3_PHY_CR_DATA_OUT      0x04400218
 
 volatile u8	__iomem	*cr_cap_addr;
 volatile u8	__iomem	*cr_cap_data;
 volatile u8	__iomem	*cr_data_in;
+volatile u8     __iomem *cr_read;
 volatile u8	__iomem	*cr_write;
 volatile u8	__iomem	*cr_ack;
+volatile u8     __iomem *cr_data_out;
 
 void phy_cr_addr(u32 address)
 {
@@ -78,6 +82,20 @@ void phy_cr_addr(u32 address)
 	while (readl(cr_ack) == 0x00) {}
 	writel(0x0, cr_cap_addr);
 	while (readl(cr_ack) == 0x01) {}
+}
+
+static u32 phy_cr_read(u32 addr)
+{
+        u32 reg;
+
+        phy_cr_addr(addr);
+        writel(0x01, cr_read);
+        while (readl(cr_ack) == 0x00) {}
+        reg = readl(cr_data_out);
+        writel(0x00, cr_read);
+        while (readl(cr_ack) == 0x01) {}
+
+        return reg;
 }
 
 static void phy_cr_write(u32 addr, u32 value)
@@ -92,6 +110,35 @@ static void phy_cr_write(u32 addr, u32 value)
 	while (readl(cr_ack) == 0x00) {}
 	writel(0x00, cr_write);
 	while (readl(cr_ack) == 0x01) {}
+}
+
+void phy_fixed_equalization(u32 value)   // Andy test: test fixed equalization
+{
+        u32 reg = 0;
+
+        if (value > 7) {
+                printk("Wrong equalization value %d. Abort\n", value);
+                return;
+        }
+
+        reg = phy_cr_read(0x1006);
+        reg &= ~0x40;
+        phy_cr_write(0x1006, reg);
+
+        reg = phy_cr_read(0x1006);
+        reg |= 0x80;
+        phy_cr_write(0x1006, reg);
+
+        reg = phy_cr_read(0x1006);
+        reg |= (value << 8);
+        phy_cr_write(0x1006, reg);
+
+        reg = phy_cr_read(0x1006);
+        reg |= 0x0800;
+        phy_cr_write(0x1006, reg);
+
+        reg = phy_cr_read(0x1006);
+        printk("PHY control register 0x1006 is modified as 0x%08X\n", reg);   // Andy test
 }
 
 static void phy_dp_pull_up(u8 on, u8 weak)
@@ -183,7 +230,9 @@ int dwc3_gadget_set_link_state(struct dwc3 *dwc, enum dwc3_link_state state)
 	 * Wait until device controller is ready. Only applies to 1.94a and
 	 * later RTL.
 	 */
+//printk(KERN_ERR "XXXXXX %s entry\n",__FUNCTION__);
 	if (dwc->revision >= DWC3_REVISION_194A) {
+//printk(KERN_ERR "XXXXXX %s 194A afer\n",__FUNCTION__);
 		while (--retries) {
 			reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 			if (reg & DWC3_DSTS_DCNRD)
@@ -254,10 +303,11 @@ int dwc3_gadget_resize_tx_fifos(struct dwc3 *dwc)
 	int		fifo_size;
 	int		mdwidth;
 	int		num;
-
+//printk(KERN_ERR "# %s entry\n",__FUNCTION__);
 	if (!dwc->needs_fifo_resize)
 		return 0;
 
+//printk(KERN_ERR "# %s execute\n",__FUNCTION__);
 	ram1_depth = DWC3_RAM1_DEPTH(dwc->hwparams.hwparams7);
 	mdwidth = DWC3_MDWIDTH(dwc->hwparams.hwparams0);
 
@@ -585,6 +635,7 @@ static int dwc3_gadget_set_ep_config(struct dwc3 *dwc, struct dwc3_ep *dep,
 
 	/* Burst size is only needed in SuperSpeed mode */
 	if (dwc->gadget.speed == USB_SPEED_SUPER) {
+//printk(KERN_ERR "*** %s : USB_SPEED_SUPER\n",__FUNCTION__);
 		u32 burst = dep->endpoint.maxburst - 1;
 
 		params.param0 |= DWC3_DEPCFG_BURST_SIZE(burst);
@@ -663,6 +714,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	int			ret;
 
 	dev_vdbg(dwc->dev, "Enabling %s\n", dep->name);
+//	printk(KERN_ERR "Enabling %s\n", dep->name);	/* yamano */
 
 	if (!(dep->flags & DWC3_EP_ENABLED)) {
 		ret = dwc3_gadget_start_config(dwc, dep);
@@ -1034,7 +1086,8 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned	length;
 		dma_addr_t	dma;
-		last_one = false;
+//		last_one = false;
+		last_one = true;	/* yamano 0219 added from refer source */
 
 		if (req->request.num_mapped_sgs > 0) {
 			struct usb_request *request = &req->request;
@@ -1631,6 +1684,7 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 
 #if WORKAROUDN_55XXA0_DP_ISSUE
 	/* 55XX A0 D+ workaround */
+//printk(KERN_ERR "%s phy_dp_pull_up 1,1 exit\n",__FUNCTION__);			
 	phy_dp_pull_up(1, 1);
 #endif
 	return 0;
@@ -1720,6 +1774,7 @@ int dwc3_gadget_restart(struct dwc3 *dwc)
 			reg |= DWC3_DSTS_SUPERSPEED;
 		}
 	}
+//printk( KERN_ERR "%s DWC3_DFCG = %x\n",__FUNCTION__,reg);
 	dwc3_writel(dwc->regs, DWC3_DCFG, reg);
 
 	dwc->start_config_issued = false;
@@ -1962,6 +2017,7 @@ static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
 	unsigned int		s_pkt = 0;
 	unsigned int		trb_status;
 
+//printk(KERN_ERR "%s entry\n",__FUNCTION__);
 	if ((trb->ctrl & DWC3_TRB_CTRL_HWO) && status != -ESHUTDOWN)
 		/*
 		 * We continue despite the error. There is not much we
@@ -2039,6 +2095,7 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 	unsigned int		i;
 	int			ret;
 
+//printk(KERN_ERR "%s entry\n",__FUNCTION__);
 	do {
 		req = next_request(&dep->req_queued);
 		if (!req) {
@@ -2093,6 +2150,7 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	unsigned		status = 0;
 	int			clean_busy;
 
+//printk(KERN_ERR "%s entry\n",__FUNCTION__);
 	if (event->status & DEPEVT_STATUS_BUSERR)
 		status = -ECONNRESET;
 
@@ -2137,6 +2195,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 	if (!(dep->flags & DWC3_EP_ENABLED))
 		return;
 
+//	printk(KERN_ERR "%s %s: %s\n",__FUNCTION__, dep->name,	/* yamano */
 	dev_vdbg(dwc->dev, "%s: %s\n", dep->name,
 			dwc3_ep_event_string(event->endpoint_event));
 
@@ -2210,6 +2269,8 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		dev_dbg(dwc->dev, "%s FIFO Overrun\n", dep->name);
 		break;
 	case DWC3_DEPEVT_EPCMDCMPLT:
+		
+//		printk(KERN_ERR "*** %s Endpoint Command Complete\n",__FUNCTION__);
 		dev_vdbg(dwc->dev, "Endpoint Command Complete\n");
 		break;
 	}
@@ -2248,6 +2309,7 @@ static void dwc3_stop_active_transfer(struct dwc3 *dwc, u32 epnum, bool force)
 	struct dwc3_gadget_ep_cmd_params params;
 	u32 cmd;
 	int ret;
+//printk(KERN_ERR "%s entry\n",__FUNCTION__);
 
 	dep = dwc->eps[epnum];
 
@@ -2349,6 +2411,7 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 
 #if WORKAROUDN_55XXA0_DP_ISSUE
 	/* 55XX A0 D+ workaround */
+//printk(KERN_ERR "%s 55xx  phy_dp_pull_up 1,1 exit\n",__FUNCTION__);			
 	phy_dp_pull_up(1, 1);
 #endif
 }
@@ -2358,6 +2421,7 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	u32			reg;
 
 	dev_vdbg(dwc->dev, "%s\n", __func__);
+//printk(KERN_ERR "## %s entry\n",__FUNCTION__);			
 
 	/*
 	 * WORKAROUND: DWC3 revisions <1.88a have an issue which
@@ -2385,14 +2449,15 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	 * STAR#9000466709: RTL: Device : Disconnect event not
 	 * generated if setup packet pending in FIFO
 	 */
-	if (dwc->revision < DWC3_REVISION_188A) {
-		if (dwc->setup_packet_pending)
-			dwc3_gadget_disconnect_interrupt(dwc);
-	}
+//	if (dwc->revision < DWC3_REVISION_188A) {
+//		if (dwc->setup_packet_pending)
+//			dwc3_gadget_disconnect_interrupt(dwc);
+//	}
 
 #if WORKAROUDN_55XXA0_DP_ISSUE
 	if (dwc->gadget.speed == USB_SPEED_UNKNOWN)
 		/* 55XX A0 D+ workaround */
+//printk(KERN_ERR "%s reset interrupt USB_SPEED_UNKOWN phy_dp_pull_up 0,0\n",__FUNCTION__);			
 		phy_dp_pull_up(0, 0);
 #endif
 
@@ -2421,7 +2486,7 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 {
 	u32 reg;
 	u32 usb30_clock = DWC3_GCTL_CLK_BUS;
-
+//printk(KERN_ERR "### %s entry\n",__FUNCTION__);
 	/*
 	 * We change the clock only at SS but I dunno why I would want to do
 	 * this. Maybe it becomes part of the power saving plan.
@@ -2440,6 +2505,7 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 	reg |= DWC3_GCTL_RAMCLKSEL(usb30_clock);
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
+//printk(KERN_ERR "### %s reg set exit\n",__FUNCTION__);
 }
 
 static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
@@ -2457,6 +2523,7 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 
 	dwc3_update_ram_clk_sel(dwc, speed);
 
+//printk(KERN_ERR "%s entry\n",__FUNCTION__);
 	switch (speed) {
 	case DWC3_DCFG_SUPERSPEED:
 		/*
@@ -2472,9 +2539,10 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 		 * STAR#9000483510: RTL: SS : USB3 reset event may
 		 * not be generated always when the link enters poll
 		 */
-		if (dwc->revision < DWC3_REVISION_190A)
-			dwc3_gadget_reset_interrupt(dwc);
-
+		if (dwc->revision < DWC3_REVISION_190A){
+//printk(KERN_ERR "connection done reset\n");
+			dwc3_gadget_reset_interrupt(dwc);	/* yamano */
+		}
 		dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
 		dwc->gadget.ep0->maxpacket = 512;
 		dwc->gadget.speed = USB_SPEED_SUPER;
@@ -2564,6 +2632,7 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 	enum dwc3_link_state	next = evtinfo & DWC3_LINK_STATE_MASK;
 	unsigned int		pwropt;
 
+//printk(KERN_ERR "%s entry next = %x\n",__FUNCTION__,next);
 	/*
 	 * WORKAROUND: DWC3 < 2.50a have an issue when configured without
 	 * Hibernation mode enabled which would show up when device detects
@@ -2587,6 +2656,7 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 		if ((dwc->link_state == DWC3_LINK_STATE_U3) &&
 				(next == DWC3_LINK_STATE_RESUME)) {
 			dev_vdbg(dwc->dev, "ignoring transition U3 -> Resume\n");
+//			printk(KERN_ERR "ignoring transition U3 -> Resume\n"); /* yamano */
 			return;
 		}
 	}
@@ -2643,20 +2713,27 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 		if ((next == DWC3_LINK_STATE_U2) ||
 			(next == DWC3_LINK_STATE_U3) ||
 			(next == DWC3_LINK_STATE_RX_DET)) {
+//printk(KERN_ERR "%s 55xx unkonwn phy_dp_pull_up 1,1\n",__FUNCTION__);			
 			/* 55XX A0 D+ workaround */
 			phy_dp_pull_up(1, 1);
 		}
 	}
 	if (next == DWC3_LINK_STATE_SS_DIS) {
 		/* 55XX A0 D+ workaround */
+//printk(KERN_ERR "%s 55xx DWC3_LINK_STATE_SS_DIS phy_dp_pull_up 1,1\n",__FUNCTION__);			
 		phy_dp_pull_up(1, 1);
 	}
 	if ((dwc->gadget.speed == USB_SPEED_FULL) &&
 		(next == DWC3_LINK_STATE_U0)) {
+//printk(KERN_ERR "%s 55xx DWC3_LINK_STATE_U0 phy_dp_pull_up 1,1\n",__FUNCTION__);			
 		/* 55XX A0 D+ workaround */
 		phy_dp_pull_up(1, 1);
 	}
+	if((dwc->gadget.speed == USB_SPEED_SUPER) && (next == DWC3_LINK_STATE_U0)){
+		phy_dp_pull_up(1, 1);	/* yamano */
+	}
 #endif
+
 
 	switch (next) {
 	case DWC3_LINK_STATE_U1:
@@ -2675,6 +2752,7 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 		break;
 	}
 
+//	printk(KERN_ERR "link change: %s [%d] -> %s [%d]\n",
 	dev_vdbg(dwc->dev, "link change: %s [%d] -> %s [%d]\n",
 			dwc3_gadget_link_string(dwc->link_state),
 			dwc->link_state, dwc3_gadget_link_string(next), next);
@@ -2686,7 +2764,9 @@ static void dwc3_gadget_hibernation_interrupt(struct dwc3 *dwc,
 		unsigned int evtinfo)
 {
 	unsigned int is_ss = evtinfo & BIT(4);
+	enum dwc3_link_state	next = evtinfo & DWC3_LINK_STATE_MASK;
 
+//printk(KERN_ERR "%s next = %d is_ss = %d\n",__FUNCTION__,next,is_ss);
 	/**
 	 * WORKAROUND: DWC3 revison 2.20a with hibernation support
 	 * have a known issue which can cause USB CV TD.9.23 to fail
@@ -2711,18 +2791,23 @@ static void dwc3_gadget_interrupt(struct dwc3 *dwc,
 {
 	switch (event->type) {
 	case DWC3_DEVICE_EVENT_DISCONNECT:
+//printk(KERN_ERR "### %s # DISCONNECT type = %x\n",__FUNCTION__,event->type);
 		dwc3_gadget_disconnect_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_RESET:
+//printk(KERN_ERR "### %s # RESET type = %x\n",__FUNCTION__,event->type);
 		dwc3_gadget_reset_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_CONNECT_DONE:
+//printk(KERN_ERR "### %s # CONNECT_DONE type = %x\n",__FUNCTION__,event->type);
 		dwc3_gadget_conndone_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_WAKEUP:
+//printk(KERN_ERR "### %s # WAKEUP type = %x\n",__FUNCTION__,event->type);
 		dwc3_gadget_wakeup_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_HIBER_REQ:
+//printk(KERN_ERR "### %s # HIBER_REQ type = %x\n",__FUNCTION__,event->type);
 		if (dev_WARN_ONCE(dwc->dev, !dwc->has_hibernation,
 					"unexpected hibernation event\n"))
 			break;
@@ -2730,24 +2815,31 @@ static void dwc3_gadget_interrupt(struct dwc3 *dwc,
 		dwc3_gadget_hibernation_interrupt(dwc, event->event_info);
 		break;
 	case DWC3_DEVICE_EVENT_LINK_STATUS_CHANGE:
+//printk(KERN_ERR "### %s # STATUS type = %x\n",__FUNCTION__,event->type);
 		dwc3_gadget_linksts_change_interrupt(dwc, event->event_info);
 		break;
 	case DWC3_DEVICE_EVENT_EOPF:
+//printk(KERN_ERR "### %s # EOPF type = %x\n",__FUNCTION__,event->type);
 		dev_vdbg(dwc->dev, "End of Periodic Frame\n");
 		break;
 	case DWC3_DEVICE_EVENT_SOF:
+//printk(KERN_ERR "### %s # SOF type = %x\n",__FUNCTION__,event->type);
 		dev_vdbg(dwc->dev, "Start of Periodic Frame\n");
 		break;
 	case DWC3_DEVICE_EVENT_ERRATIC_ERROR:
+//printk(KERN_ERR "### %s # ERRATIC type = %x\n",__FUNCTION__,event->type);
 		dev_vdbg(dwc->dev, "Erratic Error\n");
 		break;
 	case DWC3_DEVICE_EVENT_CMD_CMPL:
+//printk(KERN_ERR "### %s # CMD COMPL type = %x\n",__FUNCTION__,event->type);
 		dev_vdbg(dwc->dev, "Command Complete\n");
 		break;
 	case DWC3_DEVICE_EVENT_OVERFLOW:
+//printk(KERN_ERR "### %s # OVERFLOW type = %x\n",__FUNCTION__,event->type);
 		dev_vdbg(dwc->dev, "Overflow\n");
 		break;
 	default:
+//printk(KERN_ERR "### %s # default type = %x\n",__FUNCTION__,event->type);
 		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
 	}
 }
@@ -2779,36 +2871,36 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 	u32 reg;
 
 	evt = dwc->ev_buffs[buf];
-		left = evt->count;
+	left = evt->count;
 
-		if (!(evt->flags & DWC3_EVENT_PENDING))
+	if (!(evt->flags & DWC3_EVENT_PENDING))
 		return IRQ_NONE;
 
-		while (left > 0) {
-			union dwc3_event event;
+	while (left > 0) {
+		union dwc3_event event;
 
-			event.raw = *(u32 *) (evt->buf + evt->lpos);
+		event.raw = *(u32 *) (evt->buf + evt->lpos);
 
-			dwc3_process_event_entry(dwc, &event);
+		dwc3_process_event_entry(dwc, &event);
 
-			/*
-			 * FIXME we wrap around correctly to the next entry as
-			 * almost all entries are 4 bytes in size. There is one
-			 * entry which has 12 bytes which is a regular entry
-			 * followed by 8 bytes data. ATM I don't know how
-			 * things are organized if we get next to the a
-			 * boundary so I worry about that once we try to handle
-			 * that.
-			 */
-			evt->lpos = (evt->lpos + 4) % DWC3_EVENT_BUFFERS_SIZE;
-			left -= 4;
+		/*
+		 * FIXME we wrap around correctly to the next entry as
+		 * almost all entries are 4 bytes in size. There is one
+		 * entry which has 12 bytes which is a regular entry
+		 * followed by 8 bytes data. ATM I don't know how
+		 * things are organized if we get next to the a
+		 * boundary so I worry about that once we try to handle
+		 * that.
+		 */
+		evt->lpos = (evt->lpos + 4) % DWC3_EVENT_BUFFERS_SIZE;
+		left -= 4;
 
 		dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(buf), 4);
-		}
+	}
 
-		evt->count = 0;
-		evt->flags &= ~DWC3_EVENT_PENDING;
-		ret = IRQ_HANDLED;
+	evt->count = 0;
+	evt->flags &= ~DWC3_EVENT_PENDING;
+	ret = IRQ_HANDLED;
 
 	/* Unmask interrupt */
 	reg = dwc3_readl(dwc->regs, DWC3_GEVNTSIZ(buf));
@@ -2883,6 +2975,55 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 }
 
 /**
+ *  * phy_reset - Reset USB device PHY
+ *   */
+static void phy_reset(void)
+{
+        volatile u8     __iomem *reg;
+
+        reg = ioremap(USB3_PHY_PHY_RESET, 4);
+        writel(readl(reg) | USB3_PHY_PHY_RESET__PHY_RESET__MASK, reg);
+        udelay(5);
+        writel(0, reg);
+        iounmap(reg);
+}
+
+/**
+ *  * phy_override - Override some USB device PHY registers
+ *   */
+static void phy_override(void)
+{
+        volatile u8     __iomem *reg;
+
+        /* Initialize PHY settings */
+        reg = ioremap(USB3_PHY_TXHSXVTUNE, 4);
+        writel(0x01, reg);
+        iounmap(reg);
+
+        reg = ioremap(USB3_PHY_TXPREEMPAMPTUNE, 4);
+        writel(0x03, reg);
+        iounmap(reg);
+
+        reg = ioremap(USB3_PHY_TXRISETUNE, 4);
+        writel(0x02, reg);
+        iounmap(reg);
+
+        reg = ioremap(USB3_PHY_TXVREFTUNE, 4);
+        writel(0x09, reg);
+        iounmap(reg);
+
+        reg = ioremap(USB3_PHY_pcs_tx_swing_full, 4);
+        writel(0x79 /*0x7D*/, reg);
+        iounmap(reg);
+
+        /* Reset PHY to take all updated PHY settings */
+        phy_reset();
+
+        /* Use fixed equalization */
+        phy_fixed_equalization(2);   // Must be done after phy_reset()
+}
+
+/**
  * dwc3_gadget_init - Initializes gadget related registers
  * @dwc: pointer to our controller context structure
  *
@@ -2898,10 +3039,14 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	cr_cap_addr = ioremap(USB3_PHY_CR_CAP_ADDR, 4);
 	cr_cap_data = ioremap(USB3_PHY_CR_CAP_DATA, 4);
 	cr_data_in = ioremap(USB3_PHY_CR_DATA_IN, 4);
+        cr_read     = ioremap(USB3_PHY_CR_READ, 4);
 	cr_write = ioremap(USB3_PHY_CR_WRITE, 4);
 	cr_ack = ioremap(USB3_PHY_CR_ACK, 4);
-#endif
+        cr_data_out = ioremap(USB3_PHY_CR_DATA_OUT, 4);
 
+        phy_override();
+#endif
+#if 0
 	/* Initialize PHY settings */
 	reg = ioremap(USB3_PHY_pcs_tx_swing_full, 4);
 	writel(0x7D, reg);
@@ -2913,7 +3058,7 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	udelay(5);
 	writel(0, reg);
 	iounmap(reg);
-
+#endif	/* yamano */
 	dwc->ctrl_req = dma_alloc_coherent(dwc->dev, sizeof(*dwc->ctrl_req),
 			&dwc->ctrl_req_addr, GFP_KERNEL);
 	if (!dwc->ctrl_req) {

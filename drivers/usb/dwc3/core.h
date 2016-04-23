@@ -62,6 +62,79 @@
 #define USB3_PHY_pcs_tx_swing_full__pcs_tx_swing_full__MASK        0x0000007F
 #define USB3_PHY_pcs_tx_swing_full__pcs_tx_swing_full__HW_DEFAULT  0x5D
 
+///   @anchor USB3_PHY_TXHSXVTUNE_REG
+/////   @name   USB3_PHY_TXHSXVTUNE
+/////   USB3_PHY_TXHSXVTUNE
+/////   @{
+#define USB3_PHY_TXHSXVTUNE_OFF   0x00000110
+#define USB3_PHY_TXHSXVTUNE       0x04400110
+#define USB3_PHY_TXHSXVTUNE__txhsxvtune__SHIFT       0
+#define USB3_PHY_TXHSXVTUNE__txhsxvtune__WIDTH       2
+#define USB3_PHY_TXHSXVTUNE__txhsxvtune__MASK        0x00000003
+#define USB3_PHY_TXHSXVTUNE__txhsxvtune__HW_DEFAULT  0x3
+/////   @}
+//
+///   @anchor USB3_PHY_TXPREEMPAMPTUNE_REG
+/////   @name   USB3_PHY_TXPREEMPAMPTUNE
+/////   USB3_PHY_TXPREEMPAMPTUNE
+/////   @{
+#define USB3_PHY_TXPREEMPAMPTUNE_OFF 0x00000114
+#define USB3_PHY_TXPREEMPAMPTUNE  0x04400114
+#define USB3_PHY_TXPREEMPAMPTUNE__txpreempamptune__SHIFT       0
+#define USB3_PHY_TXPREEMPAMPTUNE__txpreempamptune__WIDTH       2
+#define USB3_PHY_TXPREEMPAMPTUNE__txpreempamptune__MASK        0x00000003
+#define USB3_PHY_TXPREEMPAMPTUNE__txpreempamptune__HW_DEFAULT  0x0
+/////   @}
+//
+/////   @anchor USB3_PHY_TXPREEMPPULSETUNE_REG
+/////   @name   USB3_PHY_TXPREEMPPULSETUNE
+/////   USB3_PHY_TXPREEMPPULSETUNE
+/////   @{
+#define USB3_PHY_TXPREEMPPULSETUNE_OFF 0x00000118
+#define USB3_PHY_TXPREEMPPULSETUNE 0x04400118
+#define USB3_PHY_TXPREEMPPULSETUNE__txpreemppulsetune__SHIFT       0
+#define USB3_PHY_TXPREEMPPULSETUNE__txpreemppulsetune__WIDTH       1
+#define USB3_PHY_TXPREEMPPULSETUNE__txpreemppulsetune__MASK        0x00000001
+#define USB3_PHY_TXPREEMPPULSETUNE__txpreemppulsetune__HW_DEFAULT  0x0
+/////   @}
+//
+/////   @anchor USB3_PHY_TXRESTUNE_REG
+/////   @name   USB3_PHY_TXRESTUNE
+/////   USB3_PHY_TXRESTUNE
+/////   @{
+#define USB3_PHY_TXRESTUNE_OFF    0x0000011C
+#define USB3_PHY_TXRESTUNE        0x0440011C
+#define USB3_PHY_TXRESTUNE__txrestune__SHIFT       0
+#define USB3_PHY_TXRESTUNE__txrestune__WIDTH       2
+#define USB3_PHY_TXRESTUNE__txrestune__MASK        0x00000003
+#define USB3_PHY_TXRESTUNE__txrestune__HW_DEFAULT  0x1
+/////   @}
+///   @anchor USB3_PHY_TXRISETUNE_REG
+/////   @name   USB3_PHY_TXRISETUNE
+/////   USB3_PHY_TXRISETUNE
+/////   @{
+#define USB3_PHY_TXRISETUNE_OFF   0x00000120
+#define USB3_PHY_TXRISETUNE       0x04400120
+#define USB3_PHY_TXRISETUNE__txrisetune__SHIFT       0
+#define USB3_PHY_TXRISETUNE__txrisetune__WIDTH       2
+#define USB3_PHY_TXRISETUNE__txrisetune__MASK        0x00000003
+#define USB3_PHY_TXRISETUNE__txrisetune__HW_DEFAULT  0x1
+/////   @}
+//
+/////   @anchor USB3_PHY_TXVREFTUNE_REG
+/////   @name   USB3_PHY_TXVREFTUNE
+/////   USB3_PHY_TXVREFTUNE
+/////   @{
+#define USB3_PHY_TXVREFTUNE_OFF   0x00000124
+#define USB3_PHY_TXVREFTUNE       0x04400124
+#define USB3_PHY_TXVREFTUNE__txvreftune__SHIFT       0
+#define USB3_PHY_TXVREFTUNE__txvreftune__WIDTH       4
+#define USB3_PHY_TXVREFTUNE__txvreftune__MASK        0x0000000F
+#define USB3_PHY_TXVREFTUNE__txvreftune__HW_DEFAULT  0x3
+/////   @}
+//
+
+//
 #define RSTGENSWRSTSTATIC3_OFF    0x00000088
 #define RSTGENSWRSTSTATIC3        0x04010088
 
