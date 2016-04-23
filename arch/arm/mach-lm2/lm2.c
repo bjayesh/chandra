@@ -14,6 +14,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/irqchip.h>
 #include <linux/ata_platform.h>
 #include <linux/memblock.h>
 #include <linux/spinlock.h>
@@ -116,8 +117,8 @@ static void __init lm2_timer_init(void)
 	void	__iomem	*clkevt_timer;
 
 /*	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x38, 0x0c);	*/
-	clksrc_timer = ioremap(LM2_TIMER_BASE+0x10, 0x10);
-	clkevt_timer = ioremap(LM2_TIMER_BASE+0x5c,0x0c);
+	clksrc_timer = ioremap(LM2_TIMER_BASE + 0x10, 0x10);
+	clkevt_timer = ioremap(LM2_TIMER_BASE + 0x5c, 0x0c);
 	lm2_clocksource_init(clksrc_timer);
 	lm2_clockevent_init(LM2_IRQ_TIMER_4,clkevt_timer);
 }
@@ -429,7 +430,7 @@ void __init lm2_dt_init_early(void)
  */
 #if 0
 static  struct of_device_id lm2_irq_match[] __initdata = {
-	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init, },
+	{ .compatible = "arm,cortex-a15-gic", .data = gic_of_init, },
 	{}
 };
 
@@ -522,6 +523,7 @@ DT_MACHINE_START(LM2_DT, "FujiXerox Waikiki")
 	.map_io		= lm2_dt_map_io,
 	.init_early	= lm2_dt_init_early,
 	.init_irq	= lm2_init_irq,
+//	.init_irq	= irqchip_init,
 	.init_time	= lm2_timer_init,
 	.init_machine	= lm2_dt_init,
 MACHINE_END

@@ -82,14 +82,14 @@
         gic: interrupt-controller@04300000 {
                 compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
                 #interrupt-cells = <3>;
-                #address-cells = <0>;
+//		#address-cells = <0>;
                 interrupt-controller;
-                reg = <0x04300000 0x1000>,
-                      <0x04301000 0x1000>,
+                reg = <0x04301000 0x1000>,
                       <0x04302000 0x2000>,
-                      <0x04304000 0x2000>;
+                      <0x04304000 0x2000>,
+                      <0x04306000 0x2000>;
                 interrupts = <1 9 0xf04>;
-
+/*
                 gic-cpuif@0 {
                         compatible = "arm,gic-cpuif";
                         cpuif-id = <0>;
@@ -100,7 +100,8 @@
                         cpuif-id = <1>;
                         cpu = <&cpu1>;
                 };
-        };
+*/  
+      };
 
 	soc{
 		compatible = "simple-bus";

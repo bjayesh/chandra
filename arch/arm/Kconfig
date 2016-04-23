@@ -385,6 +385,8 @@ config ARCH_LM2
         select PLAT_WAIKIKI
         select ARCH_DMA_ADDR_T_64BIT
         select HAVE_SMP
+	select PCIEPORTBUS
+	select PCIE_LM2
         help
           This enables support for the Fuji Xerox Co., Ltd Waikiki LM2 boards.
 

@@ -31,8 +31,9 @@ source "drivers/pci/pcie/aer/Kconfig"
 # PCI Express ASPM
 #
 config PCIE_LM2
-	bool "PCI Express host contorl"
-	depends on ARCH_LM2
+	bool "PCI Express LM2 Waikiki host control"
+	depends on ARCH_LM2 && PCIEPORTBUS
+	default y
 	help
 
 config PCIEASPM
