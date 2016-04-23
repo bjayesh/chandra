@@ -289,6 +289,25 @@ static	struct platform_device lm2_rtc_device = {
 
 };
 
+/*
+ * Watch Dog
+ */
+static struct resource lm2_wdt_resource[]={
+       {
+               .start  = 0x04040000,
+               .end    = 0x04040100,
+               .flags  = IORESOURCE_MEM,
+       },
+};
+
+static struct platform_device lm2_wdt_device = {
+       .name           = "lm2-wdt",
+       .id             = -1,
+       .resource       = lm2_wdt_resource,
+       .num_resources  = ARRAY_SIZE(lm2_wdt_resource),
+};
+
+
 static	struct resource	lm2_i2c_resource[] = {
 	{
 		.start	= 0x041F0000,
@@ -420,6 +439,7 @@ static void __init lm2_init(void)
 	platform_device_register(&lm2_gpio_device);
 	platform_device_register(&lm2_rtc_device);
 	platform_device_register(&lm2_i2c_device);
+	platform_device_register(&lm2_wdt_device);
 }
 
 MACHINE_START(LM2, "FujiXerox Waikiki")

@@ -28,6 +28,8 @@
 
 /* Watchdog timer values in seconds */
 #define WDT_MAX_TIMER	0xffffffff
+#define	WDT_MIN_TIMER	0x00000002
+
 #define	WDT_TIMER_START	0x00000001
 #define	WDT_TIMER_STOP	0x00000000
 
@@ -37,11 +39,13 @@
 #define	WDTLD		0x08C
 #define	WDTBND		0x090
 
-#define	WDT_TIMER_LOAD	0x7a1c
+#define	WDT_TIMER_LOAD	0x00007a1c
 
+//#define	DEFAULT_TIMEOUT_10s	32*1000*10	/* 32KHz from RTCCLK2 */
+#define	DEFAULT_TIMEOUT_10s	1	/* 32KHz from RTCCLK2 */
 
 struct lm2_wdt_dev {
-	void	__iomem		*reg_base;
+	volatile u32 __iomem	*reg_base;
 	struct device		*dev;
 	unsigned int		timeout;
 };
@@ -50,8 +54,13 @@ struct lm2_wdt_dev {
 static int lm2_wdt_start(struct watchdog_device *wdog)
 {
 	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
-	writel(WDT_TIMER_LOAD,wdev->reg_base+WDTLD);
-	writel(WDT_TIMER_START,wdev->reg_base+WDTEN);
+
+
+//	printk(KERN_WARNING "Watch Dog Start\n");
+	writel(WDT_TIMER_START, wdev->reg_base + WDTEN);
+	barrier();
+	writel(WDT_TIMER_LOAD, wdev->reg_base + WDTLD);
+	barrier();
 
 	return 0;
 }
@@ -60,8 +69,9 @@ static int lm2_wdt_stop(struct watchdog_device *wdog)
 {
 	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
 
-	writel(WDT_TIMER_STOP,wdev->reg_base+WDTEN);
-
+//	printk(KERN_WARNING "Watch Dog Stop\n");
+	writel(WDT_TIMER_STOP, wdev->reg_base + WDTEN);
+	barrier();
 	return 0;
 }
 
@@ -70,9 +80,12 @@ static int lm2_wdt_set_timeout(struct watchdog_device *wdog,
 {
 	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
 
+	printk(KERN_WARNING "Watch Dog Timer Set %d\n",timeout);
 	wdog->timeout = timeout;
 
-	writel(timeout, wdev->reg_base+WDTTC);
+	writel(timeout, wdev->reg_base + WDTTC);
+	barrier();
+
 	return 0;
 }
 
@@ -88,6 +101,7 @@ static const struct watchdog_ops lm2_wdt_ops = {
 	.set_timeout	= lm2_wdt_set_timeout,
 };
 
+
 static int lm2_wdt_probe(struct platform_device *pdev)
 {
 	bool nowayout = WATCHDOG_NOWAYOUT;
@@ -97,12 +111,16 @@ static int lm2_wdt_probe(struct platform_device *pdev)
 	int ret;
 
 	lm2_wdt = devm_kzalloc(&pdev->dev, sizeof(*lm2_wdt), GFP_KERNEL);
-	if (!lm2_wdt)
+	if (!lm2_wdt){
+		printk( KERN_ERR "Watch Dog Timer NOMEM install failed\n");
 		return -ENOMEM;
+	}
 
 	wdev = devm_kzalloc(&pdev->dev, sizeof(*wdev), GFP_KERNEL);
-	if (!wdev)
+	if (!wdev){
+		printk(KERN_ERR "Watch Dog driver could not allocate private memory\n");
 		return -ENOMEM;
+	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if(!mem){
@@ -114,11 +132,14 @@ static int lm2_wdt_probe(struct platform_device *pdev)
 
 	lm2_wdt->info		= &lm2_wdt_info;
 	lm2_wdt->ops		= &lm2_wdt_ops;
-	lm2_wdt->timeout	= WDT_MAX_TIMER;
-	lm2_wdt->min_timeout	= 0;
+	lm2_wdt->timeout	= DEFAULT_TIMEOUT_10s;
+	lm2_wdt->min_timeout	= 2;
 	lm2_wdt->max_timeout	= WDT_MAX_TIMER;
 
 	watchdog_set_drvdata(lm2_wdt, wdev);
+
+	platform_set_drvdata(pdev, lm2_wdt);
+
 	watchdog_set_nowayout(lm2_wdt, nowayout);
 
 	wdev->dev		= &pdev->dev;
@@ -127,9 +148,12 @@ static int lm2_wdt_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	platform_set_drvdata(pdev, lm2_wdt);
 	/* init */
-	writel(WDT_MAX_TIMER, wdev->reg_base+WDTBND);
+	writel(0x00, wdev->reg_base + WDTEN);
+	barrier();
+	writel(WDT_MAX_TIMER, wdev->reg_base + WDTBND);
+	barrier();
+	writel(DEFAULT_TIMEOUT_10s, wdev->reg_base + WDTTC);
 
 	return 0;
 }
@@ -140,7 +164,9 @@ static int lm2_wdt_remove(struct platform_device *pdev)
 	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
 
 	watchdog_unregister_device(wdog);
-
+	iounmap(wdev->reg_base);
+	kfree(wdev);
+	kfree(wdog);
 	return 0;
 }
 
@@ -149,6 +175,7 @@ static struct platform_driver lm2_wdt_driver = {
 	.remove		= lm2_wdt_remove,
 	.driver		= {
 		.name	= "lm2-wdt",
+		.owner	= THIS_MODULE,
 	},
 };
 
