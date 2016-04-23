@@ -1,7 +1,7 @@
 /*
  * arch/arm/plat-waikiki/time.c
  *
- * Copyright (C) 2014 Wind River Systems, Inc.
+ * Copyright (C) 2014-2016 Wind River Systems, Inc.
  * Koki Yamano <koki.yamano@windriver.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -24,6 +24,7 @@
 #include <linux/irq.h>
 #include <asm/mach/time.h>
 #include <asm/sched_clock.h>
+#define	PANBUG148
 /*
  * We would use TIMER0 and TIMER1 as clockevent and clocksource.
  * Timer0 and Timer1 both belong to same gpt block in cpu subbsystem. Further
@@ -32,9 +33,17 @@
  */
 
 extern int lm2_board_is_A0(void);
+#ifdef	PANBUG148
+#define	SYSCLK		300*1000*1000 /* 300MHz */
+#else
 #define	SYSCLK		( lm2_board_is_A0() ? (300*1000*1000) : (275*1000*1000) ) /* 275MHz */
+#endif
 #define	DIVISOR		100	/* For HZ=100 10msec */
+#ifdef	PANBUG148
+#define	PRESCALE	300	/* Same as Panbug */
+#else
 #define	PRESCALE	275	/* Same as Panbug */
+#endif
 
 /* Register offsets, x is channel number */
 #define	PRESCL(x)	((x)+0)

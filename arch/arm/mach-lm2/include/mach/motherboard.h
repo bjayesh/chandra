@@ -1,6 +1,6 @@
 /*
  * Fuji Xerox Co., Ltd. Waikiki LM2 board
- * Copyright 2014-2015 Wind River Systems Inc.
+ * Copyright 2014-2016 Wind River Systems Inc.
  * koki.yamano@windriver.com
  * JPN-FXCL-12490
  */
@@ -9,6 +9,7 @@
 #define __MACH_MOTHERBOARD_H
 
 #define	LM2_A15_CPUS	2
+#define	PANBUG148
 /*
  * System clocking
  */
@@ -16,12 +17,21 @@
 #define	LM2_A7_CLK	(400*1000*1000) /* 400MHz */
 #define	LM2_TIM32_CLK	(300*1000*1000)	/* 300MHz */
 #define	LM2_TIM64_CLK	(300*1000*1000)	/* 300MHz */
+#ifdef	PANBUG148
+#define	LM2_UART0_CLK	(300*1000*1000) /* 300MHz */
+#define	LM2_UART1_CLK	(300*1000*1000)	/* 300MHz */
+#define	LM2_UART2_CLK	(300*1000*1000)	/* 314MHz */
+#define LM2_UART3_CLK   (300*1000*1000) /* 314MHz */
+#define	LM2_UART4_CLK	(300*1000*1000)	/* 314MHz */
+#define	LM2_UART5_CLK	(300*1000*1000)	/* 314MHz */
+#else
 #define	LM2_UART0_CLK	(275*1000*1000) /* 300MHz */
 #define	LM2_UART1_CLK	(275*1000*1000)	/* 300MHz */
 #define	LM2_UART2_CLK	(314*1000*1000)	/* 314MHz */
 #define LM2_UART3_CLK   (314*1000*1000) /* 314MHz */
 #define	LM2_UART4_CLK	(314*1000*1000)	/* 314MHz */
 #define	LM2_UART5_CLK	(314*1000*1000)	/* 314MHz */
+#endif
 
 #define	LM2_UART0_BPS	38400
 
