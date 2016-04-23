@@ -197,7 +197,7 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 	size_t		size = 0;
 	struct usb_ep	*out;
 	unsigned long	flags;
-
+//printk(KERN_ERR "$ %s Entry RX\n",__func__);
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->port_usb)
 		out = dev->port_usb->out_ep;
@@ -205,6 +205,7 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 		out = NULL;
 	spin_unlock_irqrestore(&dev->lock, flags);
 
+//printk(KERN_ERR "$ %s Start RX\n",__func__);
 	if (!out)
 		return -ENOTCONN;
 
@@ -254,9 +255,11 @@ enomem:
 		DBG(dev, "rx submit --> %d\n", retval);
 		if (skb)
 			dev_kfree_skb_any(skb);
+//printk(KERN_ERR "$ %s retval spinlock\n",__func__);
 		spin_lock_irqsave(&dev->req_lock, flags);
 		list_add(&req->list, &dev->rx_reqs);
 		spin_unlock_irqrestore(&dev->req_lock, flags);
+//printk(KERN_ERR "$ %s retval spinlock free\n",__func__);
 	}
 	return retval;
 }
@@ -267,6 +270,7 @@ static void rx_complete(struct usb_ep *ep, struct usb_request *req)
 	struct eth_dev	*dev = ep->driver_data;
 	int		status = req->status;
 
+//printk(KERN_ERR "$ %s Entry RX COMP\n",__func__);
 	switch (status) {
 
 	/* normal completion */
@@ -276,6 +280,7 @@ static void rx_complete(struct usb_ep *ep, struct usb_request *req)
 		if (dev->unwrap) {
 			unsigned long	flags;
 
+//printk(KERN_ERR "$ %s spinlock\n",__func__);
 			spin_lock_irqsave(&dev->lock, flags);
 			if (dev->port_usb) {
 				status = dev->unwrap(dev->port_usb,
@@ -286,6 +291,7 @@ static void rx_complete(struct usb_ep *ep, struct usb_request *req)
 				status = -ENOTCONN;
 			}
 			spin_unlock_irqrestore(&dev->lock, flags);
+//printk(KERN_ERR "$ %s spinlock free\n",__func__);
 		} else {
 			skb_queue_tail(&dev->rx_frames, skb);
 		}
@@ -344,9 +350,11 @@ quiesce:
 		dev_kfree_skb_any(skb);
 	if (!netif_running(dev->net)) {
 clean:
+//printk(KERN_ERR "$ %s clean spinlock\n",__func__);
 		spin_lock(&dev->req_lock);
 		list_add(&req->list, &dev->rx_reqs);
 		spin_unlock(&dev->req_lock);
+//printk(KERN_ERR "$ %s clean spinlock free\n",__func__);
 		req = NULL;
 	}
 	if (req)
@@ -395,19 +403,30 @@ extra:
 static int alloc_requests(struct eth_dev *dev, struct gether *link, unsigned n)
 {
 	int	status;
-
-	spin_lock(&dev->req_lock);
+	unsigned long	flags;	/* yamano */
+//	spin_lock(&dev->req_lock);
+	spin_lock_irqsave(&dev->req_lock,flags);
+#if 1 /* yamano */
+	status = prealloc(&dev->rx_reqs, link->out_ep, n);
+	if (status < 0)
+		goto fail;
+	status = prealloc(&dev->tx_reqs, link->in_ep, n);
+	if (status < 0)
+		goto fail;
+#else
 	status = prealloc(&dev->tx_reqs, link->in_ep, n);
 	if (status < 0)
 		goto fail;
 	status = prealloc(&dev->rx_reqs, link->out_ep, n);
 	if (status < 0)
 		goto fail;
+#endif
 	goto done;
 fail:
 	DBG(dev, "can't alloc requests\n");
 done:
-	spin_unlock(&dev->req_lock);
+//	spin_unlock(&dev->req_lock);
+	spin_unlock_irqrestore(&dev->req_lock, flags);
 	return status;
 }
 
@@ -416,6 +435,7 @@ static void rx_fill(struct eth_dev *dev, gfp_t gfp_flags)
 	struct usb_request	*req;
 	unsigned long		flags;
 
+//printk(KERN_ERR "$ %s Entry\n",__func__);
 	/* fill unused rxq slots with some skb */
 	spin_lock_irqsave(&dev->req_lock, flags);
 	while (!list_empty(&dev->rx_reqs)) {
@@ -438,6 +458,7 @@ static void eth_work(struct work_struct *work)
 {
 	struct eth_dev	*dev = container_of(work, struct eth_dev, work);
 
+//printk(KERN_ERR "$ %s Entry\n",__func__);
 	if (test_and_clear_bit(WORK_RX_MEMORY, &dev->todo)) {
 		if (netif_running(dev->net))
 			rx_fill(dev, GFP_KERNEL);
@@ -451,7 +472,9 @@ static void tx_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct sk_buff	*skb = req->context;
 	struct eth_dev	*dev = ep->driver_data;
+	unsigned long	flags;	/* yamano */
 
+//printk(KERN_ERR "$ %s Entry\n",__func__);
 	switch (req->status) {
 	default:
 		dev->net->stats.tx_errors++;
@@ -466,8 +489,10 @@ static void tx_complete(struct usb_ep *ep, struct usb_request *req)
 	dev->net->stats.tx_packets++;
 
 	spin_lock(&dev->req_lock);
+//	spin_lock_irqsave(&dev->req_lock,flags);
 	list_add(&req->list, &dev->tx_reqs);
-	spin_unlock(&dev->req_lock);
+//	spin_unlock(&dev->req_lock);
+	spin_unlock_irqrestore(&dev->req_lock,flags);
 	dev_kfree_skb_any(skb);
 
 	atomic_dec(&dev->tx_qlen);
@@ -491,6 +516,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	struct usb_ep		*in;
 	u16			cdc_filter;
 
+//printk(KERN_ERR "$ %s Entry\n",__func__);
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->port_usb) {
 		in = dev->port_usb->in_ep;
@@ -501,6 +527,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	}
 	spin_unlock_irqrestore(&dev->lock, flags);
 
+//printk(KERN_ERR "$ %s Start\n",__func__);
 	if (!in) {
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
@@ -528,6 +555,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 		/* ignores USB_CDC_PACKET_TYPE_DIRECTED */
 	}
 
+//printk(KERN_ERR "$ %s take spinlock\n",__func__);
 	spin_lock_irqsave(&dev->req_lock, flags);
 	/*
 	 * this freelist can be empty if an interrupt triggered disconnect()
@@ -535,6 +563,8 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	 * network stack decided to xmit but before we got the spinlock.
 	 */
 	if (list_empty(&dev->tx_reqs)) {
+//printk(KERN_ERR "$ %s give spinlock TX Busy\n",__func__);
+
 		spin_unlock_irqrestore(&dev->req_lock, flags);
 		return NETDEV_TX_BUSY;
 	}
@@ -546,6 +576,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	if (list_empty(&dev->tx_reqs))
 		netif_stop_queue(net);
 	spin_unlock_irqrestore(&dev->req_lock, flags);
+//printk(KERN_ERR "$ %s free spinlock\n",__func__);
 
 	/* no buffer copies needed, unless the network stack did it
 	 * or the hardware can't use skb buffers.
@@ -554,6 +585,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	if (dev->wrap) {
 		unsigned long	flags;
 
+//printk(KERN_ERR "$ %s wrap spinlock\n",__func__);
 		spin_lock_irqsave(&dev->lock, flags);
 		if (dev->port_usb)
 			skb = dev->wrap(dev->port_usb, skb);
@@ -561,6 +593,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 		if (!skb)
 			goto drop;
 
+//printk(KERN_ERR "$ %s wrap free spinlock\n",__func__);
 		length = skb->len;
 	}
 	req->buf = skb->data;
@@ -591,6 +624,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 			? ((atomic_read(&dev->tx_qlen) % qmult) != 0)
 			: 0;
 
+//printk(KERN_ERR "$ %s no_interrupt %x \n",__func__,req->no_interrupt);
 	retval = usb_ep_queue(in, req, GFP_ATOMIC);
 	switch (retval) {
 	default:

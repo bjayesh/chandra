@@ -85,7 +85,7 @@ int dwc3_core_soft_reset(struct dwc3 *dwc)
 {
 	u32		reg;
 	int		ret;
-dev_err(dwc->dev, "dwc3_core_soft_reset entry\n");
+//dev_err(dwc->dev, "dwc3_core_soft_reset entry\n");
 	/* Before Resetting PHY, put Core in Reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 	reg |= DWC3_GCTL_CORESOFTRESET;
@@ -101,23 +101,22 @@ dev_err(dwc->dev, "dwc3_core_soft_reset entry\n");
 	reg |= DWC3_GUSB2PHYCFG_PHYSOFTRST;
 	dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(0), reg);
 
-dev_err(dwc->dev, "usb_phy_init: %x : %x :\n",dwc->usb2_phy, dwc->usb3_phy);
+//dev_err(dwc->dev, "usb_phy_init: %x : %x :\n",dwc->usb2_phy, dwc->usb3_phy);
 //	usb_phy_init(dwc->usb2_phy);
 //	usb_phy_init(dwc->usb3_phy);
-dev_err(dwc->dev, "phy_init on USB2\n");
-	ret = phy_init(dwc->usb2_generic_phy);
-	if (ret < 0)
-		return ret;
+//dev_err(dwc->dev, "phy_init on USB2\n");
+//	ret = phy_init(dwc->usb2_generic_phy);
+//	if (ret < 0)
+//		return ret;
 
-dev_err(dwc->dev, "phy_init on USB3\n");
-	ret = phy_init(dwc->usb3_generic_phy);
-	if (ret < 0) {
-		phy_exit(dwc->usb2_generic_phy);
-		return ret;
-	}
-	mdelay(100*3);	/* yamano debug */
+//dev_err(dwc->dev, "phy_init on USB3\n");
+//	ret = phy_init(dwc->usb3_generic_phy);
+//	if (ret < 0) {
+//		phy_exit(dwc->usb2_generic_phy);
+//		return ret;
+//	}
 
-dev_err(dwc->dev, "clear PHY reset ALL\n");
+//dev_err(dwc->dev, "clear PHY reset ALL\n");
 	/* Clear USB3 PHY reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(0));
 	reg &= ~DWC3_GUSB3PIPECTL_PHYSOFTRST;
@@ -241,8 +240,8 @@ int dwc3_event_buffers_setup(struct dwc3 *dwc)
 
 	for (n = 0; n < dwc->num_event_buffers; n++) {
 		evt = dwc->ev_buffs[n];
-	//	dev_dbg(dwc->dev, "Event buf %p dma %08llx length %d\n",
-		printk(KERN_ERR "Event buf %p dma %08llx length %d\n",
+//		printk(KERN_ERR "Event buf %p dma %08llx length %d\n",
+		dev_dbg(dwc->dev, "Event buf %p dma %08llx length %d\n",
 				evt->buf, (unsigned long long) evt->dma,
 				evt->length);
 
@@ -410,7 +409,7 @@ static int dwc3_core_init(struct dwc3 *dwc)
 		goto err0;
 	}
 	dwc->revision = reg;
-printk(KERN_ERR "## %s revision %x \n",__FUNCTION__,dwc->revision);
+//printk(KERN_ERR "## %s revision %x \n",__FUNCTION__,dwc->revision);
 //dev_err(dwc->dev, "prepare soft reset\n");
 	/* issue device SoftReset too */
 #if	1	/*	<HN>	*/
@@ -482,17 +481,17 @@ dev_err(dwc->dev, "Workraount DWC3 Switch core\n");
 	if (dwc->revision < DWC3_REVISION_190A)
 		reg |= DWC3_GCTL_U2RSTECN;
 
-dev_err(dwc->dev, "dwc3_core_num_eps\n");
+//dev_err(dwc->dev, "dwc3_core_num_eps\n");
 	dwc3_core_num_eps(dwc);
-printk(KERN_ERR "## %s Global Common Reg 0x%x\n",__FUNCTION__,reg);
+//printk(KERN_ERR "## %s Global Common Reg 0x%x\n",__FUNCTION__,reg);
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
-dev_err(dwc->dev, "dwc3_alloc_scratch_buffer\n");
+//dev_err(dwc->dev, "dwc3_alloc_scratch_buffer\n");
 	ret = dwc3_alloc_scratch_buffers(dwc);
 	if (ret)
 		goto err1;
 #if	1 /*<HN>*/
-dev_err(dwc->dev, "dwc3_setup_scratch_buffers. Rev=%xH <HN>\n",dwc->revision);
+//dev_err(dwc->dev, "dwc3_setup_scratch_buffers. Rev=%xH <HN>\n",dwc->revision);
 #endif
 	ret = dwc3_setup_scratch_buffers(dwc);
 	if (ret)
@@ -680,8 +679,7 @@ static void usbd_hw_reset(void)
 	reg |= (RSTGENSWRSTSTATIC3__SYS_USSD_VCC__MASK |
 		RSTGENSWRSTSTATIC3__SYS_USSD__MASK);
 	writel(reg, rstgenswrststatic3);
-	udelay(100);	/* yamano debug */
-//	udelay(10);
+	udelay(10);
 	reg &= ~(RSTGENSWRSTSTATIC3__SYS_USSD_VCC__MASK |
 		RSTGENSWRSTSTATIC3__SYS_USSD__MASK);
 	writel(reg, rstgenswrststatic3);
@@ -823,7 +821,7 @@ dev_info(dev,"event buffer\n");
 	ret = dwc3_event_buffers_setup(dwc);
 		if (ret) {
 		dev_err(dwc->dev, "failed to setup event buffers\n");
-		goto err_usb3phy_power;
+//	goto err_usb3phy_power;
 		}
 
 dev_info(dev,"DWC3 core init mode\n");
@@ -851,10 +849,10 @@ err2:
 	dwc3_event_buffers_cleanup(dwc);
 
 err_usb3phy_power:
-	phy_power_off(dwc->usb3_generic_phy);
+//	phy_power_off(dwc->usb3_generic_phy);
 
 err_usb2phy_power:
-	phy_power_off(dwc->usb2_generic_phy);
+//	phy_power_off(dwc->usb2_generic_phy);
 
 err1:
 //	usb_phy_set_suspend(dwc->usb2_phy, 1);
@@ -958,8 +956,8 @@ static int dwc3_suspend(struct device *dev)
 
 //	usb_phy_shutdown(dwc->usb3_phy);
 //	usb_phy_shutdown(dwc->usb2_phy);
-	phy_exit(dwc->usb2_generic_phy);
-	phy_exit(dwc->usb3_generic_phy);
+//	phy_exit(dwc->usb2_generic_phy);
+//	phy_exit(dwc->usb3_generic_phy);
 
 	return 0;
 }
@@ -972,13 +970,13 @@ static int dwc3_resume(struct device *dev)
 
 //	usb_phy_init(dwc->usb3_phy);
 //	usb_phy_init(dwc->usb2_phy);
-	ret = phy_init(dwc->usb2_generic_phy);
-	if (ret < 0)
-		return ret;
+//	ret = phy_init(dwc->usb2_generic_phy);
+//	if (ret < 0)
+//		return ret;
 
-	ret = phy_init(dwc->usb3_generic_phy);
-	if (ret < 0)
-		goto err_usb2phy_init;
+//	ret = phy_init(dwc->usb3_generic_phy);
+//	if (ret < 0)
+//		goto err_usb2phy_init;
 
 	spin_lock_irqsave(&dwc->lock, flags);
 

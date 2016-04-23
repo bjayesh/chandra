@@ -24,7 +24,6 @@
 
 #include "u_ether.h"
 
-
 /*
  * Ethernet gadget driver -- with CDC and non-CDC options
  * Builds on hardware support for a full duplex link.
@@ -220,6 +219,7 @@ static int __init rndis_do_config(struct usb_configuration *c)
 	/* FIXME alloc iConfiguration string, set it in c->strings */
 
 	if (gadget_is_otg(c->cdev->gadget)) {
+//printk(KERN_ERR "##### %s otg entry\n",__func__);
 		c->descriptors = otg_desc;
 		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 	}
@@ -252,16 +252,21 @@ static int __init eth_do_config(struct usb_configuration *c)
 	/* FIXME alloc iConfiguration string, set it in c->strings */
 
 	if (gadget_is_otg(c->cdev->gadget)) {
+//printk(KERN_ERR "##### %s otg entry\n",__func__);
 		c->descriptors = otg_desc;
 		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 	}
 
-	if (use_eem)
+	if (use_eem){
+//printk(KERN_ERR "##### %s eem entry\n",__func__);
 		return eem_bind_config(c, the_dev);
-	else if (can_support_ecm(c->cdev->gadget))
+	}else if (can_support_ecm(c->cdev->gadget)){
+//printk(KERN_ERR "##### %s ecm entry\n",__func__);
 		return ecm_bind_config(c, hostaddr, the_dev);
-	else
+	}else{
+//printk(KERN_ERR "##### %s geth entry\n",__func__);
 		return geth_bind_config(c, hostaddr, the_dev);
+	}
 }
 
 static struct usb_configuration eth_config_driver = {
@@ -321,6 +326,8 @@ static int __init eth_bind(struct usb_composite_dev *cdev)
 
 	/* register our configuration(s); RNDIS first, if it's used */
 	if (has_rndis()) {
+
+//printk(KERN_ERR "##### %s has rndis entry\n",__func__);
 		status = usb_add_config(cdev, &rndis_config_driver,
 				rndis_do_config);
 		if (status < 0)

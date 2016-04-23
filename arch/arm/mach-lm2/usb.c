@@ -109,8 +109,8 @@ struct dwc3_platform_data {
 static	struct dwc3_platform_data	dwc3_plat_data = {
 	.maximum_speed	= USB_SPEED_SUPER,
 	.dr_mode	= USB_DR_MODE_PERIPHERAL,
-//	.tx_fifo_resize	= 1,	/* original */
-	.tx_fifo_resize	= 0,	/* original */
+	.tx_fifo_resize	= 1,	/* original */
+//	.tx_fifo_resize	= 0,	/* original */
 };
 
 static  u64     lm2_usbd_dmamask = DMA_BIT_MASK(64);
@@ -130,10 +130,10 @@ static	struct platform_device lm2_usb_devs_device = {
 int	__init	lm2_usb_register(void)
 {
 	int	result;
-	void __iomem	*ptr;
+//	void __iomem	*ptr;
 
-	ptr= ioremap(LM2_USB2_PHY,0x500);
-	printk(KERN_WARNING "USB Register Device %x PHY address",ptr);
+//	ptr= ioremap(LM2_USB2_PHY,0x500);
+//	printk(KERN_WARNING "USB Register Device %x PHY address",ptr);
 
 	result = platform_device_register(&lm2_usb_host_device);
 	result = platform_device_register(&lm2_usb_devs_device);

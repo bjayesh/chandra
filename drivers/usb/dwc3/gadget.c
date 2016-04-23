@@ -375,12 +375,11 @@ int dwc3_gadget_resize_tx_fifos(struct dwc3 *dwc)
 void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 		int status)
 {
-	struct dwc3			*dwc = dep->dwc;
-	int				i;
+	struct dwc3	*dwc = dep->dwc;
+	int		i;
 #if	0	/*<HN>*/
 	dev_vdbg(dwc->dev, "%s <HN> Q=%d\n",__FUNCTION__,req->queued);
 #endif
-
 	if (req->queued) {
 		i = 0;
 		do {
@@ -431,6 +430,7 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	}
 #endif
 	spin_unlock(&dwc->lock);
+//printk(KERN_ERR "# GADGET # %s call compleate\n",__func__);
 	req->request.complete(&dep->endpoint, &req->request);
 	spin_lock(&dwc->lock);
 }
@@ -563,7 +563,7 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	u32			reg;
 
 /*	unsigned long			flags;*/
-
+//printk(KERN_ERR "# GADGET # %s Entry ep[%d] cmd '%x'\n",__FUNCTION__,ep,cmd);
 	dev_vdbg(dwc->dev, "%s: cmd '%s' params %08x %08x %08x\n",
 			dep->name,
 			dwc3_gadget_ep_cmd_string(cmd), params->param0,
@@ -579,8 +579,9 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	do {
 		reg = dwc3_readl(dwc->regs, DWC3_DEPCMD(ep));
 		if (!(reg & DWC3_DEPCMD_CMDACT)) {
-			dev_vdbg(dwc->dev, "Command Complete --> %d\n",
-					DWC3_DEPCMD_STATUS(reg));
+//			dev_vdbg(dwc->dev, "Command Complete --> %d\n",
+//printk(KERN_ERR "# GADGET # Command Complete --> %d\n",
+//					DWC3_DEPCMD_STATUS(reg));
 			return 0;
 		}
 
@@ -659,7 +660,7 @@ static int dwc3_gadget_start_config(struct dwc3 *dwc, struct dwc3_ep *dep)
 			dwc->start_config_issued = true;
 			cmd |= DWC3_DEPCMD_PARAM(2);
 		}
-
+//printk(KERN_ERR "# GADGET # %s Call EP Command \n",__func__);
 		return dwc3_send_gadget_ep_cmd(dwc, 0, cmd, &params);
 	}
 
@@ -682,7 +683,8 @@ static int dwc3_gadget_set_ep_config(struct dwc3 *dwc, struct dwc3_ep *dep,
 	if (dwc->gadget.speed == USB_SPEED_SUPER) {
 //printk(KERN_ERR "*** %s : USB_SPEED_SUPER\n",__FUNCTION__);
 		u32 burst = dep->endpoint.maxburst - 1;
-
+/* yamano debug */
+		if(burst < 1)	burst =1;
 		params.param0 |= DWC3_DEPCFG_BURST_SIZE(burst);
 	}
 
@@ -726,6 +728,7 @@ static int dwc3_gadget_set_ep_config(struct dwc3 *dwc, struct dwc3_ep *dep,
 		dep->interval = 1 << (desc->bInterval - 1);
 	}
 
+//printk(KERN_ERR "# GADGET # %s Call EP Setup Command \n",__func__);
 	return dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETEPCONFIG, &params);
 }
@@ -738,6 +741,7 @@ static int dwc3_gadget_set_xfer_resource(struct dwc3 *dwc, struct dwc3_ep *dep)
 
 	params.param0 = DWC3_DEPXFERCFG_NUM_XFER_RES(1);
 
+//printk(KERN_ERR "# GADGET # %s Call Set trans resource \n",__func__);
 	return dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 }
@@ -1234,6 +1238,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param,
 	}
 	if (!req) {
 		dep->flags |= DWC3_EP_PENDING_REQUEST;
+//printk(KERN_ERR "# GADGET # %s Not Start\n",__func__);
 		return 0;
 	}
 
@@ -1248,7 +1253,8 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param,
 	}
 
 	cmd |= DWC3_DEPCMD_PARAM(cmd_param);
-
+//if(start_new == 1)
+//printk(KERN_ERR "# GADGET # %s Entry \n",__func__);
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 
 	if (ret < 0) {
@@ -1262,6 +1268,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param,
 		usb_gadget_unmap_request(&dwc->gadget, &req->request,
 				req->direction);
 		list_del(&req->list);
+//printk(KERN_ERR "# GADGET # %s start now command failer\n",__func__);
 		return ret;
 	}
 
@@ -1273,7 +1280,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param,
 		WARN_ON_ONCE(!dep->resource_index);
 	}
 
-	udelay(5);	/*<HN> Try to sync 0306	*/
+//	udelay(5);	/*<HN> Try to sync 0306	*/
 
 	return 0;
 }
@@ -1283,6 +1290,7 @@ static void __dwc3_gadget_start_isoc(struct dwc3 *dwc,
 {
 	u32 uf;
 
+//printk(KERN_ERR "# GADGET # %s Entry \n",__func__);
 	if (list_empty(&dep->request_list)) {
 		dev_vdbg(dwc->dev, "ISOC ep %s run out for requests.\n",
 			dep->name);
@@ -1294,6 +1302,7 @@ static void __dwc3_gadget_start_isoc(struct dwc3 *dwc,
 	uf = cur_uf + dep->interval * 4;
 
 	__dwc3_gadget_kick_transfer(dep, uf, 1);
+//printk(KERN_ERR "# GADGET # %s Exit \n",__func__);
 }
 
 static void dwc3_gadget_start_isoc(struct dwc3 *dwc,
@@ -1471,7 +1480,6 @@ static int dwc3_gadget_ep_dequeue(struct usb_ep *ep,
 		ret = -EINVAL;
 		goto out0;
 	}
-
 out1:
 	/* giveback the request */
 	dwc3_gadget_giveback(dep, req, -ECONNRESET);
@@ -1499,6 +1507,7 @@ int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value, int protocol)
 			return -EAGAIN;
 		}
 
+		//printk(KERN_ERR "## %s Entry value\n",__func__);
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETSTALL, &params);
 		if (ret)
@@ -1508,6 +1517,7 @@ int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value, int protocol)
 		else
 			dep->flags |= DWC3_EP_STALL;
 	} else {
+//printk(KERN_ERR "## %s Entry not value\n",__func__);
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_CLEARSTALL, &params);
 		if (ret)
@@ -1818,6 +1828,10 @@ int dwc3_gadget_restart(struct dwc3 *dwc)
 	int			ret = 0;
  	u32			reg;
 	struct dwc3_ep		*dep;
+
+	#ifdef	HNDEBUG
+	//	printk("%s DWC3_DFCG = %x P1=%pH P2=%pH <HN>\n",__FUNCTION__,g,driver);
+	#endif
 
 	dwc->has_gadget = true;
 	reg = dwc3_readl(dwc->regs, DWC3_DCFG);
@@ -2285,7 +2299,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 	if (!(dep->flags & DWC3_EP_ENABLED))
 		return;
 
-//	printk(KERN_ERR "%s %s: %s\n",__FUNCTION__, dep->name,	/* yamano */
+//printk(KERN_ERR "%s %s: %s\n",__FUNCTION__, dep->name,	/* yamano */
 	dev_vdbg(dwc->dev, "%s: %s\n", dep->name,
 			dwc3_ep_event_string(event->endpoint_event));
 
@@ -2326,8 +2340,9 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 					DEPEVT_STATUS_TRANSFER_ACTIVE
 					? "Transfer Active"
 					: "Transfer Not Active");
-
+//printk(KERN_ERR "# GADGET # %s XFERNOTREADY\n",__func__);
 			ret = __dwc3_gadget_kick_transfer(dep, 0, 1);
+//printk(KERN_ERR "# GADGET # %s kick start XFERNOTREADY\n",__func__);
 			if (!ret || ret == -EBUSY)
 				return;
 
@@ -2357,11 +2372,12 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		}
 		break;
 	case DWC3_DEPEVT_RXTXFIFOEVT:
+//printk(KERN_ERR "%s FIFO Overrun\n", dep->name);
 		dev_dbg(dwc->dev, "%s FIFO Overrun\n", dep->name);
 		break;
 	case DWC3_DEPEVT_EPCMDCMPLT:
 		
-//		printk(KERN_ERR "*** %s Endpoint Command Complete\n",__FUNCTION__);
+//printk(KERN_ERR "%s Endpoint Command Complete\n",__func__);
 		dev_dbg(dwc->dev, "Endpoint Command Complete\n");
 		break;
 	default:
@@ -2434,11 +2450,12 @@ static void dwc3_stop_active_transfer(struct dwc3 *dwc, u32 epnum, bool force)
 	cmd |= DWC3_DEPCMD_CMDIOC;
 	cmd |= DWC3_DEPCMD_PARAM(dep->resource_index);
 	memset(&params, 0, sizeof(params));
+//printk(KERN_ERR "## %s Entry \n",__func__);
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 	WARN_ON_ONCE(ret);
 	dep->resource_index = 0;
 	dep->flags &= ~DWC3_EP_BUSY;
-#if	1	/*	<HN>	*/
+#if	0	/*	<HN>	*/
 	udelay(1000);
 #else	/*Original*/
 	udelay(100);
@@ -2482,6 +2499,7 @@ static void dwc3_clear_stall_all_ep(struct dwc3 *dwc)
 		dep->flags &= ~DWC3_EP_STALL;
 
 		memset(&params, 0, sizeof(params));
+//printk(KERN_ERR "## %s Entry \n",__func__);
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 				DWC3_DEPCMD_CLEARSTALL, &params);
 		WARN_ON_ONCE(ret);
@@ -3017,6 +3035,7 @@ static void dwc3_process_event_entry(struct dwc3 *dwc,
 	/* REVISIT what to do with Carkit and I2C events ? */
 	default:
 		dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event->raw);
+		printk(KERN_ERR "UNKNOWN IRQ type %d\n", event->raw);
 	}
 }
 
@@ -3074,12 +3093,14 @@ static irqreturn_t dwc3_thread_interrupt(int irq, void *_dwc)
 	irqreturn_t ret = IRQ_NONE;
 	int i;
 
-	spin_lock_irqsave(&dwc->lock, flags);
+//	spin_lock_irqsave(&dwc->lock, flags);	/* yamano debug */
+	spin_lock(&dwc->lock);
 
 	for (i = 0; i < dwc->num_event_buffers; i++)
 		ret |= dwc3_process_event_buf(dwc, i);
 
-	spin_unlock_irqrestore(&dwc->lock, flags);
+//	spin_unlock_irqrestore(&dwc->lock, flags);
+	spin_unlock(&dwc->lock);
 
 	return ret;
 }
@@ -3110,10 +3131,13 @@ static irqreturn_t dwc3_check_event_buf(struct dwc3 *dwc, u32 buf)
 
 static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 {
-	struct dwc3			*dwc = _dwc;
-	int				i;
-	irqreturn_t			ret = IRQ_NONE;
+	struct dwc3	*dwc = _dwc;
+	int		i;
+	irqreturn_t	ret = IRQ_NONE;
+	unsigned long	flags;
+
 #if 1	/* ohkuma */
+//	spin_lock_irqsave(&dwc->lock,flags);
 #else
 	spin_lock(&dwc->lock);
 #endif	/* ohkuma */
@@ -3125,6 +3149,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 			ret = status;
 	}
 #if 1	/* ohkuma */
+//	spin_unlock_irqrestore(&dwc->lock,flags);
 #else
 	spin_unlock(&dwc->lock);
 #endif	/* ohkuma */

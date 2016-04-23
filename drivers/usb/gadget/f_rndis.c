@@ -415,6 +415,7 @@ static void rndis_response_complete(struct usb_ep *ep, struct usb_request *req)
 	 *  - USB_CDC_GET_ENCAPSULATED_RESPONSE (ep0/control)
 	 *  - RNDIS_RESPONSE_AVAILABLE (status/irq)
 	 */
+//printk(KERN_ERR "#### %s Entry\n",__func__);
 	switch (status) {
 	case -ECONNRESET:
 	case -ESHUTDOWN:
@@ -427,6 +428,7 @@ static void rndis_response_complete(struct usb_ep *ep, struct usb_request *req)
 			req->actual, req->length);
 		/* FALLTHROUGH */
 	case 0:
+//printk(KERN_ERR "#### %s Entry Notice No error\n",__func__);
 		if (ep != rndis->notify)
 			break;
 
@@ -664,7 +666,7 @@ rndis_bind(struct usb_configuration *c, struct usb_function *f)
 	struct f_rndis		*rndis = func_to_rndis(f);
 	int			status;
 	struct usb_ep		*ep;
-
+//printk(KERN_ERR "## %s Entry \n",__func__);
 	/* allocate instance-specific interface IDs */
 	status = usb_interface_id(c, f);
 	if (status < 0)
@@ -759,7 +761,8 @@ rndis_bind(struct usb_configuration *c, struct usb_function *f)
 	 * until we're activated via set_alt().
 	 */
 
-	DBG(cdev, "RNDIS: %s speed IN/%s OUT/%s NOTIFY/%s\n",
+//	DBG(cdev, "RNDIS: %s speed IN/%s OUT/%s NOTIFY/%s\n",
+	printk(KERN_ERR "RNDIS: %s speed IN/%s OUT/%s NOTIFY/%s\n",
 			gadget_is_superspeed(c->cdev->gadget) ? "super" :
 			gadget_is_dualspeed(c->cdev->gadget) ? "dual" : "full",
 			rndis->port.in_ep->name, rndis->port.out_ep->name,

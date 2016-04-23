@@ -82,7 +82,8 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 	struct dwc3_ep			*dep;
 
 	int				ret;
-
+//printk(KERN_ERR "### %s Entry \n",__func__);
+//	msleep(100);	/* yamano */
 	dep = dwc->eps[epnum];
 	if (dep->flags & DWC3_EP_BUSY) {
 		dev_vdbg(dwc->dev, "%s: still busy\n", dep->name);
@@ -105,6 +106,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 	params.param0 = upper_32_bits(dwc->ep0_trb_addr);
 	params.param1 = lower_32_bits(dwc->ep0_trb_addr);
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret < 0) {
@@ -130,6 +132,7 @@ static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep,
 	req->request.status	= -EINPROGRESS;
 	req->epnum		= dep->number;
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	list_add_tail(&req->list, &dep->request_list);
 
 	/*
@@ -235,6 +238,7 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 
 	int				ret;
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	spin_lock_irqsave(&dwc->lock, flags);
 	if (!dep->endpoint.desc) {
 		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
@@ -257,6 +261,7 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 
 out:
 	spin_unlock_irqrestore(&dwc->lock, flags);
+//printk(KERN_ERR "# EP0 # %s Exit \n",__func__);
 
 	return ret;
 }
@@ -265,6 +270,7 @@ static void dwc3_ep0_stall_and_restart(struct dwc3 *dwc)
 {
 	struct dwc3_ep		*dep;
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	/* reinitialize physical ep1 */
 	dep = dwc->eps[1];
 	dep->flags = DWC3_EP_ENABLED;
@@ -279,6 +285,7 @@ static void dwc3_ep0_stall_and_restart(struct dwc3 *dwc)
 		struct dwc3_request	*req;
 
 		req = next_request(&dep->request_list);
+//printk(KERN_ERR "# EP0 # %s call giveback\n",__func__);
 		dwc3_gadget_giveback(dep, req, -ECONNRESET);
 	}
 
@@ -344,15 +351,19 @@ static int dwc3_ep0_handle_status(struct dwc3 *dwc,
 		 * LTM will be set once we know how to set this in HW.
 		 */
 		usb_status |= dwc->is_selfpowered << USB_DEVICE_SELF_POWERED;
-
+#if 1	/* yamano */
 		if (dwc->speed == DWC3_DSTS_SUPERSPEED) {
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-			if (reg & DWC3_DCTL_INITU1ENA)
+			if (reg & DWC3_DCTL_INITU1ENA){
+//printk(KERN_ERR "# EP0 # %s U1 Support \n",__func__);
 				usb_status |= 1 << USB_DEV_STAT_U1_ENABLED;
-			if (reg & DWC3_DCTL_INITU2ENA)
+			}
+			if (reg & DWC3_DCTL_INITU2ENA){
+//printk(KERN_ERR "# EP0 # %s U2 Support \n",__func__);
 				usb_status |= 1 << USB_DEV_STAT_U2_ENABLED;
+			}
 		}
-
+#endif
 		break;
 
 	case USB_RECIP_INTERFACE:
@@ -413,30 +424,40 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 		 * default control pipe
 		 */
 		case USB_DEVICE_U1_ENABLE:
+//printk(KERN_ERR "# EP0 # %s check U1 Entry \n",__func__);
 			if (state != USB_STATE_CONFIGURED)
 				return -EINVAL;
 			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
 				return -EINVAL;
 
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-			if (set)
+			if (set){
+
+//printk(KERN_ERR "# EP0 # %s check U1 Enable \n",__func__);
 				reg |= DWC3_DCTL_INITU1ENA;
-			else
+			}else{
+
+//printk(KERN_ERR "# EP0 # %s check U1 Disable \n",__func__);
 				reg &= ~DWC3_DCTL_INITU1ENA;
+			}
 			dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 			break;
 
 		case USB_DEVICE_U2_ENABLE:
+//printk(KERN_ERR "# EP0 # %s check U2 Entry \n",__func__);
 			if (state != USB_STATE_CONFIGURED)
 				return -EINVAL;
 			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
 				return -EINVAL;
 
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-			if (set)
+			if (set){
+//printk(KERN_ERR "# EP0 # %s check U2 Enable \n",__func__);
 				reg |= DWC3_DCTL_INITU2ENA;
-			else
+			}else{
+//printk(KERN_ERR "# EP0 # %s check U2 Disble \n",__func__);
 				reg &= ~DWC3_DCTL_INITU2ENA;
+			}
 			dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 			break;
 
@@ -782,6 +803,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 	u32			length;
 	u8			epnum;
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	epnum = event->endpoint_number;
 	ep0 = dwc->eps[0];
 
@@ -830,6 +852,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 		if (r)
 			dwc3_gadget_giveback(ep0, r, 0);
 	}
+//printk(KERN_ERR "# EP0 # %s Exit \n",__func__);
 }
 
 static void dwc3_ep0_complete_status(struct dwc3 *dwc,
@@ -842,6 +865,7 @@ static void dwc3_ep0_complete_status(struct dwc3 *dwc,
 
 	dep = dwc->eps[0];
 	trb = dwc->ep0_trb;
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 
 	if (!list_empty(&dep->request_list)) {
 		r = next_request(&dep->request_list);
@@ -857,6 +881,7 @@ static void dwc3_ep0_complete_status(struct dwc3 *dwc,
 			dev_dbg(dwc->dev, "Invalid Test #%d\n",
 					dwc->test_mode_nr);
 			dwc3_ep0_stall_and_restart(dwc);
+//printk(KERN_ERR "# EP0 # %s stall exit \n",__func__);
 			return;
 		}
 	}
@@ -867,6 +892,7 @@ static void dwc3_ep0_complete_status(struct dwc3 *dwc,
 
 	dwc->ep0state = EP0_SETUP_PHASE;
 	dwc3_ep0_out_start(dwc);
+//printk(KERN_ERR "# EP0 # %s Exit \n",__func__);
 }
 
 static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
@@ -878,6 +904,7 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 	dep->resource_index = 0;
 	dwc->setup_packet_pending = false;
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	switch (dwc->ep0state) {
 	case EP0_SETUP_PHASE:
 		dev_vdbg(dwc->dev, "Inspecting Setup Bytes\n");
@@ -956,6 +983,7 @@ static int dwc3_ep0_start_control_status(struct dwc3_ep *dep)
 	struct dwc3		*dwc = dep->dwc;
 	u32			type;
 
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	type = dwc->three_stage_setup ? DWC3_TRBCTL_CONTROL_STATUS3
 		: DWC3_TRBCTL_CONTROL_STATUS2;
 
@@ -965,10 +993,12 @@ static int dwc3_ep0_start_control_status(struct dwc3_ep *dep)
 
 static void __dwc3_ep0_do_control_status(struct dwc3 *dwc, struct dwc3_ep *dep)
 {
+//printk(KERN_ERR " # EP0 # %s Entry\n",__func__);
 	if (dwc->resize_fifos) {
 		dev_dbg(dwc->dev, "starting to resize fifos\n");
 		dwc3_gadget_resize_tx_fifos(dwc);
 		dwc->resize_fifos = 0;
+//printk(KERN_ERR " # EP0 # %s resize_fifo\n",__func__);
 	}
 
 	WARN_ON(dwc3_ep0_start_control_status(dep));
@@ -995,6 +1025,7 @@ static void dwc3_ep0_end_control_data(struct dwc3 *dwc, struct dwc3_ep *dep)
 	cmd |= DWC3_DEPCMD_CMDIOC;
 	cmd |= DWC3_DEPCMD_PARAM(dep->resource_index);
 	memset(&params, 0, sizeof(params));
+//printk(KERN_ERR "# EP0 # %s Entry \n",__func__);
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 	WARN_ON_ONCE(ret);
 	dep->resource_index = 0;
@@ -1046,6 +1077,7 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		dwc3_ep0_do_control_status(dwc, event);
 		break;
 	default:
+//printk(KERN_ERR "# EP0 # %s Other status\n",__func__);
 		dev_dbg(dwc->dev, "<<<DEPEVT_STATUS_CONTROL_XXXX(%xH)  <HN> >>>\n",event->status);
 		break;
 	}

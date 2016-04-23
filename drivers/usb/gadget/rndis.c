@@ -569,6 +569,7 @@ static int rndis_init_response(int configNr, rndis_init_msg_type *buf)
 	rndis_resp_t *r;
 	struct rndis_params *params = rndis_per_dev_params + configNr;
 
+//printk(KERN_ERR "#### %s Entry \n",__func__);
 	if (!params->dev)
 		return -ENOTSUPP;
 
@@ -605,6 +606,7 @@ static int rndis_query_response(int configNr, rndis_query_msg_type *buf)
 	rndis_resp_t *r;
 	struct rndis_params *params = rndis_per_dev_params + configNr;
 
+//printk(KERN_ERR "#### %s Entry \n",__func__);
 	/* pr_debug("%s: OID = %08X\n", __func__, cpu_to_le32(buf->OID)); */
 	if (!params->dev)
 		return -ENOTSUPP;
@@ -648,6 +650,7 @@ static int rndis_set_response(int configNr, rndis_set_msg_type *buf)
 	rndis_resp_t *r;
 	struct rndis_params *params = rndis_per_dev_params + configNr;
 
+//printk(KERN_ERR "#### %s Entry \n",__func__);
 	r = rndis_add_response(configNr, sizeof(rndis_set_cmplt_type));
 	if (!r)
 		return -ENOMEM;
@@ -686,6 +689,7 @@ static int rndis_reset_response(int configNr, rndis_reset_msg_type *buf)
 	rndis_reset_cmplt_type *resp;
 	rndis_resp_t *r;
 	struct rndis_params *params = rndis_per_dev_params + configNr;
+//printk(KERN_ERR "#### %s Entry \n",__func__);
 
 	r = rndis_add_response(configNr, sizeof(rndis_reset_cmplt_type));
 	if (!r)
@@ -708,7 +712,7 @@ static int rndis_keepalive_response(int configNr,
 	rndis_keepalive_cmplt_type *resp;
 	rndis_resp_t *r;
 	struct rndis_params *params = rndis_per_dev_params + configNr;
-
+//printk(KERN_ERR "#### %s Entry \n",__func__);
 	/* host "should" check only in RNDIS_DATA_INITIALIZED state */
 
 	r = rndis_add_response(configNr, sizeof(rndis_keepalive_cmplt_type));
@@ -778,7 +782,7 @@ void rndis_uninit(int configNr)
 	if (configNr >= RNDIS_MAX_CONFIGS)
 		return;
 	rndis_per_dev_params[configNr].state = RNDIS_UNINITIALIZED;
-
+//printk(KERN_ERR "### %s Entry\n",__func__);
 	/* drain the response queue */
 	while ((buf = rndis_get_next_response(configNr, &length)))
 		rndis_free_response(configNr, buf);
@@ -797,16 +801,20 @@ int rndis_msg_parser(u8 configNr, u8 *buf)
 	u32 MsgType, MsgLength;
 	__le32 *tmp;
 	struct rndis_params *params;
+//printk(KERN_ERR "#### %s Entry \n",__FUNCTION__);
+	if (!buf){
 
-	if (!buf)
+//printk(KERN_ERR "#### %s ENOMEM \n",__FUNCTION__);
 		return -ENOMEM;
-
+}
 	tmp = (__le32 *)buf;
 	MsgType   = get_unaligned_le32(tmp++);
 	MsgLength = get_unaligned_le32(tmp++);
 
-	if (configNr >= RNDIS_MAX_CONFIGS)
+	if (configNr >= RNDIS_MAX_CONFIGS){
+//printk(KERN_ERR "#### %s configNr %x\n",__func__,configNr);
 		return -ENOTSUPP;
+}
 	params = &rndis_per_dev_params[configNr];
 
 	/* NOTE: RNDIS is *EXTREMELY* chatty ... Windows constantly polls for
