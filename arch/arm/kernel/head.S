@@ -28,6 +28,12 @@
 #endif
 
 /*
+ * debug yamano 
+ */
+#define	LM2_SERIAL_DEBUG_PHYS	0x04160000
+#define	LM2_SERIAL_DEBUG_VIRT	0xfc160000
+
+/*
  * swapper_pg_dir is the virtual address of the initial page table.
  * We place the page tables 16K below KERNEL_RAM_VADDR.  Therefore, we must
  * make sure that KERNEL_RAM_VADDR is correctly set.  Currently, we expect
@@ -52,7 +58,8 @@
 	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - PG_DIR_SIZE
 
 	.macro	pgtbl, rd, phys
-	add	\rd, \phys, #TEXT_OFFSET - PG_DIR_SIZE
+	add	\rd, \phys, #TEXT_OFFSET 
+	sub	\rd, \rd, #PG_DIR_SIZE
 	.endm
 
 /*
@@ -82,7 +89,7 @@ ENTRY(stext)
  THUMB(	bx	r9		)	@ If this is a Thumb-2 kernel,
  THUMB(	.thumb			)	@ switch to Thumb now.
  THUMB(1:			)
-
+/*1:	b	1b*/	/* yamano debug */
 #ifdef CONFIG_ARM_VIRT_EXT
 	bl	__hyp_stub_install
 #endif
@@ -111,7 +118,7 @@ ENTRY(stext)
 #else
 	ldr	r8, =PHYS_OFFSET		@ always constant in this case
 #endif
-
+/* 1:	b	1b */	/* yamano ICE debug */
 	/*
 	 * r1 = machine no, r2 = atags or dtb,
 	 * r8 = phys_offset, r9 = cpuid, r10 = procinfo
@@ -183,7 +190,8 @@ __create_page_tables:
 	add	r3, r4, #0x1000			@ first PMD table address
 	orr	r3, r3, #3			@ PGD block type
 	mov	r6, #4				@ PTRS_PER_PGD
-	mov	r7, #1 << (55 - 32)		@ L_PGD_SWAPPER
+	mov	r7, #1 << (55 - 32)		@ L_PGD_SWAPPER software use not XN bit
+	orr	r7, r7, #0x08	/* yamano phys high addr 0x08_xxxx_xxxx */
 1:
 #ifdef CONFIG_CPU_ENDIAN_BE8
 	str	r7, [r0], #4			@ set top PGD entry bits
@@ -200,9 +208,18 @@ __create_page_tables:
 #ifdef CONFIG_CPU_ENDIAN_BE8
 	add	r4, r4, #4			@ we only write the bottom word
 #endif
-#endif
+#endif	/* CONFIG_ARM_LPAE */
 
 	ldr	r7, [r10, #PROCINFO_MM_MMUFLAGS] @ mm_mmuflags
+
+	/* secure booting page table */
+	mov	r0, r4
+	add	r0, r0, #0x2400
+	mov	r5, r7
+	orr	r5, r5, r8
+	mov	r6, #0x08
+	str	r5, [r0], #4
+	str	r6, [r0]
 
 	/*
 	 * Create identity mapping to cater for __enable_mmu.
@@ -213,14 +230,23 @@ __create_page_tables:
 	sub	r0, r0, r3			@ virt->phys offset
 	add	r5, r5, r0			@ phys __turn_mmu_on
 	add	r6, r6, r0			@ phys __turn_mmu_on_end
-	mov	r5, r5, lsr #SECTION_SHIFT
+	mov	r5, r5, lsr #SECTION_SHIFT	@ SECTION_SHIFT 15
 	mov	r6, r6, lsr #SECTION_SHIFT
-
+	mov	r0, #0x08	/* high addr yamano */
 1:	orr	r3, r7, r5, lsl #SECTION_SHIFT	@ flags + kernel base
-	str	r3, [r4, r5, lsl #PMD_ORDER]	@ identity mapping
+#if 1 /* yamano */
+	add	r7, r4, r5, lsl #PMD_ORDER
+	str	r3, [r7], #4
+	str	r0, [r7], #4
+#else
+	str	r3, [r4, r5, lsl #PMD_ORDER]	@ identity mapping yamano
+#endif	/* yamano */
 	cmp	r5, r6
 	addlo	r5, r5, #1			@ next section
 	blo	1b
+
+	/* restore r7 */
+	ldr	r7, [r10, #PROCINFO_MM_MMUFLAGS] @ mm_mmuflags
 
 	/*
 	 * Map our RAM from the start to the end of the kernel .bss section.
@@ -228,12 +254,34 @@ __create_page_tables:
 	add	r0, r4, #PAGE_OFFSET >> (SECTION_SHIFT - PMD_ORDER)
 	ldr	r6, =(_end - 1)
 	orr	r3, r8, r7
+	mov	r5, #0x08	/* yamano */
 	add	r6, r4, r6, lsr #(SECTION_SHIFT - PMD_ORDER)
-1:	str	r3, [r0], #1 << PMD_ORDER
+/* 1:	str	r3, [r0], #1 << PMD_ORDER */	/* yamano */
+1:	str	r3, [r0], #4	/* yamano */
+	str	r5, [r0], #4 	/* yamano */
 	add	r3, r3, #1 << SECTION_SHIFT
 	cmp	r0, r6
 	bls	1b
 
+#if 1	/* yamano debug */
+/* 2:	b	2b	*/ /* yamano ICE debug */
+	/* calculate page table address to stored r0 */
+	ldr	r3, =LM2_SERIAL_DEBUG_VIRT	@specify virtual address 0xf800_0000
+	mov	r3, r3, lsr #SECTION_SHIFT
+	mov	r3, r3, lsl #PMD_ORDER
+	add	r0, r4, r3			@ store page table address
+
+	/* calculate page table entry address to stored r3 */
+	ldr	r7, =LM2_SERIAL_DEBUG_PHYS	@ specify physical address  0x04154000
+	mov	r3, r7, lsr #SECTION_SHIFT
+	ldr	r7, [r10, #PROCINFO_IO_MMUFLAGS]
+	orr	r3, r7, r3, lsl #SECTION_SHIFT
+
+	mov	r7, #1 << (54 -32)		@ never executable set
+	str	r3, [r0], #4
+	str	r7, [r0], #4
+/* 2:	b	2b*/	/* yamano debug */	
+#endif	/* yamano debug */
 #ifdef CONFIG_XIP_KERNEL
 	/*
 	 * Map the kernel image separately as it is not located in RAM.
@@ -253,6 +301,7 @@ __create_page_tables:
 	bls	1b
 #endif
 
+	/* dont forget this code for support LPAE yamano */
 	/*
 	 * Then map boot params address in r2 if specified.
 	 * We map 2 sections in case the ATAGs/DTB crosses a section boundary.
@@ -463,6 +512,7 @@ ENTRY(__turn_mmu_on)
 	instr_sync
 	mov	r3, r3
 	mov	r3, r13
+/*1:	b	1b	*/	/* yamano next start_kernel*/
 	mov	pc, r3
 __turn_mmu_on_end:
 ENDPROC(__turn_mmu_on)

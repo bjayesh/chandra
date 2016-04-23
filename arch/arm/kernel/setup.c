@@ -115,6 +115,40 @@ struct outer_cache_fns outer_cache __read_mostly;
 EXPORT_SYMBOL(outer_cache);
 #endif
 
+#if 1 /* yamano */
+#define UART_BASE       0xfc160000
+#define	UART_BASE2	0xfc000000
+#define UART_DATA(base) (*(volatile unsigned char *)((base) + 0x10))
+#define UART_STAT(base) (*(volatile unsigned char *)((base) + 0x15))
+
+static  void    putchar(u32 base, int c)
+{
+        while((UART_STAT(base) & 0x40) == 0)
+                barrier();
+        UART_DATA(base) = c;
+        return;
+}
+
+static  void    flush(u32 base)
+{
+        while((UART_STAT(base) & 0x40) == 0)
+                barrier();
+}
+
+static  void    putstr(u32 base,const char *ptr)
+{
+        char    c;
+
+        while((c = *ptr++) != '\0'){
+                if(c == '\n')
+                        putchar(base,'\r');
+                putchar(base,c);
+        }
+        flush(base);
+}
+
+#endif  /* yamano */
+
 /*
  * Cached cpu_architecture() result for use by assembler code.
  * C code should use the cpu_architecture() function instead of accessing this
@@ -453,10 +487,15 @@ u32 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = MPIDR_INVALID };
 
 void __init smp_setup_processor_id(void)
 {
+#if 0	/* yamano */
 	int i;
 	u32 mpidr = is_smp() ? read_cpuid_mpidr() & MPIDR_HWID_BITMASK : 0;
-	u32 cpu = MPIDR_AFFINITY_LEVEL(mpidr, 0);
+#else
+	int	i;
+	u32	mpidr;
 
+	mpidr = 0;	/* yamano force single processor */
+	u32 cpu = MPIDR_AFFINITY_LEVEL(mpidr, 0);
 	cpu_logical_map(0) = cpu;
 	for (i = 1; i < nr_cpu_ids; ++i)
 		cpu_logical_map(i) = i == cpu ? 0 : i;
@@ -469,6 +508,7 @@ void __init smp_setup_processor_id(void)
 	set_my_cpu_offset(0);
 
 	printk(KERN_INFO "Booting Linux on physical CPU 0x%x\n", mpidr);
+#endif	/* yamano */
 }
 
 static void __init setup_processor(void)
@@ -640,6 +680,7 @@ static void __init request_standard_resources(struct machine_desc *mdesc)
 {
 	struct memblock_region *region;
 	struct resource *res;
+	char	buf[128];
 
 	kernel_code.start   = virt_to_phys(_text);
 	kernel_code.end     = virt_to_phys(_etext - 1);
@@ -793,6 +834,7 @@ void __init hyp_mode_check(void)
 void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
+	char	buf[128];	/* yamano debug */ 
 
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);
@@ -800,7 +842,6 @@ void __init setup_arch(char **cmdline_p)
 		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
-
 	setup_dma_zone(mdesc);
 
 	if (mdesc->restart_mode)
@@ -810,20 +851,17 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.end_code   = (unsigned long) _etext;
 	init_mm.end_data   = (unsigned long) _edata;
 	init_mm.brk	   = (unsigned long) _end;
-
 	/* populate cmd_line too for later use, preserving boot_command_line */
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;
-
 	parse_early_param();
+
 
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
 	sanity_check_meminfo();
 	arm_memblock_init(&meminfo, mdesc);
-
-	paging_init(mdesc);
+	paging_init(mdesc);	/* reset debug I/O memory page  yamano */
 	request_standard_resources(mdesc);
-
 	if (mdesc->restart)
 		arm_pm_restart = mdesc->restart;
 
@@ -843,7 +881,7 @@ void __init setup_arch(char **cmdline_p)
 	reserve_crashkernel();
 
 #ifdef CONFIG_MULTI_IRQ_HANDLER
-	handle_arch_irq = mdesc->handle_irq;
+//	handle_arch_irq = mdesc->handle_irq;
 #endif
 
 #ifdef CONFIG_VT
@@ -853,9 +891,10 @@ void __init setup_arch(char **cmdline_p)
 	conswitchp = &dummy_con;
 #endif
 #endif
-
+#if 0
 	if (mdesc->init_early)
 		mdesc->init_early();
+#endif
 }
 
 
