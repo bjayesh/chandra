@@ -28,6 +28,8 @@
 
 #include "e1000.h"
 
+#undef	YAMADEBUG
+#undef	YAMADEBUG_DELAY
 static s32 e1000_wait_autoneg(struct e1000_hw *hw);
 static s32 e1000_access_phy_wakeup_reg_bm(struct e1000_hw *hw, u32 offset,
 					  u16 *data, bool read, bool page_set);
@@ -144,7 +146,9 @@ s32 e1000e_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 {
 	struct e1000_phy_info *phy = &hw->phy;
 	u32 i, mdic = 0;
-
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s Entry\n",__FUNCTION__);
+#endif
 	if (offset > MAX_PHY_REG_ADDRESS) {
 		e_dbg("PHY Address %d is out of range\n", offset);
 		return -E1000_ERR_PARAM;
@@ -158,6 +162,9 @@ s32 e1000e_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 		(phy->addr << E1000_MDIC_PHY_SHIFT) |
 		(E1000_MDIC_OP_READ));
 
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s write MDIO offset %x addr %x\n",__FUNCTION__,offset, phy->addr);
+#endif
 	ew32(MDIC, mdic);
 
 	/* Poll the ready bit to see if the MDI read completed
@@ -165,21 +172,32 @@ s32 e1000e_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 	 * the lower time out
 	 */
 	for (i = 0; i < (E1000_GEN_POLL_TIMEOUT * 3); i++) {
+#ifdef	YAMADEBUG_DELAY
+		udelay(900);/* yamano debug orig 50 */
+		msleep(1000);	/* yamano */
+#else
 		udelay(50);
+#endif
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s Read status MDIO\n",__FUNCTION__);
+#endif
 		mdic = er32(MDIC);
 		if (mdic & E1000_MDIC_READY)
 			break;
 	}
 	if (!(mdic & E1000_MDIC_READY)) {
 		e_dbg("MDI Read did not complete\n");
+		printk(KERN_ERR "=== %s MDI Read did not complete\n",__FUNCTION__);
 		return -E1000_ERR_PHY;
 	}
 	if (mdic & E1000_MDIC_ERROR) {
 		e_dbg("MDI Error\n");
+		printk(KERN_ERR "=== %s MDI Error\n",__FUNCTION__);
 		return -E1000_ERR_PHY;
 	}
 	if (((mdic & E1000_MDIC_REG_MASK) >> E1000_MDIC_REG_SHIFT) != offset) {
-		e_dbg("MDI Read offset error - requested %d, returned %d\n",
+//		e_dbg("MDI Read offset error - requested %d, returned %d\n",
+		printk(KERN_ERR "MDI Read offset error - requested %d, returned %d\n",
 		      offset,
 		      (mdic & E1000_MDIC_REG_MASK) >> E1000_MDIC_REG_SHIFT);
 		return -E1000_ERR_PHY;
@@ -189,9 +207,13 @@ s32 e1000e_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 	/* Allow some time after each MDIC transaction to avoid
 	 * reading duplicate data in the next MDIC transaction.
 	 */
-	if (hw->mac.type == e1000_pch2lan)
+	if (hw->mac.type == e1000_pch2lan){
+		printk(KERN_ERR "=== %s e1000_pch2len\n",__FUNCTION__);
 		udelay(100);
-
+	}
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s Normal Exit %x\n",__FUNCTION__,*data);
+#endif
 	return 0;
 }
 
@@ -208,6 +230,9 @@ s32 e1000e_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 	struct e1000_phy_info *phy = &hw->phy;
 	u32 i, mdic = 0;
 
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s Normal Entry %x\n",__FUNCTION__,data);
+#endif
 	if (offset > MAX_PHY_REG_ADDRESS) {
 		e_dbg("PHY Address %d is out of range\n", offset);
 		return -E1000_ERR_PARAM;
@@ -222,6 +247,9 @@ s32 e1000e_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 		(phy->addr << E1000_MDIC_PHY_SHIFT) |
 		(E1000_MDIC_OP_WRITE));
 
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s write MDIO offset %x addr %x\n",__FUNCTION__,offset, phy->addr);
+#endif
 	ew32(MDIC, mdic);
 
 	/* Poll the ready bit to see if the MDI read completed
@@ -229,21 +257,32 @@ s32 e1000e_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 	 * the lower time out
 	 */
 	for (i = 0; i < (E1000_GEN_POLL_TIMEOUT * 3); i++) {
+#ifdef	YAMADEBUG_DELAY
+		udelay(900);	/* yamano modified orig 50 */
+		msleep(1000);	/* yamano debug */
+#else
 		udelay(50);
+#endif
 		mdic = er32(MDIC);
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s Read status MDIO\n",__FUNCTION__);
+#endif
 		if (mdic & E1000_MDIC_READY)
 			break;
 	}
 	if (!(mdic & E1000_MDIC_READY)) {
 		e_dbg("MDI Write did not complete\n");
+		printk(KERN_ERR "=== %s MDI Write did not complete\n",__FUNCTION__);
 		return -E1000_ERR_PHY;
 	}
 	if (mdic & E1000_MDIC_ERROR) {
 		e_dbg("MDI Error\n");
+		printk(KERN_ERR "=== %s MDI Error\n",__FUNCTION__);
 		return -E1000_ERR_PHY;
 	}
 	if (((mdic & E1000_MDIC_REG_MASK) >> E1000_MDIC_REG_SHIFT) != offset) {
-		e_dbg("MDI Write offset error - requested %d, returned %d\n",
+//		e_dbg("MDI Write offset error - requested %d, returned %d\n",
+		printk(KERN_ERR "=== %s MDI Write offset error - requested %d, returned %d\n",__FUNCTION__,
 		      offset,
 		      (mdic & E1000_MDIC_REG_MASK) >> E1000_MDIC_REG_SHIFT);
 		return -E1000_ERR_PHY;
@@ -252,9 +291,13 @@ s32 e1000e_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 	/* Allow some time after each MDIC transaction to avoid
 	 * reading duplicate data in the next MDIC transaction.
 	 */
-	if (hw->mac.type == e1000_pch2lan)
+	if (hw->mac.type == e1000_pch2lan){
+		printk(KERN_ERR "=== %s e1000_pch2len\n",__FUNCTION__);
 		udelay(100);
-
+	}
+#ifdef	YAMADEBUG
+printk(KERN_ERR "=== %s Normal Exit %x\n",__FUNCTION__,data);
+#endif
 	return 0;
 }
 
@@ -272,15 +315,17 @@ s32 e1000e_read_phy_reg_m88(struct e1000_hw *hw, u32 offset, u16 *data)
 {
 	s32 ret_val;
 
+printk(KERN_ERR "___%s Entry\n",__FUNCTION__);
 	ret_val = hw->phy.ops.acquire(hw);
 	if (ret_val)
 		return ret_val;
-
+printk(KERN_ERR "___%s read phy\n",__FUNCTION__);
 	ret_val = e1000e_read_phy_reg_mdic(hw, MAX_PHY_REG_ADDRESS & offset,
 					   data);
 
 	hw->phy.ops.release(hw);
 
+printk(KERN_ERR "___%s Exit\n",__FUNCTION__);
 	return ret_val;
 }
 
@@ -342,7 +387,7 @@ static s32 __e1000e_read_phy_reg_igp(struct e1000_hw *hw, u32 offset, u16 *data,
 				     bool locked)
 {
 	s32 ret_val = 0;
-
+printk(KERN_ERR "___%s Entry \n",__FUNCTION__);
 	if (!locked) {
 		if (!hw->phy.ops.acquire)
 			return 0;
@@ -946,6 +991,8 @@ static s32 e1000_phy_setup_autoneg(struct e1000_hw *hw)
 	u16 mii_autoneg_adv_reg;
 	u16 mii_1000t_ctrl_reg = 0;
 
+printk(KERN_ERR "___%s Entry\n",__FUNCTION__);
+
 	phy->autoneg_advertised &= phy->autoneg_mask;
 
 	/* Read the MII Auto-Neg Advertisement Register (Address 4). */
@@ -1077,7 +1124,7 @@ static s32 e1000_phy_setup_autoneg(struct e1000_hw *hw)
 
 	if (phy->autoneg_mask & ADVERTISE_1000_FULL)
 		ret_val = e1e_wphy(hw, MII_CTRL1000, mii_1000t_ctrl_reg);
-
+printk(KERN_ERR "___%s Normal Exit\n",__FUNCTION__);
 	return ret_val;
 }
 
@@ -1095,7 +1142,7 @@ static s32 e1000_copper_link_autoneg(struct e1000_hw *hw)
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val;
 	u16 phy_ctrl;
-
+printk(KERN_ERR "___%s Entry\n",__FUNCTION__);
 	/* Perform some bounds checking on the autoneg advertisement
 	 * parameter.
 	 */
@@ -1139,6 +1186,7 @@ static s32 e1000_copper_link_autoneg(struct e1000_hw *hw)
 	}
 
 	hw->mac.get_link_status = true;
+printk(KERN_ERR "___%s Normal Exit\n",__FUNCTION__);
 
 	return ret_val;
 }
@@ -1157,6 +1205,7 @@ s32 e1000e_setup_copper_link(struct e1000_hw *hw)
 	s32 ret_val;
 	bool link;
 
+printk(KERN_ERR "___%s Entry\n",__FUNCTION__);	/* yamano */
 	if (hw->mac.autoneg) {
 		/* Setup autoneg and flow control advertisement and perform
 		 * autonegotiation.
@@ -1192,6 +1241,7 @@ s32 e1000e_setup_copper_link(struct e1000_hw *hw)
 		e_dbg("Unable to establish link!!!\n");
 	}
 
+printk(KERN_ERR "___%s Normal Exit\n",__FUNCTION__);	/* yamano */
 	return ret_val;
 }
 
@@ -1727,7 +1777,11 @@ static s32 e1000_wait_autoneg(struct e1000_hw *hw)
 			break;
 		if (phy_status & BMSR_ANEGCOMPLETE)
 			break;
+#ifdef	YAMADEBUG_DELAY
+		msleep(100*50);	/* yamano */
+#else
 		msleep(100);
+#endif
 	}
 
 	/* PHY_AUTO_NEG_TIME expiration doesn't guarantee auto-negotiation
@@ -1750,7 +1804,9 @@ s32 e1000e_phy_has_link_generic(struct e1000_hw *hw, u32 iterations,
 {
 	s32 ret_val = 0;
 	u16 i, phy_status;
+#ifdef	YAMADEBUG
 printk(KERN_ERR " $$$ <<< %s Entry iterations %d usec = %d\n",__FUNCTION__,iterations,usec_interval);
+#endif
 	for (i = 0; i < iterations; i++) {
 		/* Some PHYs require the MII_BMSR register to be read
 		 * twice due to the link bit being sticky.  No harm doing
@@ -1768,6 +1824,9 @@ printk(KERN_ERR " $$$ <<< %s Entry iterations %d usec = %d\n",__FUNCTION__,itera
 				udelay(usec_interval);
 		}
 		ret_val = e1e_rphy(hw, MII_BMSR, &phy_status);
+#ifdef	YAMADEBUG
+printk(KERN_ERR " $$$ <<< %s phy status 0x%x\n",__FUNCTION__,phy_status);
+#endif
 		if (ret_val)
 			break;
 		if (phy_status & BMSR_LSTATUS)
@@ -1779,8 +1838,9 @@ printk(KERN_ERR " $$$ <<< %s Entry iterations %d usec = %d\n",__FUNCTION__,itera
 	}
 
 	*success = (i < iterations);
+#ifdef	YAMADEBUG
 printk(KERN_ERR " $$$ >>>  %s Exit phy status = %x\n",__FUNCTION__,phy_status);
-
+#endif
 	return ret_val;
 }
 
@@ -1806,15 +1866,21 @@ s32 e1000e_get_cable_length_m88(struct e1000_hw *hw)
 	u16 phy_data, index;
 
 	ret_val = e1e_rphy(hw, M88E1000_PHY_SPEC_STATUS, &phy_data);
-	if (ret_val)
+	if (ret_val){
+#ifndef	YAMADEBUG
+printk(KERN_ERR "___%s Phys accress Error return %x\n",__FUNCTION__,ret_val);
+#endif
 		return ret_val;
-
+	}
 	index = ((phy_data & M88E1000_PSSR_CABLE_LENGTH) >>
 		 M88E1000_PSSR_CABLE_LENGTH_SHIFT);
-
-	if (index >= M88E1000_CABLE_LENGTH_TABLE_SIZE - 1)
+printk(KERN_ERR "___%s cable %d  %x\n",__FUNCTION__,index,phy_data);
+	if(index >=M88E1000_CABLE_LENGTH_TABLE_SIZE - 1)
+		index = 3;
+	if (index >= M88E1000_CABLE_LENGTH_TABLE_SIZE - 1){
+printk(KERN_ERR "___%s cable table out of range %d\n",__FUNCTION__,index);
 		return -E1000_ERR_PHY;
-
+	}
 	phy->min_cable_length = e1000_m88_cable_length_table[index];
 	phy->max_cable_length = e1000_m88_cable_length_table[index + 1];
 
@@ -2487,14 +2553,19 @@ s32 e1000e_read_phy_reg_bm2(struct e1000_hw *hw, u32 offset, u16 *data)
 	s32 ret_val;
 	u16 page = (u16)(offset >> IGP_PAGE_SHIFT);
 
+#ifdef	YAMADEBUG
+printk(KERN_ERR "___%s Entry \n",__FUNCTION__);
+#endif
 	ret_val = hw->phy.ops.acquire(hw);
-	if (ret_val)
+	if (ret_val){
+printk(KERN_ERR "___%s acquire err \n",__FUNCTION__);
 		return ret_val;
-
+	}
 	/* Page 800 works differently than the rest so it has its own func */
 	if (page == BM_WUC_PAGE) {
 		ret_val = e1000_access_phy_wakeup_reg_bm(hw, offset, data,
 							 true, false);
+printk(KERN_ERR "___%s phy wakeup reg \n",__FUNCTION__);
 		goto release;
 	}
 
@@ -2505,12 +2576,18 @@ s32 e1000e_read_phy_reg_bm2(struct e1000_hw *hw, u32 offset, u16 *data)
 		ret_val = e1000e_write_phy_reg_mdic(hw, BM_PHY_PAGE_SELECT,
 						    page);
 
-		if (ret_val)
+printk(KERN_ERR "___%s phy write reg mdic \n",__FUNCTION__);
+		if (ret_val){
+printk(KERN_ERR "___%s phy write reg mdic error \n",__FUNCTION__);
 			goto release;
+}
 	}
 
 	ret_val = e1000e_read_phy_reg_mdic(hw, MAX_PHY_REG_ADDRESS & offset,
 					   data);
+#ifdef	YAMADEBUG
+printk(KERN_ERR "___%s phy read reg mdic \n",__FUNCTION__);
+#endif
 release:
 	hw->phy.ops.release(hw);
 	return ret_val;

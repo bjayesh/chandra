@@ -57,7 +57,7 @@ void pci_bus_add_resource(struct pci_bus *bus, struct resource *res,
 {
 	struct pci_bus_resource *bus_res;
 
-printk(KERN_ERR "##### %s resource add to bus \n",__FUNCTION__);
+//printk(KERN_ERR "##### %s resource add to bus \n",__FUNCTION__);
 	bus_res = kzalloc(sizeof(struct pci_bus_resource), GFP_KERNEL);
 	if (!bus_res) {
 		dev_err(&bus->dev, "can't add %pR resource\n", res);
@@ -127,7 +127,7 @@ pci_bus_alloc_resource(struct pci_bus *bus, struct resource *res,
 	int i, ret = -ENOMEM;
 	struct resource *r;
 	resource_size_t max = -1;
-printk(KERN_ERR " ### %s : Entry %x bus->number = %x\n",__FUNCTION__,bus,bus->number);
+//printk(KERN_ERR " ### %s : Entry %x bus->number = %x\n",__FUNCTION__,bus,bus->number);
 	type_mask |= IORESOURCE_IO | IORESOURCE_MEM;
 
 	/* don't allocate too high if the pref mem doesn't support 64bit*/
@@ -137,15 +137,15 @@ printk(KERN_ERR " ### %s : Entry %x bus->number = %x\n",__FUNCTION__,bus,bus->nu
 	pci_bus_for_each_resource(bus, r, i) {
 		if (!r)
 			continue;
-printk(KERN_ERR "resource start = 0x%llx\n",r->start);
-printk(KERN_ERR "resource end   = 0x%llx\n",r->end);
-printk(KERN_ERR "resource flags = 0x%x\n",r->flags);
+//printk(KERN_ERR "resource start = 0x%llx\n",r->start);
+//printk(KERN_ERR "resource end   = 0x%llx\n",r->end);
+//printk(KERN_ERR "resource flags = 0x%x\n",r->flags);
 
 
 		/* type_mask must match */
 		if ((res->flags ^ r->flags) & type_mask){
-printk(KERN_ERR "----- type mismatch %x : %x : %x\n",res->flags,r->flags,type_mask);
-printk(KERN_ERR "----- res start %llx : r start %llx \n",res->start,r->start);
+//printk(KERN_ERR "----- type mismatch %x : %x : %x\n",res->flags,r->flags,type_mask);
+//printk(KERN_ERR "----- res start %llx : r start %llx \n",res->start,r->start);
 			continue;
 		}
 
@@ -153,12 +153,12 @@ printk(KERN_ERR "----- res start %llx : r start %llx \n",res->start,r->start);
 		   from a pre-fetching area */
 		if ((r->flags & IORESOURCE_PREFETCH) &&
 		    !(res->flags & IORESOURCE_PREFETCH)){
-printk(KERN_ERR "----- non prefetch \n");
+//printk(KERN_ERR "----- non prefetch \n");
 			continue;
 		}
 
 		/* Ok, try it out.. */
-printk(KERN_ERR " ### %s : resource allocate\n",__FUNCTION__);
+//printk(KERN_ERR " ### %s : resource allocate\n",__FUNCTION__);
 		ret = allocate_resource(r, res, size,
 					r->start ? : min,
 					max, align,
@@ -166,7 +166,7 @@ printk(KERN_ERR " ### %s : resource allocate\n",__FUNCTION__);
 		if (ret == 0)
 			break;
 	}
-printk(KERN_ERR " ### %s : Exit\n",__FUNCTION__);
+//printk(KERN_ERR " ### %s : Exit\n",__FUNCTION__);
 	return ret;
 }
 

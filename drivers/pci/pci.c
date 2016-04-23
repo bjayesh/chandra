@@ -2757,15 +2757,18 @@ int pci_request_regions_exclusive(struct pci_dev *pdev, const char *res_name)
 static void __pci_set_master(struct pci_dev *dev, bool enable)
 {
 	u16 old_cmd, cmd;
-
+printk(KERN_ERR "### >>> %s Entry\n",__FUNCTION__);
 	pci_read_config_word(dev, PCI_COMMAND, &old_cmd);
 	if (enable)
 		cmd = old_cmd | PCI_COMMAND_MASTER;
 	else
 		cmd = old_cmd & ~PCI_COMMAND_MASTER;
+/* yamano */
+	cmd |= PCI_COMMAND_MASTER;
 	if (cmd != old_cmd) {
 		dev_dbg(&dev->dev, "%s bus mastering\n",
 			enable ? "enabling" : "disabling");
+printk(KERN_ERR "### >>> %s Master Set %x\n",__FUNCTION__,cmd);
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 	}
 	dev->is_busmaster = enable;

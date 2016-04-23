@@ -216,7 +216,7 @@ static int __pci_assign_resource(struct pci_bus *bus, struct pci_dev *dev,
 		    (max_pfn + 1) << PAGE_SHIFT : PCIBIOS_MIN_MEM;
 	min = (res->flags & IORESOURCE_IO) ? PCIBIOS_MIN_IO : min_iomem;
 #else
-	printk( KERN_ERR " $$$ %s : Entry\n",__FUNCTION__);
+	//printk( KERN_ERR " $$$ %s : Entry\n",__FUNCTION__);
 	min = (res->flags & IORESOURCE_IO) ? PCIBIOS_MIN_IO : PCIBIOS_MIN_MEM;
 #endif
 
@@ -232,7 +232,7 @@ static int __pci_assign_resource(struct pci_bus *bus, struct pci_dev *dev,
 		 * But a prefetching area can handle a non-prefetching
 		 * window (it will just not perform as well).
 		 */
-printk( KERN_ERR " $$$ %s : re-allocating\n",__FUNCTION__);
+//printk( KERN_ERR " $$$ %s : re-allocating\n",__FUNCTION__);
 		ret = pci_bus_alloc_resource(bus, res, size, align, min, 0,
 					     pcibios_align_resource, dev);
 	}
@@ -246,7 +246,7 @@ static int _pci_assign_resource(struct pci_dev *dev, int resno,
 	struct pci_bus *bus;
 	int ret;
 	char *type;
-printk( KERN_ERR " $$$ %s : Entry size %llx align =%llx\n",__FUNCTION__,size,min_align);
+//printk( KERN_ERR " $$$ %s : Entry size %llx align =%llx\n",__FUNCTION__,size,min_align);
 	bus = dev->bus;
 	while ((ret = __pci_assign_resource(bus, dev, resno, size, min_align))) {
 		if (!bus->parent || !bus->self->transparent)
@@ -278,7 +278,7 @@ int pci_assign_resource(struct pci_dev *dev, int resno)
 	resource_size_t align, size;
 	int ret;
 
-printk(KERN_ERR " $$$ %s : resno = %x\n",__FUNCTION__,resno);
+//printk(KERN_ERR " $$$ %s : resno = %x\n",__FUNCTION__,resno);
 	align = pci_resource_alignment(dev, res);
 	if (!align) {
 		dev_info(&dev->dev, "BAR %d: can't assign %pR "
@@ -338,7 +338,7 @@ int pci_enable_resources(struct pci_dev *dev, int mask)
 
 	pci_read_config_word(dev, PCI_COMMAND, &cmd);
 	old_cmd = cmd;
-printk(KERN_ERR "<<<< %s Entry\n",__FUNCTION__);
+//printk(KERN_ERR "<<<< %s Entry\n",__FUNCTION__);
 	for (i = 0; i < PCI_NUM_RESOURCES; i++) {
 		if (!(mask & (1 << i)))
 			continue;
@@ -369,6 +369,6 @@ printk(KERN_ERR ">>>> %s Error Exit\n",__FUNCTION__);
 			 old_cmd, cmd);
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 	}
-printk(KERN_ERR ">>>> %s Exit\n",__FUNCTION__);
+//printk(KERN_ERR ">>>> %s Exit\n",__FUNCTION__);
 	return 0;
 }

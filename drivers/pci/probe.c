@@ -1351,7 +1351,7 @@ static void pci_init_capabilities(struct pci_dev *dev)
 void pci_device_add(struct pci_dev *dev, struct pci_bus *bus)
 {
 	int ret;
-printk(KERN_ERR " $$$$$ %s : Entry\n",__FUNCTION__);
+//printk(KERN_ERR " $$$$$ %s : Entry\n",__FUNCTION__);
 	device_initialize(&dev->dev);
 	dev->dev.release = pci_release_dev;
 
@@ -1392,7 +1392,7 @@ printk(KERN_ERR " $$$$$ %s : Entry\n",__FUNCTION__);
 	WARN_ON(ret < 0);
 
 	pci_proc_attach_device(dev);
-printk(KERN_ERR " $$$$$ %s : Exit\n",__FUNCTION__);
+//printk(KERN_ERR " $$$$$ %s : Exit\n",__FUNCTION__);
 }
 
 struct pci_dev *__ref pci_scan_single_device(struct pci_bus *bus, int devfn)
@@ -1660,7 +1660,7 @@ unsigned int pci_scan_child_bus(struct pci_bus *bus)
 	unsigned int devfn, pass, max = bus->busn_res.start;
 	struct pci_dev *dev;
 
-	dev_dbg(&bus->dev, "scanning bus\n");
+//dev_dbg(&bus->dev, "scanning bus\n");
 
 	/* Go find them, Rover! */
 	for (devfn = 0; devfn < 0x100; devfn += 8)
@@ -1674,7 +1674,7 @@ unsigned int pci_scan_child_bus(struct pci_bus *bus)
 	 * all PCI-to-PCI bridges on this bus.
 	 */
 	if (!bus->is_added) {
-		dev_dbg(&bus->dev, "fixups for bus\n");
+//dev_dbg(&bus->dev, "fixups for bus\n");
 		pcibios_fixup_bus(bus);
 		bus->is_added = 1;
 	}
@@ -1693,7 +1693,7 @@ unsigned int pci_scan_child_bus(struct pci_bus *bus)
 	 *
 	 * Return how far we've got finding sub-buses.
 	 */
-	dev_dbg(&bus->dev, "bus scan returning with max=%02x\n", max);
+//dev_dbg(&bus->dev, "bus scan returning with max=%02x\n", max);
 	return max;
 }
 
@@ -1729,7 +1729,7 @@ struct pci_bus *pci_create_root_bus(struct device *parent, int bus,
 	char bus_addr[64];
 	char *fmt;
 
-dev_dbg(&b2->dev, "%s entry\n",__FUNCTION__);
+//dev_dbg(&b2->dev, "%s entry\n",__FUNCTION__);
 	b = pci_alloc_bus();
 	if (!b)
 		return NULL;
@@ -1812,7 +1812,7 @@ dev_dbg(&b2->dev, "%s entry\n",__FUNCTION__);
 	list_add_tail(&b->node, &pci_root_buses);
 	up_write(&pci_bus_sem);
 
-dev_dbg(&b2->dev, "%s exit\n",__FUNCTION__);
+//dev_dbg(&b2->dev, "%s exit\n",__FUNCTION__);
 	return b;
 
 class_dev_reg_err:
@@ -1833,10 +1833,10 @@ int pci_bus_insert_busn_res(struct pci_bus *b, int bus, int bus_max)
 	res->flags = IORESOURCE_BUS;
 
 	if (!pci_is_root_bus(b)){	/* yamano debug */
-		printk(KERN_ERR "root bus\n");
+//		printk(KERN_ERR "root bus\n");
 		parent_res = &b->parent->busn_res;
 	} else {
-		printk(KERN_ERR "not root bus\n");
+//		printk(KERN_ERR "not root bus\n");
 		parent_res = get_pci_domain_busn_res(pci_domain_nr(b));
 		res->flags |= IORESOURCE_PCI_FIXED;
 	}
@@ -1860,15 +1860,15 @@ int pci_bus_update_busn_res_end(struct pci_bus *b, int bus_max)
 	resource_size_t size;
 	int ret;
 
-printk(KERN_ERR " ## %s : Entry bus=%x bus_max= %x\n",__FUNCTION__,b,bus_max);
+//printk(KERN_ERR " ## %s : Entry bus=%x bus_max= %x\n",__FUNCTION__,b,bus_max);
 
 	if (res->start > bus_max){
-printk(KERN_ERR " ## %s : start %d > bus_max %d \n",__FUNCTION__,res->start,bus_max);
+//printk(KERN_ERR " ## %s : start %d > bus_max %d \n",__FUNCTION__,res->start,bus_max);
 		return -EINVAL;
 	}	/* yamano debug */
-printk( KERN_ERR "res->start =%llx\n",res->start);
-printk( KERN_ERR "res->end =%llx\n",res->end);
-printk( KERN_ERR "res->flags =%x\n",res->flags);
+//printk( KERN_ERR "res->start =%llx\n",res->start);
+//printk( KERN_ERR "res->end =%llx\n",res->end);
+//printk( KERN_ERR "res->flags =%x\n",res->flags);
 
 	size = bus_max - res->start + 1;
 res->start=0;
@@ -1878,7 +1878,7 @@ res->start=0;
 			&old_res, ret ? "can not be" : "is", bus_max);
 
 	if (!ret && !res->parent){
-printk(KERN_ERR " ## %s : instert busn_res\n",__FUNCTION__);
+//printk(KERN_ERR " ## %s : instert busn_res\n",__FUNCTION__);
 
 		pci_bus_insert_busn_res(b, res->start, res->end);
 	}	/* yamano debug */
@@ -1886,7 +1886,7 @@ printk(KERN_ERR " ## %s : instert busn_res\n",__FUNCTION__);
 //printk(KERN_ERR "parent : %x \n",b->parent);
 //printk(KERN_ERR "resource : %x \n",b->resources);
 
-printk(KERN_ERR " ## %s ;Exit bus->resources = %x\n",__FUNCTION__,b->busn_res);
+//printk(KERN_ERR " ## %s ;Exit bus->resources = %x\n",__FUNCTION__,b->busn_res);
 	return ret;
 }
 
@@ -1921,7 +1921,7 @@ struct pci_bus *pci_scan_root_bus(struct device *parent, int bus,
 	b = pci_create_root_bus(parent, bus, ops, sysdata, resources);
 	if (!b)
 		return NULL;
-printk(KERN_ERR " ## %s : root bus = %x\n",__FUNCTION__,b);
+//printk(KERN_ERR " ## %s : root bus = %x\n",__FUNCTION__,b);
 	if (!found) {
 		dev_info(&b->dev,
 		 "No busn resource found for root bus, will use [bus %02x-ff]\n",
@@ -1933,12 +1933,12 @@ printk(KERN_ERR " ## %s : root bus = %x\n",__FUNCTION__,b);
 dev_info(&b->dev,"max=%d \n",max);	/* yamano debug */
 
 	if (!found){
-printk(KERN_ERR " ## %s : pci_bus_update\n",__FUNCTION__);
+//printk(KERN_ERR " ## %s : pci_bus_update\n",__FUNCTION__);
 		pci_bus_update_busn_res_end(b, max);
 	}
 
 	pci_bus_add_devices(b);
-printk(KERN_ERR " ## %s : return bus = %x\n",__FUNCTION__,b);
+//printk(KERN_ERR " ## %s : return bus = %x\n",__FUNCTION__,b);
 	return b;
 }
 EXPORT_SYMBOL(pci_scan_root_bus);

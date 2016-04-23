@@ -145,7 +145,7 @@ DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_WINBOND2, PCI_DEVICE_ID_WINBOND2_89C940F,
 static void pci_fixup_quatro(struct pci_dev *dev)
 {
 	int i;
-printk(KERN_ERR "pci fixup function for quatro\n");
+//printk(KERN_ERR "pci fixup function for quatro\n");
 	if (dev->devfn == 0) {
 //		dev->resource[0].flags = IORESOURCE_MEM;
 //		dev->resource[1].flags = IORESOURCE_IO;
@@ -638,7 +638,7 @@ int pcibios_enable_device(struct pci_dev *dev, int mask)
 	u16 cmd, old_cmd;
 	int idx;
 	struct resource *r;
-printk(KERN_ERR "<<<<< %s Entry\n",__FUNCTION__);
+//printk(KERN_ERR "<<<<< %s Entry\n",__FUNCTION__);
 	pci_read_config_word(dev, PCI_COMMAND, &cmd);
 	old_cmd = cmd;
 	for (idx = 0; idx < 6; idx++) {
@@ -669,7 +669,7 @@ printk(KERN_ERR "<<<<< %s Entry\n",__FUNCTION__);
 		       pci_name(dev), old_cmd, cmd);
 		pci_write_config_word(dev, PCI_COMMAND, cmd);
 	}
-printk(KERN_ERR ">>>>> %s Exit\n",__FUNCTION__);
+//printk(KERN_ERR ">>>>> %s Exit\n",__FUNCTION__);
 	return 0;
 }
 

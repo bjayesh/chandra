@@ -6507,6 +6507,7 @@ printk(KERN_ERR "###>>> %s Entry\n",__FUNCTION__);
 	if (aspm_disable_flag)
 		e1000e_disable_aspm(pdev, aspm_disable_flag);
 
+printk(KERN_ERR "###>>> %s PCI enable\n",__FUNCTION__);
 	err = pci_enable_device_mem(pdev);
 	if (err)
 		return err;
@@ -6539,6 +6540,7 @@ printk(KERN_ERR "###>>> %s Entry\n",__FUNCTION__);
 	/* AER (Advanced Error Reporting) hooks */
 	pci_enable_pcie_error_reporting(pdev);
 
+printk(KERN_ERR "###>>> %s PCI master enable\n",__FUNCTION__);
 	pci_set_master(pdev);
 	/* PCI config space info */
 	err = pci_save_state(pdev);
@@ -6601,12 +6603,14 @@ printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x \n",mmio_start,mmio_len)
 	adapter->bd_number = cards_found++;
 
 	e1000e_check_options(adapter);
+printk(KERN_ERR "____ %s check option\n",__FUNCTION__);
 
 	/* setup adapter struct */
 	err = e1000_sw_init(adapter);
 	if (err)
 		goto err_sw_init;
 
+printk(KERN_ERR "____ %s setup adapter\n",__FUNCTION__);
 	memcpy(&hw->mac.ops, ei->mac_ops, sizeof(hw->mac.ops));
 	memcpy(&hw->nvm.ops, ei->nvm_ops, sizeof(hw->nvm.ops));
 	memcpy(&hw->phy.ops, ei->phy_ops, sizeof(hw->phy.ops));
@@ -6621,7 +6625,7 @@ printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x \n",mmio_start,mmio_len)
 
 	hw->mac.ops.get_bus_info(&adapter->hw);
 
-	adapter->hw.phy.autoneg_wait_to_complete = 0;
+	adapter->hw.phy.autoneg_wait_to_complete = 1;	/* yamano debug 0-> 1*/
 
 	/* Copper options */
 	if (adapter->hw.phy.media_type == e1000_media_type_copper) {
@@ -6630,10 +6634,11 @@ printk(KERN_ERR "pci resource start : 0x%llx len : 0x%x \n",mmio_start,mmio_len)
 		adapter->hw.phy.ms_type = e1000_ms_hw_default;
 	}
 
-	if (hw->phy.ops.check_reset_block && hw->phy.ops.check_reset_block(hw))
+	if (hw->phy.ops.check_reset_block && hw->phy.ops.check_reset_block(hw)){
+printk(KERN_ERR "____ %s PHY reset is blocked\n",__FUNCTION__);
 		dev_info(&pdev->dev,
 			 "PHY reset is blocked due to SOL/IDER session.\n");
-
+}
 	/* Set initial default active device features */
 	netdev->features = (NETIF_F_SG |
 			    NETIF_F_HW_VLAN_CTAG_RX |
