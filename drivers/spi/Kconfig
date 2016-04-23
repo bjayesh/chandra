@@ -529,8 +529,9 @@ config SPI_DW_MMIO
 	depends on SPI_DESIGNWARE && HAVE_CLK
 
 config SPI_XSPI
-	bool "LM2 XSPI SRAM/CPLD Driver"
+	tristate "LM2 XSPI SRAM/CPLD Driver"
 	depends on ARCH_LM2
+	select	SPI_SPIDEV
 	help
 
 #

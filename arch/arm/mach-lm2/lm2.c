@@ -272,13 +272,13 @@ static struct platform_device lm2_wdt_device = {
 
 static	struct resource	lm2_i2c_resource[] = {
 	{
-		.start	= 0x041F0000,
-		.end	= 0x041F00FF,
+		.start	= 0x041F0100,
+		.end	= 0x041F01FF,
 		.flags	= IORESOURCE_MEM,
 	},
 	{
-		.start	= 0x041F0100,
-		.end	= 0x041F01FF,
+		.start	= 0x041F0000,
+		.end	= 0x041F00FF,
 		.flags	= IORESOURCE_MEM,
 	},
 	{
