@@ -322,6 +322,7 @@ static struct resource lm2_pcie_resource[]={
                .end    = 0x04a40fff,
                .flags  = IORESOURCE_MEM,
        },
+#if 0
        {	/* port 2 */
                .start  = 0x04a50000,
                .end    = 0x04a50fff,
@@ -332,6 +333,7 @@ static struct resource lm2_pcie_resource[]={
                .end    = 0x04a60fff,
                .flags  = IORESOURCE_MEM,
        },
+#endif
        {	/* host bridge interrput */
 //               .start  = LM2_IRQ_PCIE_BUS,
 //               .end    = LM2_IRQ_PCIE_BUS,
