@@ -2457,6 +2457,7 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	 * something other than the default (~1ms minimum between interrupts).
 	 * See section 5.5.1.2.
 	 */
+printk("## %s addr_dev init \n");
 	init_completion(&xhci->addr_dev);
 	for (i = 0; i < MAX_HC_SLOTS; ++i)
 		xhci->devs[i] = NULL;
@@ -2480,6 +2481,7 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	temp &= ~DEV_NOTE_MASK;
 	temp |= DEV_NOTE_FWAKE;
 	xhci_writel(xhci, temp, &xhci->op_regs->dev_notification);
+printk("## %s mem init normal exit\n",__FUNCTION__);
 
 	return 0;
 
@@ -2488,5 +2490,6 @@ fail:
 	xhci_halt(xhci);
 	xhci_reset(xhci);
 	xhci_mem_cleanup(xhci);
+printk("## %s mem init error exit\n",__FUNCTION__);
 	return -ENOMEM;
 }

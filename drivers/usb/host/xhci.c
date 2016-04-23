@@ -3360,6 +3360,7 @@ int xhci_discover_or_reset_device(struct usb_hcd *hcd, struct usb_device *udev)
 	struct xhci_slot_ctx *slot_ctx;
 	int old_active_eps = 0;
 
+printk("## %s entry\n",__FUNCTION__);	/* yamano */
 	ret = xhci_check_args(hcd, udev, NULL, 0, false, __func__);
 	if (ret <= 0)
 		return ret;
@@ -3607,21 +3608,26 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	int timeleft;
 	int ret;
 	union xhci_trb *cmd_trb;
-
+printk("## %s entry\n",__FUNCTION__);	/* yamano */
 	spin_lock_irqsave(&xhci->lock, flags);
+//	spin_lock(&xhci->lock);
 	cmd_trb = xhci_find_next_enqueue(xhci->cmd_ring);
 	ret = xhci_queue_slot_control(xhci, TRB_ENABLE_SLOT, 0);
 	if (ret) {
 		spin_unlock_irqrestore(&xhci->lock, flags);
+//		spin_unlock(&xhci->lock);
 		xhci_dbg(xhci, "FIXME: allocate a command ring segment\n");
 		return 0;
 	}
 	xhci_ring_cmd_db(xhci);
 	spin_unlock_irqrestore(&xhci->lock, flags);
+//	spin_unlock(&xhci->lock);
 
+printk("## %s wait completion\n",__FUNCTION__);	/* yamano */
 	/* XXX: how much time for xHC slot assignment? */
 	timeleft = wait_for_completion_interruptible_timeout(&xhci->addr_dev,
 			XHCI_CMD_DEFAULT_TIMEOUT);
+printk("## %s wait exit\n",__FUNCTION__);	/* yamano */
 	if (timeleft <= 0) {
 		xhci_warn(xhci, "%s while waiting for a slot\n",
 				timeleft == 0 ? "Timeout" : "Signal");
@@ -3634,17 +3640,21 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 		return 0;
 	}
 
+printk("## %s completion next step\n",__FUNCTION__);	/* yamano */
 	if ((xhci->quirks & XHCI_EP_LIMIT_QUIRK)) {
 		spin_lock_irqsave(&xhci->lock, flags);
+//		spin_lock(&xhci->lock);
 		ret = xhci_reserve_host_control_ep_resources(xhci);
 		if (ret) {
 			spin_unlock_irqrestore(&xhci->lock, flags);
+//			spin_unlock(&xhci->lock);
 			xhci_warn(xhci, "Not enough host resources, "
 					"active endpoint contexts = %u\n",
 					xhci->num_active_eps);
 			goto disable_slot;
 		}
 		spin_unlock_irqrestore(&xhci->lock, flags);
+//		spin_unlock(&xhci->lock);
 	}
 	/* Use GFP_NOIO, since this function can be called from
 	 * xhci_discover_or_reset_device(), which may be called as part of
@@ -3672,9 +3682,11 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 disable_slot:
 	/* Disable slot, if we can do it without mem alloc */
 	spin_lock_irqsave(&xhci->lock, flags);
+//	spin_lock(&xhci->lock);
 	if (!xhci_queue_slot_control(xhci, TRB_DISABLE_SLOT, udev->slot_id))
 		xhci_ring_cmd_db(xhci);
 	spin_unlock_irqrestore(&xhci->lock, flags);
+//	spin_unlock(&xhci->lock);
 	return 0;
 }
 

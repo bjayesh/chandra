@@ -187,6 +187,7 @@ static void inc_deq(struct xhci_hcd *xhci, struct xhci_ring *ring)
 	} while (last_trb(xhci, ring, ring->deq_seg, ring->dequeue));
 
 	addr = (unsigned long long) xhci_trb_virt_to_dma(ring->deq_seg, ring->dequeue);
+printk("### %s exit addr= %llx\n",__FUNCTION__,addr);
 }
 
 /*
@@ -262,8 +263,10 @@ static void inc_enq(struct xhci_hcd *xhci, struct xhci_ring *ring,
 		ring->enq_seg = ring->enq_seg->next;
 		ring->enqueue = ring->enq_seg->trbs;
 		next = ring->enqueue;
+		wmb();	/* yamano debug */
 	}
 	addr = (unsigned long long) xhci_trb_virt_to_dma(ring->enq_seg, ring->enqueue);
+printk("### %s exit addr= %llx\n",__FUNCTION__,addr);
 }
 
 /*
@@ -1375,7 +1378,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 	unsigned int ep_index;
 	struct xhci_ring *ep_ring;
 	unsigned int ep_state;
-
+printk("### %s entry \n",__FUNCTION__);
 	cmd_dma = le64_to_cpu(event->cmd_trb);
 	cmd_dequeue_dma = xhci_trb_virt_to_dma(xhci->cmd_ring->deq_seg,
 			xhci->cmd_ring->dequeue);
@@ -1418,6 +1421,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 			xhci->slot_id = slot_id;
 		else
 			xhci->slot_id = 0;
+printk("### %s TRB_ENABLE_SLOT\n",__FUNCTION__);	/* yamano */
 		complete(&xhci->addr_dev);
 		break;
 	case TRB_TYPE(TRB_DISABLE_SLOT):
@@ -1528,7 +1532,7 @@ static void handle_vendor_event(struct xhci_hcd *xhci,
 		union xhci_trb *event)
 {
 	u32 trb_type;
-
+printk("### %s \n",__FUNCTION__);
 	trb_type = TRB_FIELD_TO_TYPE(le32_to_cpu(event->generic.field[3]));
 	xhci_dbg(xhci, "Vendor specific event TRB type = %u\n", trb_type);
 	if (trb_type == TRB_NEC_CMD_COMP && (xhci->quirks & XHCI_NEC_HOST))
@@ -2678,8 +2682,11 @@ static int xhci_handle_event(struct xhci_hcd *xhci)
 	int update_ptrs = 1;
 	int ret;
 
+	rmb();	/* yamano debug */
+printk("### %s \n",__FUNCTION__);
 	if (!xhci->event_ring || !xhci->event_ring->dequeue) {
 		xhci->error_bitmask |= 1 << 1;
+printk("### %s sanity check error\n",__FUNCTION__);
 		return 0;
 	}
 
@@ -2688,6 +2695,7 @@ static int xhci_handle_event(struct xhci_hcd *xhci)
 	if ((le32_to_cpu(event->event_cmd.flags) & TRB_CYCLE) !=
 	    xhci->event_ring->cycle_state) {
 		xhci->error_bitmask |= 1 << 2;
+printk("### %s myself trb\n",__FUNCTION__);
 		return 0;
 	}
 
@@ -2695,17 +2703,21 @@ static int xhci_handle_event(struct xhci_hcd *xhci)
 	 * Barrier between reading the TRB_CYCLE (valid) flag above and any
 	 * speculative reads of the event's flags/data below.
 	 */
-	rmb();
+	rmb();	/* yamano debug */
+//	smp_rmb();	/* yamano debug */
 	/* FIXME: Handle more event types. */
 	switch ((le32_to_cpu(event->event_cmd.flags) & TRB_TYPE_BITMASK)) {
 	case TRB_TYPE(TRB_COMPLETION):
+printk("### %s TRB_COMPLETE\n",__FUNCTION__,update_ptrs);
 		handle_cmd_completion(xhci, &event->event_cmd);
 		break;
 	case TRB_TYPE(TRB_PORT_STATUS):
+printk("### %s TRB_PORT_STATUS\n",__FUNCTION__,update_ptrs);
 		handle_port_status(xhci, event);
 		update_ptrs = 0;
 		break;
 	case TRB_TYPE(TRB_TRANSFER):
+printk("### %s TRB_TRANSFER\n",__FUNCTION__,update_ptrs);
 		ret = handle_tx_event(xhci, &event->trans_event);
 		if (ret < 0)
 			xhci->error_bitmask |= 1 << 9;
@@ -2713,9 +2725,11 @@ static int xhci_handle_event(struct xhci_hcd *xhci)
 			update_ptrs = 0;
 		break;
 	case TRB_TYPE(TRB_DEV_NOTE):
+printk("### %s TRB_TRB_DEV_NOTE\n",__FUNCTION__,update_ptrs);
 		handle_device_notification(xhci, event);
 		break;
 	default:
+printk("### %s TRB_DEFAULT\n",__FUNCTION__,update_ptrs);
 		if ((le32_to_cpu(event->event_cmd.flags) & TRB_TYPE_BITMASK) >=
 		    TRB_TYPE(48))
 			handle_vendor_event(xhci, event);
@@ -2731,6 +2745,7 @@ static int xhci_handle_event(struct xhci_hcd *xhci)
 		return 0;
 	}
 
+printk("### %s update_ptrs = %x\n",__FUNCTION__,update_ptrs);
 	if (update_ptrs)
 		/* Update SW event ring dequeue pointer */
 		inc_deq(xhci, xhci->event_ring);
@@ -2753,22 +2768,29 @@ irqreturn_t xhci_irq(struct usb_hcd *hcd)
 	u64 temp_64;
 	union xhci_trb *event_ring_deq;
 	dma_addr_t deq;
+	ulong	flags;
 
-	spin_lock(&xhci->lock);
+printk("#######xHCI Ireq\n");	/* yamano debug */
+//	spin_lock(&xhci->lock);
+	spin_lock_irqsave(&xhci->lock,flags);
 	/* Check if the xHC generated the interrupt, or the irq is shared */
 	status = xhci_readl(xhci, &xhci->op_regs->status);
 	if (status == 0xffffffff)
 		goto hw_died;
 
 	if (!(status & STS_EINT)) {
-		spin_unlock(&xhci->lock);
+//		spin_unlock(&xhci->lock);
+		spin_unlock_irqrestore(&xhci->lock, flags);
+printk("#######xHCI Not Ireq!!!\n");	/* yamano debug */
 		return IRQ_NONE;
 	}
 	if (status & STS_FATAL) {
 		xhci_warn(xhci, "WARNING: Host System Error\n");
 		xhci_halt(xhci);
 hw_died:
-		spin_unlock(&xhci->lock);
+//		spin_unlock(&xhci->lock);
+		spin_unlock_irqrestore(&xhci->lock, flags);
+printk("#######xHCI System Down\n");	/* yamano debug */
 		return -ESHUTDOWN;
 	}
 
@@ -2799,17 +2821,23 @@ hw_died:
 		temp_64 = xhci_read_64(xhci, &xhci->ir_set->erst_dequeue);
 		xhci_write_64(xhci, temp_64 | ERST_EHB,
 				&xhci->ir_set->erst_dequeue);
-		spin_unlock(&xhci->lock);
+//		spin_unlock(&xhci->lock);
+		spin_unlock_irqrestore(&xhci->lock, flags);
+printk("#######xHCI Ireq Device Dying!!!!\n");
 
 		return IRQ_HANDLED;
 	}
 
+printk("#######xHCI Ireq execute cmd\n");
+//	spin_lock(&xhci->lock);
 	event_ring_deq = xhci->event_ring->dequeue;
 	/* FIXME this should be a delayed service routine
 	 * that clears the EHB.
 	 */
 	while (xhci_handle_event(xhci) > 0) {}
+//	spin_unlock(&xhci->lock);
 
+printk("#######xHCI Ireq finish execute cmd\n");
 	temp_64 = xhci_read_64(xhci, &xhci->ir_set->erst_dequeue);
 	/* If necessary, update the HW's version of the event ring deq ptr. */
 	if (event_ring_deq != xhci->event_ring->dequeue) {
@@ -2827,7 +2855,8 @@ hw_died:
 	temp_64 |= ERST_EHB;
 	xhci_write_64(xhci, temp_64, &xhci->ir_set->erst_dequeue);
 
-	spin_unlock(&xhci->lock);
+//	spin_unlock(&xhci->lock);
+	spin_unlock_irqrestore(&xhci->lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -2851,7 +2880,7 @@ static void queue_trb(struct xhci_hcd *xhci, struct xhci_ring *ring,
 		u32 field1, u32 field2, u32 field3, u32 field4)
 {
 	struct xhci_generic_trb *trb;
-
+printk("##### %s \n",__FUNCTION__);
 	trb = &ring->enqueue->generic;
 	trb->field[0] = cpu_to_le32(field1);
 	trb->field[1] = cpu_to_le32(field2);
@@ -4012,6 +4041,7 @@ static int queue_set_tr_deq(struct xhci_hcd *xhci, int slot_id,
 	u32 type = TRB_TYPE(TRB_SET_DEQ);
 	struct xhci_virt_ep *ep;
 
+printk("### %s dequeue \n",__FUNCTION__);	/* yamano */
 	addr = xhci_trb_virt_to_dma(deq_seg, deq_ptr);
 	if (addr == 0) {
 		xhci_warn(xhci, "WARN Cannot submit Set TR Deq Ptr\n");

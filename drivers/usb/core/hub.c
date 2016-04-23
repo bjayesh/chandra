@@ -1347,6 +1347,7 @@ static int hub_configure(struct usb_hub *hub,
 	 * hub->descriptor can handle USB_MAXCHILDREN ports,
 	 * but the hub can/will return fewer bytes here.
 	 */
+printk("### %s get hub\n",__FUNCTION__);
 	ret = get_hub_descriptor(hdev, hub->descriptor);
 	if (ret < 0) {
 		message = "can't read hub descriptor";
@@ -1371,6 +1372,7 @@ static int hub_configure(struct usb_hub *hub,
 		ret = -ENOMEM;
 		goto fail;
 	}
+printk("### %s get hub success\n",__FUNCTION__);
 
 	wHubCharacteristics = le16_to_cpu(hub->descriptor->wHubCharacteristics);
 	if (hub_is_superspeed(hdev)) {
