@@ -1,0 +1,6 @@
+if PLAT_WAIKIKI
+
+config PLAT_VERSATILE_SCHED_CLOCK
+	def_bool y
+
+endif
