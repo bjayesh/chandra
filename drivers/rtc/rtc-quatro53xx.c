@@ -179,7 +179,7 @@ static	int	lm2_set_time(struct device *dev, struct rtc_time *tm)
 	struct lm2_rtc	*rtc = dev_get_drvdata(dev);
 	u32	current_sec;
 	int	result;
-	u32	reg;
+//	u32	reg;
 
 //	printk( KERN_WARNING "RTC set date and time\n");
 	result = rtc_tm_to_time(tm, &current_sec);
@@ -252,22 +252,23 @@ static	int	lm2_get_time(struct device *dev, struct rtc_time *tm)
 
 	return	0;
 }
+#if 0
 static	irqreturn_t	lm2_timer_irq_handler(int irq, void *ptr)
 {
 	struct	lm2_rtc	*rtc = ptr;
-	unsigned int	currect;
+	unsigned int	current_sec;
 
-	current = readl(rtc->rtc_base+ RTCCNT);
+	current_sec = (unsigned int)readl(rtc->rtc_base+ RTCCNT);
 
 	if(rtc->alm_en){
-		if(current >= rtc->alm_sec ){
+		if(current_sec >= rtc->alm_sec ){
 			rtc_update_irq(rtc->rtc, 1, RTC_AF | RTC_IRQF);
 		}
 	}
 
 	return	IRQ_HANDLED;
 }
-
+#endif
 static	int	lm2_read_alarm(struct device *dev, struct rtc_wkalrm *alm)
 {
 	struct lm2_rtc *rtc = dev_get_drvdata(dev);
@@ -334,7 +335,7 @@ void lm2_timer_do_work(struct work_struct *work)
 	result = rtc_busy(rtc->rtc_base);
 	if(result != 0){
 		printk(KERN_ERR "No responce Watch Dog Timer\n");
-		return	-1;
+		return;
 	}
 	
 	current_sec = readl(rtc->rtc_base + RTCCNT);
@@ -355,7 +356,7 @@ static	int	lm2_voltage_status(struct device *dev, unsigned long value, int flag)
 {
 	struct lm2_rtc	*rtc = dev_get_drvdata(dev);
 	char	result;
-	void __user *uarg = (void __user *) value;
+//	void __user *uarg = (void __user *) value;
 	unsigned int	reg;
 
 	mutex_lock(&rtc->lock);
@@ -416,9 +417,9 @@ static int __init lm2_rtc_probe(struct platform_device *pdev)
 {
 	struct lm2_rtc	*dev;
 	struct resource	*mem;
-	struct resource *irq;
-	u32	val;
-	u8	reg;
+//	struct resource *irq;
+//	u32	val;
+//	u8	reg;
 	
 //	dev_info(&pdev->dev,"# %s # RTC Driver Probing\n",__func__);
 

@@ -676,7 +676,7 @@ static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
 				  unsigned long end, unsigned long pfn,
 				  const struct mem_type *type)
 {
-	char buf[128];
+//	char buf[128];	/* yamano debug */
 	pte_t *pte = early_pte_alloc(pmd, addr, type->prot_l1);
 	do {
 		set_pte_ext(pte, pfn_pte(pfn, __pgprot(type->prot_pte)), 0);
@@ -715,7 +715,7 @@ static void __init alloc_init_pmd(pud_t *pud, unsigned long addr,
 				      unsigned long end, phys_addr_t phys,
 				      const struct mem_type *type)
 {
-	char	buf[128];
+//	char	buf[128];	/* yamano debug */
 	pmd_t *pmd = pmd_offset(pud, addr);
 	unsigned long next;
 	do {
@@ -831,7 +831,7 @@ static void __init create_mapping(struct map_desc *md)
 	phys_addr_t phys;
 	const struct mem_type *type;
 	pgd_t *pgd;
-	char	buf[128];	/* yamano */
+//	char	buf[128];	/* yamano */
 
 	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) {
 		printk(KERN_WARNING "BUG: not creating mapping for 0x%08llx"
@@ -1058,7 +1058,7 @@ void __init sanity_check_meminfo(void)
 {
 	int i, j, highmem = 0;
 	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;
-	char	buf[256];	/* yamano debug */
+//	char	buf[256];	/* yamano debug */
 //putstr(UART_BASE, "sanity\n");
 //sprintf(buf, "%llx vmlimit\n", vmalloc_limit);
 //putstr(UART_BASE, buf);
@@ -1173,7 +1173,7 @@ static inline void prepare_page_table(void)
 {
 	unsigned long addr;
 	phys_addr_t end;
-	char	buf[64];
+//	char	buf[64];	/* yamano debug */
 
 	/*
 	 * Clear out all the mappings below the kernel image.
@@ -1242,7 +1242,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 {
 	struct map_desc map;
 	unsigned long addr;
-	phys_addr_t	paddr;
+//	phys_addr_t	paddr;
 	void *vectors;
 	char	buf[128];
 
@@ -1361,7 +1361,7 @@ static void __init kmap_init(void)
 static void __init map_lowmem(void)
 {
 	struct memblock_region *reg;
-	char	buf[128];
+	//char	buf[128];	/* yamano debug */
 
 	/* Map all the lowmem memory banks. */
 	for_each_memblock(memory, reg) {
@@ -1390,27 +1390,27 @@ static void __init map_lowmem(void)
 void __init paging_init(struct machine_desc *mdesc)
 {
 	void *zero_page;
-	char	buf[64];
-	int c;
+//	char	buf[64];
+//	int c;
 
-putstr(UART_BASE,"paging_init\n");
+//putstr(UART_BASE,"paging_init\n");
 	memblock_set_current_limit(arm_lowmem_limit);
-putstr(UART_BASE,"memblock_set_current_limit\n");
+//putstr(UART_BASE,"memblock_set_current_limit\n");
 	build_mem_type_table();
-putstr(UART_BASE,"build_mem_type_table\n");
+//putstr(UART_BASE,"build_mem_type_table\n");
 	prepare_page_table();
-putstr(UART_BASE,"prepare_page_table\n");
+//putstr(UART_BASE,"prepare_page_table\n");
 	map_lowmem();
-putstr(UART_BASE,"map_lowmem\n");
+//putstr(UART_BASE,"map_lowmem\n");
 	dma_contiguous_remap();
-putstr(UART_BASE,"dma_contiguous_remap\n");
+//putstr(UART_BASE,"dma_contiguous_remap\n");
 	devicemaps_init(mdesc);	/* reset debug I/O map yamano befor used UART_BASE2 */
 	yamadebug = 1;
-putstr(UART_BASE2,"devicemaps_init\n");
+//putstr(UART_BASE2,"devicemaps_init\n");
 	kmap_init();
-putstr(UART_BASE2,"kmap_init\n");
+//putstr(UART_BASE2,"kmap_init\n");
 	tcm_init();
-putstr(UART_BASE2,"tcm_init\n");
+//putstr(UART_BASE2,"tcm_init\n");
 	top_pmd = pmd_off_k(0xffff0000);
 //putstr(UART_BASE2,"top_off_k\n");
 

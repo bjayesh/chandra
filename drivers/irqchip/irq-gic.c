@@ -261,9 +261,12 @@ static int gic_retrigger(struct irq_data *d)
 static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 			    bool force)
 {
+	unsigned int cpu;
+#ifndef CONFIG_ARCH_LM2 /* Linux IRQ Only */
 	void __iomem *reg = gic_dist_base(d) + GIC_DIST_TARGET + (gic_irq(d) & ~3);
-	unsigned int cpu, shift = (gic_irq(d) % 4) * 8;
+	unsigned int shift = (gic_irq(d) % 4) * 8;
 	u32 val, mask, bit;
+#endif
 
 	if (!force)
 		cpu = cpumask_any_and(mask_val, cpu_online_mask);
@@ -421,9 +424,11 @@ static u8 gic_get_cpumask(struct gic_chip_data *gic)
 
 static void __init gic_dist_init(struct gic_chip_data *gic)
 {
+#ifndef	CONFIG_ARCH_LM2
 	unsigned int i;
 	u32 cpumask;
 	unsigned int gic_irqs = gic->gic_irqs;
+#endif
 	void __iomem *base = gic_data_dist_base(gic);
 
 	writel_relaxed(0, base + GIC_DIST_CTRL);

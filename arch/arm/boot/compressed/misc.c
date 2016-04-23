@@ -109,7 +109,7 @@ unsigned long free_mem_end_ptr;
 #ifndef arch_error
 #define arch_error(x)
 #endif
-
+#if 0
 static void	num_to_string(unsigned int data)
 {
 	int i,j;
@@ -124,7 +124,7 @@ static void	num_to_string(unsigned int data)
 	}
 	flush();
 }
-
+#endif
 void error(char *x)
 {
 	arch_error(x);

@@ -436,7 +436,7 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 void __init bootmem_init(void)
 {
 	unsigned long min, max_low, max_high;
-	char	buf[128];
+//	char	buf[128];	/* yamano debug */
 
 	max_low = max_high = 0;
 

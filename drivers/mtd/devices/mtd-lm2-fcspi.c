@@ -278,7 +278,7 @@ static int fcspi_write_work(struct fcspi_message *msg)
 	struct device *dev = &ctl->pdev->dev;
 	dma_addr_t tx_dma;
 	unsigned long	tx_dma_36;
-	int	i;	/* yamano */
+//	int	i;	/* yamano */
 
 #ifdef DEBUG_FCSPI_WRITE
 	printk("%s: to %llx len %d buf %p\n", __func__, 

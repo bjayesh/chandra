@@ -416,6 +416,7 @@ static int gpdma_mmap(struct file* filp, struct vm_area_struct* vma)
 	return ret;
 }
 
+#ifndef	CONFIG_UIO_DMEM_GENIRQ
 static irqreturn_t quatro_gpdma_interrupt(int irq, void *dev_id)
 {
 	struct gpdma_quatro *dma = (struct gpdma_quatro *)dev_id; 
@@ -444,7 +445,7 @@ static irqreturn_t quatro_gpdma_interrupt(int irq, void *dev_id)
 	ret = IRQ_HANDLED;
 	return ret;
 }
-
+#endif
 static struct file_operations quatro_gpdma_ops = {
 	.owner		= THIS_MODULE,
 	.open		= gpdma_open,

@@ -45,7 +45,7 @@
 #define	WDTBND		0x090
 
 //                              300*1000*1000	/* 300MHz supply clock */
-#define	DEFAULT_TIMEOUT_10s	300*1000*1000 *10	/* 32KHz from RTCCLK2 */
+#define	DEFAULT_TIMEOUT_10s	(unsigned long)(300*1000*1000 *10)	/* 32KHz from RTCCLK2 */
 #define WDT_MAX_TIMER	(DEFAULT_TIMEOUT_10s -10)
 #define	WDT_MIN_TIMER	0x00000002
 
@@ -115,7 +115,7 @@ DEFINE_TIMER(lm2_reload,lm2_reload_timer_handler,0,0);
 
 static	void	lm2_reload_timer_handler(unsigned long data)
 {
-	unsigned long j = jiffies;
+//	unsigned long j = jiffies;
 
 #ifdef	DEBUG_LM2_WDT_RELOAD
 	printk( KERN_WARNING "Reload timer handler\n");
@@ -132,7 +132,7 @@ static	void	lm2_reload_timer_handler(unsigned long data)
 	}
 	return;
 }
-
+#if 0
 static	void	dump_wdreg(struct lm2_wdt_dev *wdev,int loc)
 {
 	printk(KERN_WARNING "\n<<Watch Dog Timer Reg Dump at %d\n",loc);
@@ -144,13 +144,13 @@ static	void	dump_wdreg(struct lm2_wdt_dev *wdev,int loc)
 		   *(unsigned int *)(wdev->reg_base + WDTLD));
 	printk(KERN_WARNING "WDTBND  = %xH>>\n\n",*(unsigned int *)(wdev->reg_base + WDTBND));
 }
-
+#endif
 static int lm2_wdt_start(struct watchdog_device *wdog)
 {
 
 	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
 	int		val;
-	unsigned long flags = 0;
+//	unsigned long flags = 0;
 
 #ifdef	DEBUG_LM2_WDT_TRACE
 	printk(KERN_WARNING "Watch Dog Timer Start Set=%d\n",wdog->timeout);
@@ -203,7 +203,7 @@ static int lm2_wdt_start(struct watchdog_device *wdog)
 static int lm2_wdt_ping(struct watchdog_device *wdog)
 {
 	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
-	u32	val;
+//	u32	val;
 
 #ifdef	DEBUG_LM2_WDT_TRACE
 	printk(KERN_WARNING "%s call\n",__FUNCTION__);
@@ -244,7 +244,7 @@ static int lm2_wdt_stop(struct watchdog_device *wdog)
 static int lm2_wdt_set_timeout(struct watchdog_device *wdog,
 				unsigned int timeout)
 {
-	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
+//	struct lm2_wdt_dev *wdev = watchdog_get_drvdata(wdog);
 
 	printk(KERN_WARNING "Watch Dog Timer Out: %d\n",timeout);
 	wdog->timeout = timeout;

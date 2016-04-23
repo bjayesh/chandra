@@ -24,8 +24,8 @@
 
 extern	void	lm2_secondary_startup(void);
 static	void	__iomem *misc_base;
-extern	void	waikiki_boot_secondary(void);
-extern	void	waikiki_secondary_init(unsigned int cpus);
+extern	int	waikiki_boot_secondary(void);
+extern	int	waikiki_secondary_init(unsigned int cpus);
 extern	void	waikiki_cpu_die(unsigned int cpu);
 
 #if defined(CONFIG_OF)
@@ -33,7 +33,7 @@ extern	void	waikiki_cpu_die(unsigned int cpu);
 void __init lm2_dt_smp_map_io(void)
 {
 }
-
+#if 0
 static int __init lm2_dt_cpus_num(unsigned long node, const char *uname,
 		int depth, void *data)
 {
@@ -62,6 +62,7 @@ static int __init lm2_dt_cpus_num(unsigned long node, const char *uname,
 static void __init lm2_dt_smp_prepare_cpus(unsigned int max_cpus)
 {
 }
+#endif
 #else
 
 static void __init lm2_dt_smp_init_cpus(void)
@@ -80,12 +81,13 @@ void __init lm2_dt_smp_prepare_cpus(unsigned int max_cpus)
  */
 void __init lm2_smp_init_cpus(void)
 {
-	int	i,ncore;
 #ifdef	CONFIG_ARCH_LM2_DT
 /*
 	lm2_dt_smp_init_cpus();
 */
 #else
+	int	i,ncore;
+
 	ncore = LM2_A15_CPUS;
 	if(ncore > nr_cpu_ids)	/* Kernel config check */
 		ncore = nr_cpu_ids;
@@ -101,7 +103,7 @@ void __init lm2_smp_init_cpus(void)
 
 void __init lm2_smp_prepare_cpus(unsigned int max_cpus)
 {
-	void __iomem		*cpu1_addr;
+//	void __iomem		*cpu1_addr;
 	unsigned long long	adr;
 	/*
 	 * Initialise the present map, which describes the set of CPUs

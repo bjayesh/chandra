@@ -462,7 +462,7 @@ static const char *dwc3_gadget_ep_cmd_string(u8 cmd)
 		return "UNKNOWN command";
 	}
 }
-
+#if 0
 static const char *dwc3_gadget_generic_cmd_string(u8 cmd)
 {
 	switch (cmd) {
@@ -488,7 +488,7 @@ static const char *dwc3_gadget_generic_cmd_string(u8 cmd)
 		return "UNKNOWN";
 	}
 }
-
+#endif
 static const char *dwc3_gadget_link_string(enum dwc3_link_state link_state)
 {
 	switch (link_state) {
@@ -2971,7 +2971,7 @@ static void dwc3_gadget_hibernation_interrupt(struct dwc3 *dwc,
 		unsigned int evtinfo)
 {
 	unsigned int is_ss = evtinfo & BIT(4);
-	enum dwc3_link_state	next = evtinfo & DWC3_LINK_STATE_MASK;
+//	enum dwc3_link_state	next = evtinfo & DWC3_LINK_STATE_MASK;
 
 //printk(KERN_ERR "%s next = %d is_ss = %d\n",__FUNCTION__,next,is_ss);
 	/**
@@ -3123,7 +3123,7 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 static irqreturn_t dwc3_thread_interrupt(int irq, void *_dwc)
 {
 	struct dwc3 *dwc = _dwc;
-	unsigned long flags;
+//	unsigned long flags;
 	irqreturn_t ret = IRQ_NONE;
 	int i;
 
@@ -3168,7 +3168,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	struct dwc3	*dwc = _dwc;
 	int		i;
 	irqreturn_t	ret = IRQ_NONE;
-	unsigned long	flags;
+//	unsigned long	flags;
 
 #if 1
 //	spin_lock_irqsave(&dwc->lock,flags);
@@ -3248,7 +3248,7 @@ static void phy_override(void)
 int dwc3_gadget_init(struct dwc3 *dwc)
 {
 	int					ret;
-	volatile u8	__iomem	*reg;
+//	volatile u8	__iomem	*reg;
 
 #if WORKAROUDN_55XXA0_DP_ISSUE
 	/* 55XX A0 D+ workaround */

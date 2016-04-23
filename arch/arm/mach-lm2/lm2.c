@@ -59,7 +59,7 @@ extern void    lm2_cipui_tim_init(void);
 #ifdef	CONFIG_LM2_GPDMA
 extern	lm2_dma_register(void);
 #endif	/* CONFIG_LM2_GPDMA */
-
+#if 0
 static	void	lm2_putchar(unsigned long base, char c)
 {
 #if 0
@@ -91,7 +91,7 @@ void	lm2_printk(unsigned long base, const char *ptr)
 	lm2_flush(base);
 #endif
 }
-
+#endif
 /*
  * Static I/O map
  * serial ,GIC, timer, ethernet, SPI etc.
@@ -148,7 +148,7 @@ const unsigned int lm2_use_irq_size = sizeof(lm2_use_irq);
  */
 static void __init lm2_timer_init(void)
 {
-	char	buf[128];
+//	char	buf[128];
 	void	__iomem	*clksrc_timer;
 	void	__iomem	*clkevt_timer;
 
@@ -194,12 +194,15 @@ static struct platform_device lm2_serial_device = {
 };
 
 #ifdef	CONFIG_SERIAL_8250_CONSOLE
+#if 0
 static int	__init lm2_console_init(void)
 {
 #if 0
 	return add_preferred_console("ttyS",0,"38400");
 #endif
+	return	0;
 }
+#endif
 #endif	/* CONFIG_SERIAL_8250_CONSOLE */
 
 /*
@@ -386,12 +389,12 @@ static void __init lm2_init_early(void)
 {
 //	lm2_printk(0xfc000000,"lm2_init_early\n");
 }
-
+#if 0
 static void lm2_power_off(void)
 {
 	printk(KERN_EMERG "Unable to shutdown\n");
 }
-
+#endif
 static void lm2_restart(char str, const char *cmd)
 {
 	printk(KERN_EMERG "Unable to reboot\n");
@@ -410,7 +413,7 @@ static void __init lm2_map_io(void)
  */
 static void __init lm2_init_irq(void)
 {
-	char	buf[128];
+//	char	buf[128];
 	void __iomem	*virt_dist;
 	void __iomem	*virt_cpui;
 
@@ -535,6 +538,7 @@ static void __init lm2_dt_init_irq(void)
 /*
  * Kernel timer initialize routine by DTB
  */
+#if 0
 static void __init lm2_dt_timer_init(void)
 {
 	struct device_node *node;
@@ -555,7 +559,7 @@ static void __init lm2_dt_timer_init(void)
 //	clocksource_register_hz(&clocksource,LM2_TIMER_HZ);
 //	clocksource_register_hz(&clocksource,LM2_TIM32_CLK);
 }
-
+#endif
 /*
  * init_machine by DTB
  */

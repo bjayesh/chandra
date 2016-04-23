@@ -113,7 +113,7 @@ static void lm2_event_resume(struct clock_event_device *clk_event_dev)
 void	lm2_clocksource_init(__iomem void *gpt_base)
 {
 	u32	tick_rate;
-	u32	val;
+//	u32	val;
 	int	result;
 
 	/* secured memory I/O base */
@@ -211,7 +211,7 @@ static int clockevent_next_event(unsigned long cycles,
 /*
  * Interrupt handler by general timer
  */
-static	u32	int_cnt=0;
+//static	u32	int_cnt=0;
 
 static irqreturn_t lm2_timer_interrupt(int irq, void *dev_id)
 {

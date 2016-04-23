@@ -509,7 +509,7 @@ asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];
-	char	buf[128];
+//	char	buf[128];
 	/*
 	 * Need to run as early as possible, to initialize the
 	 * lockdep hash:

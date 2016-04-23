@@ -30,6 +30,7 @@
  * resource 1 : USB Host
  * resource 2 : USB Device
  */
+#if 0
 static	struct resource lm2_usbh_phy_resource[] ={
 	{
 		.start	= LM2_USB2_PHY,
@@ -37,14 +38,16 @@ static	struct resource lm2_usbh_phy_resource[] ={
 		.flags	= IORESOURCE_MEM,
 	},
 };
-
+#endif
+#if 0
 static	struct platform_device lm2_usbh_phy_device = {
 	.name	= "usb-phy",
 	.id	= -1,
 	.num_resources	= ARRAY_SIZE(lm2_usbh_phy_resource),
 	.resource	= lm2_usbh_phy_resource,
 };
-
+#endif
+#if 0
 static	struct resource lm2_usbd_phy_resource[] ={
 	{
 		.start	= LM2_USB3_PHY,
@@ -52,14 +55,15 @@ static	struct resource lm2_usbd_phy_resource[] ={
 		.flags	= IORESOURCE_MEM,
 	},
 };
-
+#endif
+#if 0
 static	struct platform_device lm2_usbd_phy_device = {
 	.name	= "usb-phy",
 	.id	= -1,
 	.num_resources	= ARRAY_SIZE(lm2_usbd_phy_resource),
 	.resource	= lm2_usbd_phy_resource,
 };
-
+#endif
 
 static	struct resource	lm2_usbh_resource[] = {
 	{

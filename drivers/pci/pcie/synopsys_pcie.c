@@ -265,7 +265,7 @@ static int synopsys_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where, int 
 	else
 		*val = synopsys_readl(pcieconf_base);
 //	dev_err(pp->dev, " 0x%8.8lx : 0x%8.8lx\n", pcieconf_base, val);
-out:
+//out:
 	if(debugFlag == 1){
 //		dev_err(pp->dev, "root read access %x : %x\n",where, *val);
 		if(where == 8)
@@ -322,7 +322,7 @@ static int synopsys_pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 		synopsys_writew(pcieconf_base, val);
 	else
 		synopsys_writel(pcieconf_base, val);
-out:
+//out:
 #ifdef	DEBUG_TRACE1
 //	dev_err(pp->dev, "%s exit\n",__FUNCTION__);
 #endif
@@ -639,7 +639,7 @@ static void synopsys_pcie_deassert_gpex_reset(struct pcie_port *pp, int which, i
 			break;
 	}
 }
-
+#if 0
 static void synopsys_pcie_gpexd_core_clk_ratio(struct pcie_port *pp, int which)
 {
 	u32 regVal=0;
@@ -676,7 +676,7 @@ static void synopsys_pcie_gpexd_core_clk_ratio(struct pcie_port *pp, int which)
 			break;
 	}
 }
-
+#endif
 static void synopsys_pcie_AxiToPexInit(struct pcie_port *pp, int which)
 {
 	void __iomem *pciegen3_base1 = pp->pciegen3_base1;
@@ -738,8 +738,8 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 //	u32 regVal=0;
 //	void __iomem *pciewrap_base  = pp->pciewrap_base;
 	void __iomem *pciegen3_base1 = pp->pciegen3_base1;
-	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
-	void __iomem *pciegen3_base3 = pp->pciegen3_base3;
+//	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
+//	void __iomem *pciegen3_base3 = pp->pciegen3_base3;
 	unsigned long	kernel_addr = 0x05000000;
 	unsigned long	in_size = 0x0ffffc00;	/* 255MB */
 	unsigned long	pex_addr = 0x05000000;
@@ -873,7 +873,7 @@ static void synopsys_pcie_PexToAxiInitRc(struct pcie_port *pp, int which)
 	break;
 	}
 }
-
+#if 0
 static void synopsys_pcie_PexToAxiInitEp(struct pcie_port *pp, int which)
 {
 //	u32 regVal=0;
@@ -907,7 +907,7 @@ static void synopsys_pcie_PexToAxiInitEp(struct pcie_port *pp, int which)
       		break;
 	}
 }
-
+#endif
 
 
 static int synopsys_pcie_establish_link(struct pcie_port *pp)
@@ -916,7 +916,7 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 //	int count = 0;
 	void __iomem *pciewrap_base  = pp->pciewrap_base;
 	void __iomem *pciegen3_base1 = pp->pciegen3_base1;
-	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
+//	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
 //	void __iomem *pciegen3_base3 = pp->pciegen3_base3;
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_establish_link: Start(rc_num=%d ep_num=%d nu_num=%d)\n",rc_num,ep_num,nu_num);
@@ -1009,7 +1009,7 @@ static int synopsys_pcie_establish_link(struct pcie_port *pp)
 //	}
 //	
 //	dev_info(pp->dev, "Link up\n");
-out:
+//out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_establish_link: End\n");
 #endif
@@ -1025,7 +1025,7 @@ static void exynos_pcie_clear_irq_pulse(struct pcie_port *pp)
 //	synopsys_writel(resetgen_base + PCIE1_INT_CLR, PCIE3_INT_CLR__PERST_N_PIN__MASK | PCIE3_INT_CLR__GDA_PAB__MASK);
 	return;
 }
-
+#if 0
 static void synopsys_pcie_enable_irq_pulse(struct pcie_port *pp)
 {
 //	u32 val;
@@ -1037,7 +1037,7 @@ static void synopsys_pcie_enable_irq_pulse(struct pcie_port *pp)
 //	synopsys_writel(resetgen_base + PCIE3_INT_EN, PCIE3_INT_EN__PERST_N_PIN__MASK | PCIE3_INT_EN__GDA_PAB__MASK);
 	return;
 }
-
+#endif
 static irqreturn_t exynos_pcie_irq_handler(int irq, void *arg)
 {
 	struct pcie_port *pp = arg;
@@ -1045,13 +1045,13 @@ static irqreturn_t exynos_pcie_irq_handler(int irq, void *arg)
 	exynos_pcie_clear_irq_pulse(pp);
 	return IRQ_HANDLED;
 }
-
+#if 0
 static void synopsys_pcie_enable_interrupts(struct pcie_port *pp)
 {
 	synopsys_pcie_enable_irq_pulse(pp);
 	return;
 }
-
+#endif
 /* PCIe Card Driver Interrupt helper function */
 int	synopsys_pcie_interrupt_clear(unsigned int irq_no)
 {
@@ -1063,15 +1063,15 @@ EXPORT_SYMBOL(synopsys_pcie_interrupt_clear);
 
 static int  synopsys_pcie_host_init(struct pcie_port *pp)
 {
-	struct pcie_port_info *config = &pp->config;
+//	struct pcie_port_info *config = &pp->config;
 	u32 val,result,wait_loop;
-	u64	adr_base;
+//	u64	adr_base;
 	void __iomem *resetgen_base  = pp->resetgen_base;
 	void __iomem *pciewrap_base  = pp->pciewrap_base;
 	void __iomem *pciegen3_base1 = pp->pciegen3_base1;
-	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
+//	void __iomem *pciegen3_base2 = pp->pciegen3_base2;
 //	void __iomem *pciegen3_base3 = pp->pciegen3_base3;
-	void __iomem *conFig;
+	//void __iomem *conFig;
 
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init: Start\n");
@@ -1189,7 +1189,7 @@ static int  synopsys_pcie_host_init(struct pcie_port *pp)
 
 //	synopsys_writel(pciewrap_base + PCIE_INT_EN, 0x00000001);
 //	synopsys_pcie_enable_interrupts(pp);
-out:
+//out:
 #ifdef	DEBUG_TRACE
 	dev_err(pp->dev, "synopsys_pcie_host_init:%x End\n",pciegen3_base1);
 #endif
@@ -1294,7 +1294,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 	struct of_pci_range_parser parser;
 #endif
 	int ret;
-	struct device_node *np;
+//	struct device_node *np;
 
 
 	pp = devm_kzalloc(&pdev->dev, sizeof(*pp), GFP_KERNEL);
@@ -1409,7 +1409,7 @@ static int __init synopsys_pcie_probe(struct platform_device *pdev)
 
 fail_bus_clk:
 	clk_disable_unprepare(pp->bus_clk);
-fail_clk:
+//fail_clk:
 	clk_disable_unprepare(pp->clk);
 	return ret;
 }

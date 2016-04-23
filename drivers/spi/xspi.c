@@ -194,7 +194,7 @@ static	void	xspi_clear_fifo(struct xspi_dev *dev)
 	}
 	xspi_wr(dev, SPI_DCTL, 0x00000180);
 }
-
+#if 0
 static	irqreturn_t	xspi_interrupt(int irq, void *dev_id)
 {
 	struct spi_master	*master = dev_id;
@@ -215,7 +215,7 @@ static	irqreturn_t	xspi_interrupt(int irq, void *dev_id)
 	complete(&dev->done);
 	return	IRQ_HANDLED;
 }
-
+#endif
 static	int	xspi_read_trans(struct xspi_dev *xspi, int adr, int offset)
 {
 	unsigned int	reg;
@@ -378,9 +378,9 @@ static  int     xspi_write_prim(struct xspi_dev *xspi,int cs,int width,unsigned 
 static	int	xspi_start_transfer(struct spi_device *spi,struct spi_transfer *tfr, int addr)
 {
 	struct xspi_dev	*xspi = spi_master_get_devdata(spi->master);
-	char	*buf;
+//	char	*buf;
 	int	cnt;
-	u32	reg;
+//	u32	reg;
 
 #ifdef	XSPI_DEBUG_FUNC
 	dev_info(&spi->dev, "xspi_start_transfer\n");
@@ -414,10 +414,10 @@ else				tfr->bits_per_word = 8;
 
 static	int	xspi_transfer_one(struct spi_master *master, struct spi_message *msg)
 {
-	struct xspi_dev *xspi = spi_master_get_devdata(master);
+//	struct xspi_dev *xspi = spi_master_get_devdata(master);
 	struct spi_transfer	*tfr;
 	struct spi_device	*spi = msg->spi;
-	int	err,dat;
+	int	err;
 
 #ifdef	XPSI_DEBUG_FUNC
 	printk(KERN_ERR "# %s entry\n",__func__);

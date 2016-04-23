@@ -27,6 +27,7 @@
 /* 
  * Local functions
  */
+#if 0
 static	int	lm2_sata_initial(struct device *dev, void __iomem *addr)
 {
 	struct	lm2_sata3_gpr	*gpr;
@@ -43,7 +44,7 @@ static	int	lm2_sata_initial(struct device *dev, void __iomem *addr)
 
 	return	0;
 }
-
+#endif
 /*
  * Platform parameters
  */
@@ -60,11 +61,11 @@ static	struct resource	lm2_sata_resource[] = {
 };
 
 static	u64	lm2_sata_dmamask = DMA_BIT_MASK(64);
-
+#if 0
 static	struct ahci_platform_data	lm2_sata_pdata = {
 	.init	= lm2_sata_initial,
 };
-
+#endif
 static	struct platform_device lm2_sata_device = {
 	.name	= "ahci",
 	.id	= -1,

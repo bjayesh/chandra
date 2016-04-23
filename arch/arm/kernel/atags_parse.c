@@ -233,7 +233,7 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 	struct tag *tags = (struct tag *)&default_tags;
 	struct machine_desc *mdesc = NULL, *p;
 	char *from = default_command_line;
-	char	buf[256];	/* yamano debug */
+//	char	buf[256];	/* yamano debug */
 
 	default_tags.mem.start = PHYS_OFFSET;
 //	default_tags.mem.start = 0x0000000890000000ULL;

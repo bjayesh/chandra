@@ -127,7 +127,7 @@ static	void	gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
 
 static	int	gpio_probe(struct platform_device *pdev)
 {
-	struct device		*dev = &pdev->dev;
+//	struct device		*dev = &pdev->dev;
 	struct resource		*res;
 	struct mmgpios		*gpio;
 	struct gpio_chip	*chip;

@@ -30,12 +30,12 @@
 #define	UART_BASE_5	0x052f0000
 
 #define UART_BASE_RS1	0x1c090000
-
+#if 0
 static unsigned long get_uart_base(void)
 {
 	return	UART_BASE_1;
 }
-
+#endif
 /*
  * This does not append a newline
  */

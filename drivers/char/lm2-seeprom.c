@@ -77,7 +77,7 @@ module_param(seeprom_major, int, 0);
 MODULE_AUTHOR("Wind River Systems,Inc.");
 MODULE_LICENSE("GPL");
 
-static	int	seeprom_devs;
+//static	int	seeprom_devs;
 static	struct cdev	seeprom_cdev;
 static	struct class	*seeprom_class;
 static	struct lm2_i2c_seeprom	*seeprom_device;
@@ -252,7 +252,7 @@ static	int	seeprom_open(struct inode *inode, struct file *filp)
 
 static	int	seeprom_release(struct inode *inode, struct file *filp)
 {
-	struct lm2_i2c_seeprom	*seeprom = filp->private_data;
+//	struct lm2_i2c_seeprom	*seeprom = filp->private_data;
 
 //	pr_info("close\n");
 	filp->private_data = NULL;
@@ -263,10 +263,11 @@ static	int	seeprom_release(struct inode *inode, struct file *filp)
 static	ssize_t seeprom_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
 	struct lm2_i2c_seeprom	*seeprom = filp->private_data;
-	int	retval = 0;
+//	int	retval = 0;
 	char	*kern_buf;
 	int	cur_pos;
 	int	trans,idx,length;
+	int	result;
 
 //	pr_info("# %s count %d offset %lld\n", __func__, count, *f_pos );
 
@@ -307,7 +308,7 @@ static	ssize_t seeprom_read(struct file *filp, char __user *buf, size_t count, l
 		cur_pos = cur_pos + seeprom->len;
 	}
 
-	copy_to_user(buf,kern_buf,count);
+	result = copy_to_user(buf,kern_buf,count);
 	*f_pos = *f_pos + count;
 
 	mutex_unlock(&seeprom->lock);
@@ -316,13 +317,13 @@ static	ssize_t seeprom_read(struct file *filp, char __user *buf, size_t count, l
 
 }
 
-static	ssize_t	seeprom_write(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+static	ssize_t	seeprom_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
 	struct lm2_i2c_seeprom	*seeprom = filp->private_data;
 	char	*kern_buf;
 	int	cur_pos;
 	int	trans,idx,length;
-	
+	int	result;	
 //	pr_info("# %s count %d offset %lld\n", __func__, count, *f_pos);
 
 	kern_buf = kmalloc(count, GFP_KERNEL);
@@ -335,7 +336,7 @@ static	ssize_t	seeprom_write(struct file *filp, char __user *buf, size_t count, 
 		return	-ERESTARTSYS;
 	}
 
-        copy_from_user(kern_buf, buf, count);
+        result = copy_from_user(kern_buf, buf, count);
 
         cur_pos = (unsigned int)*f_pos;
         length = count;
@@ -403,7 +404,7 @@ static	loff_t	seeprom_llseek(struct file *filp, loff_t offset, int origin)
 
 static	long	seeprom_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	struct lm2_i2c_seeprom *seeprom = filp->private_data;
+//	struct lm2_i2c_seeprom *seeprom = filp->private_data;
 	return	0;
 }
 
@@ -426,7 +427,7 @@ struct file_operations seeprom_fops = {
 
 static int lm2_seeprom_probe(struct platform_device *pdev)
 {
-	struct lm2_i2c_platdata	*pd;
+//	struct lm2_i2c_platdata	*pd;
 	struct resource		*res;
 	struct resource		*misc_res;
 	struct lm2_i2c_seeprom	*id;
@@ -462,14 +463,14 @@ static int lm2_seeprom_probe(struct platform_device *pdev)
 	/* I2C Device base */
 	id->iobase = ioremap(res->start, 0x200 );
 	if(!id->iobase){
-		dev_err(&pdev->dev, "cannot I2C REG ioremap %x \n", res->start);
+		dev_err(&pdev->dev, "cannot I2C REG ioremap \n");
 	}
 
 	/* UICPI Device base */
 	misc_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	id->miscbase = ioremap(misc_res->start, REGSIZE);
 	if (!id->miscbase) {
-		dev_err(&pdev->dev, "cannot MISC REG ioremap %x \n", misc_res->start);
+		dev_err(&pdev->dev, "cannot MISC REG ioremap \n");
 		ret = -ENODEV;
 		goto out2;
 	}

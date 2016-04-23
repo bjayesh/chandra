@@ -682,7 +682,7 @@ static void __init request_standard_resources(struct machine_desc *mdesc)
 {
 	struct memblock_region *region;
 	struct resource *res;
-	char	buf[128];
+//	char	buf[128];
 
 	kernel_code.start   = virt_to_phys(_text);
 	kernel_code.end     = virt_to_phys(_etext - 1);
@@ -836,7 +836,7 @@ void __init hyp_mode_check(void)
 void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
-	char	buf[128];	/* yamano debug */ 
+//	char	buf[128];	/* yamano debug */ 
 
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);

@@ -84,7 +84,7 @@ void dwc3_set_mode(struct dwc3 *dwc, u32 mode)
 int dwc3_core_soft_reset(struct dwc3 *dwc)
 {
 	u32		reg;
-	int		ret;
+//	int		ret;
 //dev_err(dwc->dev, "dwc3_core_soft_reset entry\n");
 	/* Before Resetting PHY, put Core in Reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
@@ -848,13 +848,13 @@ err3:
 err2:
 	dwc3_event_buffers_cleanup(dwc);
 
-err_usb3phy_power:
+//err_usb3phy_power:
 //	phy_power_off(dwc->usb3_generic_phy);
 
-err_usb2phy_power:
+//err_usb2phy_power:
 //	phy_power_off(dwc->usb2_generic_phy);
 
-err1:
+//err1:
 //	usb_phy_set_suspend(dwc->usb2_phy, 1);
 //	usb_phy_set_suspend(dwc->usb3_phy, 1);
 	dwc3_core_exit(dwc);
@@ -1141,7 +1141,7 @@ static int dwc3_resume(struct device *dev)
 
 	return 0;
 
-err_usb2phy_init:
+//err_usb2phy_init:
 	phy_exit(dwc->usb2_generic_phy);
 
 	return ret;
