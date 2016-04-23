@@ -25,6 +25,13 @@
 #include <linux/ahci_platform.h>
 #include "ahci.h"
 
+#define	RSTGENSWRSTSTATIC10	0x04010104
+#define	SATA3_reset		0x04a7203c
+#define	SATA3_ssc_en		0x04a7202c
+#define	SATA3_ref_use_pad	0x04a72038
+#define	SATA3_tx_preemph_gen1	0x04a72000
+#define	AHSataRAHostCapabilitiesReg	0x04a30000
+
 static void ahci_host_stop(struct ata_host *host);
 
 enum ahci_type {
@@ -85,6 +92,47 @@ static const struct ata_port_info ahci_port_info[] = {
 static struct scsi_host_template ahci_platform_sht = {
 	AHCI_SHT("ahci_platform"),
 };
+
+static	void	sata_clk_set(void)
+{
+	volatile u32 __iomem	*reg_adr;
+	u32	reg;
+
+	/* SATA block reset */
+	reg_adr = ioremap(RSTGENSWRSTSTATIC10, 4);
+	reg = readl(reg_adr);
+	writel((reg | 0x01000000),reg_adr);
+	udelay(1);
+	writel(reg,reg_adr);
+	iounmap(reg_adr);
+
+	/* clock set */
+	reg_adr = ioremap(SATA3_reset, 4);
+	writel(0x00000001,reg_adr);
+	iounmap(reg_adr);
+
+	reg_adr = ioremap(SATA3_ssc_en,4);
+	writel(0x00000000,reg_adr);
+	iounmap(reg_adr);
+
+	reg_adr = ioremap(SATA3_ref_use_pad, 4);
+	writel(0x00000001,reg_adr);
+	iounmap(reg_adr);
+
+	reg_adr = ioremap(SATA3_tx_preemph_gen1, 4);
+	writel(0x00000008,reg_adr);
+	iounmap(reg_adr);
+	
+	reg_adr = ioremap(SATA3_reset, 4);
+	writel(0x00000000,reg_adr);
+	iounmap(reg_adr);
+
+	reg_adr = ioremap(AHSataRAHostCapabilitiesReg, 4);
+	writel(0x00000000,reg_adr);
+	iounmap(reg_adr);
+
+	return;
+}
 
 static int ahci_probe(struct platform_device *pdev)
 {
@@ -203,6 +251,9 @@ static int ahci_probe(struct platform_device *pdev)
 		if (!(hpriv->port_map & (1 << i)))
 			ap->ops = &ata_dummy_port_ops;
 	}
+
+	sata_clk_set();
+
 //dev_info(dev,"prepare reset controller\n");
 	rc = ahci_reset_controller(host);
 	if (rc)
