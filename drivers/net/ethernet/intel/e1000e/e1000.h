@@ -164,6 +164,9 @@ struct e1000_buffer {
 			unsigned int segs;
 			unsigned int bytecount;
 			u16 mapped_as_page;
+#if 1	/* Workaround */
+			u16 end;
+#endif	/* Workaround */
 		};
 		/* Rx */
 		struct {

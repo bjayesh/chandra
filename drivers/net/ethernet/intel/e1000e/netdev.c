@@ -5213,14 +5213,14 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 	unsigned int len = skb_headlen(skb);
 	unsigned int offset = 0, size, count = 0, i;
 	unsigned int f, bytecount, segs;
-//printk(KERN_ERR "___%s Entry\n",__FUNCTION__);
+
 	i = tx_ring->next_to_use;
 
 	while (len) {
 		buffer_info = &tx_ring->buffer_info[i];
 #if 1	/* Workaround */
-		if ( max_per_txd > 512 )
-			max_per_txd = 512;
+		if ( max_per_txd > 256 )
+			max_per_txd = 256;
 #endif	/* Workaround */
 		size = min(len, max_per_txd);
 
@@ -5231,10 +5231,15 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 						  skb->data + offset,
 						  size, DMA_TO_DEVICE);
 		buffer_info->mapped_as_page = false;
+#if 1	/* Workaround */
+		if ( len == size )
+			buffer_info->end=1;
+		else
+			buffer_info->end=0;
+#endif	/* Workaround */
 		if (dma_mapping_error(&pdev->dev, buffer_info->dma))
 			goto dma_error;
 
-//printk(KERN_ERR "___%s DMA %llx\n",__FUNCTION__,buffer_info->dma);
 		len -= size;
 		offset += size;
 		count++;
@@ -5352,6 +5357,10 @@ static void e1000_tx_queue(struct e1000_ring *tx_ring, int tx_flags, int count)
 						  buffer_info->length);
 		tx_desc->upper.data = cpu_to_le32(txd_upper);
 
+#if 1	/* Workaround */
+		if ( buffer_info->end == 0 ) 
+			tx_desc->lower.data &= ~(cpu_to_le32(E1000_TXD_CMD_IFCS));
+#endif	/* Workaround */
 		i++;
 		if (i == tx_ring->count)
 			i = 0;
