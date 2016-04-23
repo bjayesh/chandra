@@ -42,6 +42,7 @@
 #include <mach/irqs.h>
 #include <mach/eth.h>
 #include <plat/sched_clock.h>
+#include <linux/phy.h>
 
 #include "core.h"
 
@@ -170,6 +171,7 @@ static	struct	plat_stmmacenet_data	lm2_eth_config = {
 	.has_gmac	= 1,
 	.clk_csr	= 0,
 	.enh_desc       = 1,	/* add */
+	.interface	= PHY_INTERFACE_MODE_MII,
 };
 
 static struct platform_device lm2_eth_device = {
