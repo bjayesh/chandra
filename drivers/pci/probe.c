@@ -1684,6 +1684,7 @@ struct pci_bus *pci_create_root_bus(struct device *parent, int bus,
 	char bus_addr[64];
 	char *fmt;
 
+dev_dbg(&b2->dev, "%s entry\n",__FUNCTION__);
 	b = pci_alloc_bus();
 	if (!b)
 		return NULL;
@@ -1766,6 +1767,7 @@ struct pci_bus *pci_create_root_bus(struct device *parent, int bus,
 	list_add_tail(&b->node, &pci_root_buses);
 	up_write(&pci_bus_sem);
 
+dev_dbg(&b2->dev, "%s exit\n",__FUNCTION__);
 	return b;
 
 class_dev_reg_err:
@@ -1865,6 +1867,7 @@ struct pci_bus *pci_scan_root_bus(struct device *parent, int bus,
 	}
 
 	max = pci_scan_child_bus(b);
+dev_info(&b->dev,"max=%d \n",max);	/* yamano debug */
 
 	if (!found)
 		pci_bus_update_busn_res_end(b, max);
