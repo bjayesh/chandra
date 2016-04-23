@@ -74,20 +74,24 @@ static irqreturn_t lm2_i2c_irq(int irq, void *ptr)
 	unsigned long msr, fsr, fier, len, stat;
 
 	stat = readl(id->miscbase + MISC_INT_STS);
-	if(stat & E2P_TRANS_COMP){
-		/* complete */
-		id->status = E2P_TRANS_DONE;
-	}
-	if(stat & E2P_ACK_ERR){
-		id->status = 0;
-	}
+	if((stat & E2P_TRANS_COMP) || (stat & E2P_ACK_ERR)){
+		if(stat & E2P_TRANS_COMP){
+			/* complete */
+			id->status = E2P_TRANS_DONE;
+		}
+		if(stat & E2P_ACK_ERR){
+			id->status = 0;
+		}
 finish:
-	stat |= E2P_TRANS_COMP;
-	writel(stat, id->miscbase + MISC_INT_CLEAR);
+		stat |= E2P_TRANS_COMP;
+		writel(stat, id->miscbase + MISC_INT_CLEAR);
 
-	complete(&id->xfer_done);
+		complete(&id->xfer_done);
 
-	return IRQ_HANDLED;
+		return IRQ_HANDLED;
+	}
+node:
+	return	IRQ_NONE;
 }
 
 
@@ -291,7 +295,7 @@ static int lm2_i2c_probe(struct platform_device *pdev)
 	snprintf(id->adap.name, sizeof(id->adap.name),
 		"LM2 I2C at %08lx", (unsigned long)res->start);
 
-	if (request_irq(id->irq, lm2_i2c_irq, 0,
+	if (request_irq(id->irq, lm2_i2c_irq, IRQF_SHARED,
 			"lm2-i2c", id)) {
 		dev_err(&pdev->dev, "cannot get irq %d\n", id->irq);
 		ret = -EBUSY;
